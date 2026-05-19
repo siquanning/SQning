@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>杭州麻将</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="game-shell">
+    <header class="top-bar">
+      <div class="brand-block">
+        <span class="brand-chip">杭州麻将</span>
+        <h1>杭州麻将</h1>
+        <p id="statusLine" class="status-line">开桌中</p>
+      </div>
+      <div class="hud-stack">
+        <div id="scoreStrip" class="score-strip" aria-label="玩家分数"></div>
+        <div class="top-badges" aria-label="局况">
+          <span id="wallCount" class="hud-pill">牌墙 0</span>
+          <span id="turnText" class="hud-pill">东风</span>
+          <span id="wildTileBadge" class="hud-pill wild-badge">白板财神</span>
+        </div>
+      </div>
+      <div class="top-btns">
+        <button id="soundBtn" class="icon-button sound-on" type="button" title="音效" aria-label="切换音效">♪</button>
+        <button id="newGameBtn" class="icon-button" type="button" title="新局" aria-label="新局">↻</button>
+      </div>
+    </header>
+
+    <section class="game-layout">
+      <section class="mahjong-table" aria-label="麻将桌">
+        <div id="seatTop" class="seat seat-top"></div>
+        <div id="seatLeft" class="seat seat-left"></div>
+
+        <section class="table-center">
+          <div class="table-core">
+            <div id="lastDiscard" class="last-discard"></div>
+            <div id="riverBoard" class="river-board"></div>
+            <div id="actionBar" class="action-bar"></div>
+          </div>
+        </section>
+
+        <div id="seatRight" class="seat seat-right"></div>
+
+        <section class="player-console">
+          <div class="player-head">
+            <div>
+              <span class="seat-avatar seat-avatar-you">东</span>
+              <strong>你</strong>
+            </div>
+            <span id="handCount" class="hand-count">0 张</span>
+          </div>
+          <div id="playerMelds" class="meld-zone"></div>
+          <div id="playerHand" class="hand-rack" aria-label="你的手牌"></div>
+        </section>
+      </section>
+
+      <aside class="info-panel">
+        <section class="rule-panel">
+          <h2>本局</h2>
+          <div class="rule-tags">
+            <span>白板财神</span>
+            <span>吃碰杠</span>
+            <span>七对</span>
+            <span>爆头</span>
+            <span>杠开</span>
+          </div>
+        </section>
+        <section class="hint-panel">
+          <h2>听牌</h2>
+          <div id="hintList" class="hint-list"></div>
+        </section>
+        <section class="log-panel">
+          <h2>牌局</h2>
+          <div id="logList" class="log-list"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>

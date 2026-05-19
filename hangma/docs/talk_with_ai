@@ -1,0 +1,37 @@
+# 与 AI 对话记录
+
+## 2026-05-18 — v1.1 飘财 + AI 策略重训
+
+### 决策
+- **飘财规则**：新增听牌后亮财神机制，胡牌双倍计分。飘财后自动摸打，不可吃碰杠。纯自摸规则（无点炮，用户确认意如此）。
+- **AI 重训**：
+  - 重写 evaluateShape：区分两面搭子(+20)、边张搭子(+10)、坎张搭子(+8)、完整顺子(+28)
+  - 新增 evaluateWaitQuality：听牌质量 = 剩余牌数 × 多样性加成
+  - 重写 estimateDiscardDanger：考虑所有对手弃牌、对手副露数、终盘曲线
+  - evaluateImprovingDraws 新增 shapeGain 追踪
+  - 新增 shouldAiPiaoCai：AI 判断是否飘财（听牌数≥5 且质量够好）
+- **测试**：smoke-test 从 7 项扩展到 8 项，补全 VM 沙箱 stub（localStorage、AudioContext、setTimeout no-op）
+
+### 未做
+- 点炮胡（用户明确不需要）
+- 抢杠（暂缓）
+- 一炮多响（暂缓）
+- 飘财专用音效（用碰牌音效占位）
+
+## 2026-05-18 — v1.1.1 财神（癞子）胡牌 bug 修复
+
+### 问题
+用户反馈：白板做将牌时，明明听牌等任意一张就能胡，但进张后胡不了。
+
+### 根因
+`getCanonicalCounts()` 将第一张财神"扣留"为普通白板（`reserved = min(rawWildCount, 1)`），导致 `wildCount = 0`。
+手牌 4 组面子 + 单张白板听牌时，白板在 counts 中 count=1，无法满足：
+- `count >= 2`（不能做天然对子）
+- `count >= 1 && wildCount >= 1`（wildCount=0 无法用癞子补对子）
+
+结果：摸任何牌都无法胡。
+
+### 修复
+- `getCanonicalCounts`：移除 reserved 机制，所有财神牌全部计入 wildCount，不放入 counts
+- `countWildcards`：移除 `-1`，直接返回财神数量（1 张财神即算"财神入手"）
+- `isBaotou`：恢复原始判定结构（移除胡牌+1癞子→12张成4面子=爆头），配合新的 wildCount 正确运作。爆头定义：财神在将牌中（与胡牌配对），不在面子中

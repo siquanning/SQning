@@ -1,0 +1,57 @@
+[
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -xc",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/APP/leds/leds.c"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\"",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/DSP2833x_Libraries/DSP2833x_ADC_cal.asm"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\"",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/DSP2833x_Libraries/DSP2833x_CodeStartBranch.asm"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -xc",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/DSP2833x_Libraries/DSP2833x_DefaultIsr.c"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -xc",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/DSP2833x_Libraries/DSP2833x_GlobalVariableDefs.c"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -xc",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/DSP2833x_Libraries/DSP2833x_Gpio.c"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -xc",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/DSP2833x_Libraries/DSP2833x_PieCtrl.c"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -xc",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/DSP2833x_Libraries/DSP2833x_PieVect.c"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -xc",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/DSP2833x_Libraries/DSP2833x_SysCtrl.c"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\"",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/DSP2833x_Libraries/DSP2833x_usDelay.asm"
+   },
+   {
+      "directory" : "E:/DSP28335/Example02_DSP2833x_LED/Debug",
+      "command"   : "clang++ -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/DSP28335/Example02_DSP2833x_LED/APP/leds\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -xc",
+      "file"      : "E:/DSP28335/Example02_DSP2833x_LED/User/main.c"
+   }
+]

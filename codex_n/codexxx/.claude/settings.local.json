@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"E:\\\\ti\\\\ccs2051\")",
+      "Read(//e/ti/ccs2051/**)",
+      "Bash(ls \"E:\\\\ti\\\\ccs2051\\\\workspace\" 2>/dev/null || echo \"no workspace dir\")",
+      "Bash(ls \"E:\\\\ti\" 2>/dev/null)",
+      "Read(//e/ti/**)",
+      "Bash(ls \"E:\\\\DSP28335\")",
+      "Read(//e/DSP28335/**)",
+      "Read(//c/Users/32485/**)",
+      "Bash(grep -oE '.{0,100}AI.{0,100}' \"E:\\\\ti\\\\ccs2051\\\\ccs\\\\theia\\\\resources\\\\app\\\\plugins\\\\ccs-ai\\\\extension\\\\dist\\\\extension.js\")",
+      "Bash(node -e \"const cfg = require\\('os'\\).homedir\\(\\) + '/.claude.json'; const c = JSON.parse\\(require\\('fs'\\).readFileSync\\(cfg,'utf-8'\\)\\); console.log\\('API Base:', c.env.ANTHROPIC_BASE_URL\\); console.log\\('Model:', c.env.ANTHROPIC_MODEL\\); console.log\\('Has Key:', !!c.env.ANTHROPIC_AUTH_TOKEN\\);\")",
+      "Bash(curl -s -X POST https://api.deepseek.com/anthropic/v1/messages -H 'Content-Type: application/json' -H 'x-api-key: sk-f38d7d4397984c63812b35e711a5a87c' -H 'anthropic-version: 2023-06-01' -d '{\"model\":\"deepseek-v4-pro\",\"max_tokens\":200,\"messages\":[{\"role\":\"user\",\"content\":\"Say hello and tell me what 2+2 is. Just give the answer, no tools needed.\"}]}')",
+      "Bash(curl -s -X POST https://api.deepseek.com/anthropic/v1/messages -H 'Content-Type: application/json' -H 'x-api-key: sk-f38d7d4397984c63812b35e711a5a87c' -H 'anthropic-version: 2023-06-01' -d '{\"model\":\"deepseek-v4-pro\",\"max_tokens\":500,\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get weather for a city\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"description\":\"City name\"}},\"required\":[\"city\"]}}],\"messages\":[{\"role\":\"user\",\"content\":\"What is the weather in Beijing? Use the tool if needed.\"}]}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST \"https://api.deepseek.com/anthropic/v1/messages\" -H \"Content-Type: application/json\" -H \"x-api-key: sk-f38d7d4397984c63812b35e711a5a87c\" -H \"anthropic-version: 2023-06-01\" -d '{\"model\":\"deepseek-v4-pro\",\"max_tokens\":500,\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get weather for a city\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"description\":\"City name\"}},\"required\":[\"city\"]}}],\"messages\":[{\"role\":\"user\",\"content\":\"What is the weather in Beijing? Use the tool if needed.\"}]}')"
+    ]
+  }
+}

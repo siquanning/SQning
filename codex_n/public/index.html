@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Codex Client</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <header class="brand">
+          <div class="brand-mark" aria-hidden="true">C</div>
+          <div>
+            <h1>Codex Client</h1>
+            <p id="healthText">连接中</p>
+          </div>
+        </header>
+
+        <button class="primary-action" id="newSessionButton" type="button">
+          <span aria-hidden="true">+</span>
+          <span>新会话</span>
+        </button>
+
+        <nav class="session-list" id="sessionList" aria-label="会话"></nav>
+
+        <section class="settings-panel" aria-label="设置">
+          <div class="section-title">设置</div>
+          <label class="field">
+            <span>工作区</span>
+            <input id="workspaceInput" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field">
+            <span>模型</span>
+            <input id="modelInput" autocomplete="off" spellcheck="false" placeholder="默认">
+          </label>
+          <label class="field">
+            <span>沙箱</span>
+            <select id="sandboxSelect">
+              <option value="workspace-write">workspace-write</option>
+              <option value="read-only">read-only</option>
+              <option value="danger-full-access">danger-full-access</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>审批</span>
+            <select id="approvalSelect">
+              <option value="never">never</option>
+              <option value="on-request">on-request</option>
+              <option value="untrusted">untrusted</option>
+            </select>
+          </label>
+          <label class="check-field">
+            <input id="bypassInput" type="checkbox">
+            <span>跳过沙箱</span>
+          </label>
+          <button class="secondary-action" id="saveSettingsButton" type="button">保存设置</button>
+        </section>
+      </aside>
+
+      <main class="chat-main">
+        <header class="chat-header">
+          <div>
+            <div class="eyebrow">本地 Codex</div>
+            <h2 id="chatTitle">新会话</h2>
+          </div>
+          <div class="header-actions">
+            <span class="status-pill" id="runStatus">空闲</span>
+            <button class="icon-button" id="stopButton" type="button" title="停止" disabled aria-label="停止">
+              <span aria-hidden="true">■</span>
+            </button>
+            <button class="icon-button danger" id="deleteSessionButton" type="button" title="删除会话" aria-label="删除会话">
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="conversation" id="conversation" aria-live="polite"></section>
+
+        <section class="activity-panel" id="activityPanel" aria-label="活动"></section>
+
+        <form class="composer" id="composer">
+          <textarea id="messageInput" rows="1" placeholder="输入任务"></textarea>
+          <button class="send-button" id="sendButton" type="submit">
+            <span>发送</span>
+            <span aria-hidden="true">↵</span>
+          </button>
+        </form>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

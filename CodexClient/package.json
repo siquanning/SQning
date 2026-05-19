@@ -1,0 +1,12 @@
+{
+  "name": "codex-local-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local browser client for the Codex CLI.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

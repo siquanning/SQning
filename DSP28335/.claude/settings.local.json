@@ -1,0 +1,34 @@
+{
+  "env": {
+    "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Read(//E/ti/ccs2051/ccs/utils/sysconfig_1.27.1/**)",
+      "Read(//E/ti/ccs2051/ccs/theia/resources/ai/**)",
+      "Bash(cd \"E:\\\\DSP28335\" && mkdir -p docs \"assets/design\" \"assets/bug\" \"assets/reference\" notes)",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "Bash(xxd \"E:\\\\DSP28335\\\\2P_DAB\\\\assets\\\\reference\\\\PZ-DSP28335-L原理图.pdf\")",
+      "Bash(python -c \"print\\('hello'\\)\")",
+      "Bash(mkdir -p \"C:/Users/32485/.claude/projects/e--DSP28335/memory\")",
+      "Bash(pip list *)",
+      "Bash(python -m pip --version)",
+      "Bash(python -c \"from PIL import Image; print\\('Pillow OK'\\)\")",
+      "Bash(python -c \"import mcp; print\\('mcp OK'\\)\")",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(where pdftoppm *)",
+      "Bash(python -c \"import subprocess; print\\(subprocess.run\\(['pdftoppm','-v'],capture_output=True\\).stderr.decode\\(\\)\\)\")",
+      "Bash(npm ls *)",
+      "Bash(npx pdftoppm *)",
+      "Bash(node -e \"const sharp = require\\('sharp'\\); sharp\\('e:/DSP28335/2P_DAB/assets/reference/PZ-DSP28335-L原理图.pdf'\\).metadata\\(\\).then\\(m => console.log\\(JSON.stringify\\(m\\)\\)\\).catch\\(e => console.log\\('Error:', e.message\\)\\)\")"
+    ],
+    "ask": [],
+    "additionalDirectories": [
+      "E:\\DSP28335",
+      "C:\\Users\\32485\\.claude\\projects\\e--DSP28335"
+    ]
+  }
+}
