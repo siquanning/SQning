@@ -22,26 +22,65 @@
 
 ## 项目技术概要
 
-- **类型**：纯前端单页游戏，无框架，vanilla JS + CSS
-- **入口**：直接用浏览器打开 `src/index.html` 即可运行
-- **玩法**：杭州麻将（白板财神、吃碰杠、七对、爆头、杠开、飘财）
-- **规则**：纯自摸（无点炮），飘财胡牌双倍计分
+- **类型**：纯前端单页游戏，无框架，vanilla JS + CSS + ES Modules
+- **入口**：需通过 HTTP 服务打开 `src/index.html`（ES Modules 不支持 file:// 协议）
+- **架构**：UI 层 (`app.js`) + 引擎层 (`engine.js`)，通过 ES Module import 解耦
+- **玩法**：杭州麻将（白板财神、吃碰杠、七对、爆头、杠开、飘财）—— 见 [PRD](E:/CLAUDE/hangzhou_majiang/docs/PRD.md)
+- **规则**：纯自摸（无点炮），庄家/闲家不同计分，详见 PRD
 - **音效**：Web Audio API 合成，无外部音频文件
 - **存档**：localStorage 自动保存/恢复（含飘财状态）
-- **AI**：启发式评估 + 搭子识别 + 听牌质量评分 + 防守意识 + 记忆化递归决策
+
+## 核心架构
+
+```
+src/
+├── index.html          # 入口 HTML
+├── styles.css          # 全部样式
+├── app.js              # UI 层：渲染、音效、输入、游戏流程编排
+├── engine.js           # 引擎层：[接口文档 + Stub 桩] → 待你实现实际逻辑
+├── assets/tiles/*.svg  # 牌面 SVG 资源
+└── ...
+```
+
+### app.js（UI 层）职责
+- 所有 DOM 渲染（render* 函数）
+- 音效管理（AudioManager）
+- 粒子特效（ParticleSpawner）
+- 手势/键盘输入
+- 游戏流程编排（回合推进、吃碰杠执行、胡牌结算、存档恢复）
+
+### engine.js（引擎层）职责
+- 牌具操作：createTile, tileKey, tileLabel, sortTiles 等
+- 游戏状态创建：createNewGame, createPlayers, createWall
+- 规则判定：isWinningHand, getWaitTiles, getChiOptions, getConcealedGangChoices
+- 出牌提示：getDiscardHints
+- AI 决策：chooseDiscard, shouldPeng, shouldMeldGang, chooseChi, chooseConcealedGang, shouldPiaoCai, resolveClaim
+- 计分：calculateWinScore
+
+### 当前状态：Stub 模式
+`engine.js` 当前为桩（Stub）实现，所有规则判定返回安全默认值（false/空），UI 可正常渲染空桌。你需要按照 `engine.js` 中的 `[TODO: IMPLEMENT]` 标记和 [PRD](E:/CLAUDE/hangzhou_majiang/docs/PRD.md) 实现实际逻辑。
+
+## 本地运行
+
+```powershell
+# 在 src/ 目录启动静态服务（ES Modules 需要 HTTP）
+npx serve src/
+# 或
+cd src; npx http-server -p 8080 -c-1
+```
 
 ## 脚本说明
 
 | 脚本 | 用途 | 运行方式 |
 |------|------|----------|
 | `src/extract-tiles.js` | 从 Mahjong.Colored.otf 字体中提取牌面 SVG | `node src/extract-tiles.js` |
-| `src/smoke-test.js` | 游戏逻辑单元测试（Node vm 沙箱） | `node src/smoke-test.js` |
+| `src/smoke-test.js` | 游戏逻辑单元测试（Node vm 沙箱）— 需随引擎实现同步更新 | `node src/smoke-test.js` |
 | `src/verify-ui.js` | Playwright UI 验证（简单流程） | `node src/verify-ui.js` |
 | `src/ui-check.mjs` | Playwright UI 全面检查（ES module） | `node src/ui-check.mjs` |
 
 ## 修改代码注意事项
 
-- `app.js` 中 `tileAssetPath()` 返回 `./assets/tiles/...`，移动代码时需确保相对路径正确
+- 规则/AI 逻辑全部在 `engine.js` 中实现，不要写入 `app.js`
+- `app.js` 中的流程编排函数（discardPlayerTile、checkClaimsAfterDiscard 等）依赖 engine 返回值做分支，修改 engine 接口时需同步更新 app.js 的调用处
+- `tileAssetPath()` 返回 `./assets/tiles/...`，移动代码时需确保相对路径正确
 - `styles.css` 中 `url("./assets/table-pattern.svg")` 同样依赖相对路径
-- AI 策略修改集中在 `app.js` 后半部分的评估函数（`evaluateShape`、`chooseAiDiscard` 等）
-- 添加新牌型判定逻辑需同步更新 `smoke-test.js` 的测试用例

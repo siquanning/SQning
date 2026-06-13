@@ -17,12 +17,19 @@
       <div class="hud-stack">
         <div id="scoreStrip" class="score-strip" aria-label="玩家分数"></div>
         <div class="top-badges" aria-label="局况">
-          <span id="wallCount" class="hud-pill">牌墙 0</span>
+          <span id="remainingCount" class="hud-pill">剩余 0 张</span>
           <span id="turnText" class="hud-pill">东风</span>
           <span id="wildTileBadge" class="hud-pill wild-badge">白板财神</span>
         </div>
       </div>
       <div class="top-btns">
+        <select id="difficultySelect" class="difficulty-select" title="AI 难度" aria-label="AI 难度">
+          <option value="easy">简单</option>
+          <option value="normal" selected>普通</option>
+          <option value="hard">困难</option>
+        </select>
+        <div id="modeToggleSlot"></div>
+        <button id="resetScoreBtn" class="icon-button" type="button" title="重置积分" aria-label="重置积分">0</button>
         <button id="soundBtn" class="icon-button sound-on" type="button" title="音效" aria-label="切换音效">♪</button>
         <button id="newGameBtn" class="icon-button" type="button" title="新局" aria-label="新局">↻</button>
       </div>
@@ -68,7 +75,7 @@
           </div>
         </section>
         <section class="hint-panel">
-          <h2>听牌</h2>
+          <h2 class="hint-toggle" id="hintToggle">听牌 ▼</h2>
           <div id="hintList" class="hint-list"></div>
         </section>
         <section class="log-panel">
@@ -79,6 +86,6 @@
     </section>
   </main>
 
-  <script src="./app.js" defer></script>
+  <script type="module" src="./app.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//E/ti/ccs2051/ccs/utils/sysconfig_1.27.1/**)",
+      "Bash(git -C \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\" log --oneline --all -30)",
+      "Bash(git -C \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\" status)",
+      "Read(//c//**)",
+      "Bash(mkdir -p \"e:/repos/DSP28335/2P_DAB/targetConfigs\")",
+      "Bash(mkdir -p \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\\\\app\" \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\\\\bsp\" \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\\\\control\" \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\\\\drivers\" \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\\\\protocols\" \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\\\\protection\" \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\\\\include\")",
+      "Bash(mkdir -p firmware)",
+      "Bash(mv app *)",
+      "Bash(mv 28335_RAM_lnk.cmd firmware/)",
+      "Bash(Get-ChildItem -Recurse -Name \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\\\\firmware\")",
+      "Bash(git -C \"e:\\\\repos\\\\DSP28335\\\\2P_DAB\" log --oneline --all -20)",
+      "PowerShell(if \\(Test-Path \"C:\\\\ti\\\\c2000\\\\C2000Ware_5_04_01_00\"\\) { \"C2000Ware 5.04 found at C:\\\\ti\\\\c2000\\\\C2000Ware_5_04_01_00\" } elseif \\(Test-Path \"C:\\\\ti\\\\c2000\\\\C2000Ware_4_03_00_00\"\\) { \"C2000Ware 4.03 found\" } else { Get-ChildItem \"C:\\\\ti\" -Directory -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }; Get-ChildItem \"C:\\\\ti\\\\c2000\" -Directory -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName } })",
+      "PowerShell($paths = @\\(\"C:\\\\ti\", \"C:\\\\TexasInstruments\", \"D:\\\\ti\", \"E:\\\\ti\", \"$env:USERPROFILE\\\\ti\", \"${env:ProgramFiles}\\\\Texas Instruments\", \"C:\\\\CCS\"\\); foreach \\($p in $paths\\) { if \\(Test-Path $p\\) { Write-Host \"Found: $p\" } })",
+      "PowerShell(Get-ChildItem \"E:\\\\ti\" -Directory -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })"
+    ],
+    "additionalDirectories": [
+      "e:\\repos\\DSP28335\\2P_DAB"
+    ]
+  }
+}

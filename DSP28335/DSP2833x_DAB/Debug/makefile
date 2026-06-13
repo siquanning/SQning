@@ -12,7 +12,8 @@ GEN_CMDS__FLAG :=
 ORDERED_OBJS += \
 "./APP/gpio/gpio_config.obj" \
 "./APP/leds/leds.obj" \
-"./APP/sci/app_sci.obj" \
+"./APP/modbus/app_modbus.obj" \
+"./APP/modbus/modbus_slave.obj" \
 "./APP/sci/sci_driver.obj" \
 "./DSP2833x_Libraries/DSP2833x_ADC_cal.obj" \
 "./DSP2833x_Libraries/DSP2833x_CodeStartBranch.obj" \
@@ -39,11 +40,13 @@ RMDIR := RMDIR /S/Q
 -include sources.mk
 -include APP/gpio/subdir_vars.mk
 -include APP/leds/subdir_vars.mk
+-include APP/modbus/subdir_vars.mk
 -include APP/sci/subdir_vars.mk
 -include DSP2833x_Libraries/subdir_vars.mk
 -include User/subdir_vars.mk
 -include APP/gpio/subdir_rules.mk
 -include APP/leds/subdir_rules.mk
+-include APP/modbus/subdir_rules.mk
 -include APP/sci/subdir_rules.mk
 -include DSP2833x_Libraries/subdir_rules.mk
 -include User/subdir_rules.mk
@@ -156,8 +159,8 @@ DSP2833x_DAB.out: $(OBJS) $(CMD_SRCS) $(LIB_SRCS) $(GEN_CMDS)
 # Other Targets
 clean:
 	-$(RM) $(EXE_OUTPUTS__QUOTED)
-	-$(RM) "APP\gpio\gpio_config.obj" "APP\leds\leds.obj" "APP\sci\app_sci.obj" "APP\sci\sci_driver.obj" "DSP2833x_Libraries\DSP2833x_ADC_cal.obj" "DSP2833x_Libraries\DSP2833x_CodeStartBranch.obj" "DSP2833x_Libraries\DSP2833x_DefaultIsr.obj" "DSP2833x_Libraries\DSP2833x_GlobalVariableDefs.obj" "DSP2833x_Libraries\DSP2833x_Gpio.obj" "DSP2833x_Libraries\DSP2833x_PieCtrl.obj" "DSP2833x_Libraries\DSP2833x_PieVect.obj" "DSP2833x_Libraries\DSP2833x_SysCtrl.obj" "DSP2833x_Libraries\DSP2833x_usDelay.obj" "User\main.obj" 
-	-$(RM) "APP\gpio\gpio_config.d" "APP\leds\leds.d" "APP\sci\app_sci.d" "APP\sci\sci_driver.d" "DSP2833x_Libraries\DSP2833x_DefaultIsr.d" "DSP2833x_Libraries\DSP2833x_GlobalVariableDefs.d" "DSP2833x_Libraries\DSP2833x_Gpio.d" "DSP2833x_Libraries\DSP2833x_PieCtrl.d" "DSP2833x_Libraries\DSP2833x_PieVect.d" "DSP2833x_Libraries\DSP2833x_SysCtrl.d" "User\main.d" 
+	-$(RM) "APP\gpio\gpio_config.obj" "APP\leds\leds.obj" "APP\modbus\app_modbus.obj" "APP\modbus\modbus_slave.obj" "APP\sci\sci_driver.obj" "DSP2833x_Libraries\DSP2833x_ADC_cal.obj" "DSP2833x_Libraries\DSP2833x_CodeStartBranch.obj" "DSP2833x_Libraries\DSP2833x_DefaultIsr.obj" "DSP2833x_Libraries\DSP2833x_GlobalVariableDefs.obj" "DSP2833x_Libraries\DSP2833x_Gpio.obj" "DSP2833x_Libraries\DSP2833x_PieCtrl.obj" "DSP2833x_Libraries\DSP2833x_PieVect.obj" "DSP2833x_Libraries\DSP2833x_SysCtrl.obj" "DSP2833x_Libraries\DSP2833x_usDelay.obj" "User\main.obj" 
+	-$(RM) "APP\gpio\gpio_config.d" "APP\leds\leds.d" "APP\modbus\app_modbus.d" "APP\modbus\modbus_slave.d" "APP\sci\sci_driver.d" "DSP2833x_Libraries\DSP2833x_DefaultIsr.d" "DSP2833x_Libraries\DSP2833x_GlobalVariableDefs.d" "DSP2833x_Libraries\DSP2833x_Gpio.d" "DSP2833x_Libraries\DSP2833x_PieCtrl.d" "DSP2833x_Libraries\DSP2833x_PieVect.d" "DSP2833x_Libraries\DSP2833x_SysCtrl.d" "User\main.d" 
 	-$(RM) "DSP2833x_Libraries\DSP2833x_ADC_cal.d" "DSP2833x_Libraries\DSP2833x_CodeStartBranch.d" "DSP2833x_Libraries\DSP2833x_usDelay.d" 
 	-@echo ' '
 

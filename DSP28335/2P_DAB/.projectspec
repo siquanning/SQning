@@ -1,0 +1,17 @@
+{
+  "name": "2P_DAB",
+  "version": "1.0.0",
+  "description": "DAB Dual Active Bridge Power Control System",
+  "devices": [
+    {
+      "id": "TMS320F28335",
+      "compatibleCores": [
+        {
+          "id": "C28xx"
+        }
+      ]
+    }
+  ],
+  "activeTargetConfiguration": "targetConfigs/TMS320F28335.ccxml",
+  "activeBuildConfiguration": "RAM"
+}

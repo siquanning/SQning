@@ -1,6 +1,7 @@
 "./APP/gpio/gpio_config.obj"
 "./APP/leds/leds.obj"
-"./APP/sci/app_sci.obj"
+"./APP/modbus/app_modbus.obj"
+"./APP/modbus/modbus_slave.obj"
 "./APP/sci/sci_driver.obj"
 "./DSP2833x_Libraries/DSP2833x_ADC_cal.obj"
 "./DSP2833x_Libraries/DSP2833x_CodeStartBranch.obj"

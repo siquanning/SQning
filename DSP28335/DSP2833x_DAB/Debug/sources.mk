@@ -107,6 +107,7 @@ S62_DEPS__QUOTED :=
 SUBDIRS := \
 APP/gpio \
 APP/leds \
+APP/modbus \
 APP/sci \
 DSP2833x_Libraries \
 User \

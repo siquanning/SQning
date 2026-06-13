@@ -184,7 +184,7 @@ ST  = SD1 + SD2           范围 [0.5, 1.5] — 副边叠加调制波
 
 | 参数 | 值 |
 |------|-----|
-| 接口 | SCI-A (GPIO28/29) |
+| 接口 | SCI-A (GPIO35/36) |
 | 模式 | RTU Slave |
 | 波特率 | 9600 |
 | 数据位 | 8 |
@@ -233,3 +233,54 @@ ST  = SD1 + SD2           范围 [0.5, 1.5] — 副边叠加调制波
 | 2026-05-18 | v1.0 | 初版，基于 PLECS dab_test.plecs 仿真讨论确定 |
 | 2026-05-18 | v1.1 | 硬件引脚确认：对照 PZ-DSP28335-L 原理图，所有 PWM/ADC/SCI/TZ/LED 引脚无冲突 |
 | 2026-05-18 | v1.2 | 扩展 DPS 调制算法分区详表，新增 PWM 调制信号链路（SD1/SD2/ST → 载波比较 → 死区 → 8 路门极），参考代码入库 assets/reference/ |
+| 2026-05-19 | v1.3 | 工程目录重组：所有源码归入 firmware/，新增目录结构文档 |
+
+## 12. 工程目录结构
+
+```
+2P_DAB/                          # 项目根目录
+├── firmware/                    # 固件主工程
+│   ├── app/                     # 应用层（状态机、主循环、系统初始化）
+│   ├── bsp/                     # 板级支持包（时钟配置、GPIO、delay、systick）
+│   ├── control/                 # 控制算法（PID、DPS调制、软启动斜坡）
+│   ├── drivers/                 # 外设驱动（ePWM、ADC、SCI/I2C、TZ）
+│   ├── include/                 # 公共头文件（全局定义、枚举、结构体）
+│   ├── protection/              # 保护逻辑（过压/过流检测、故障锁存、TZ触发）
+│   ├── protocols/               # 通信协议（Modbus RTU Slave）
+│   └── 28335_RAM_lnk.cmd       # TI C2000 链接器命令文件
+├── docs/                        # 项目文档
+│   ├── PRD.md                   # 产品需求文档
+│   └── MILESTONES.md            # 里程碑记录
+├── assets/                      # 参考资料
+│   ├── bug/                     # Bug 记录与复现
+│   ├── design/                  # 设计笔记与计算
+│   └── reference/               # 外部参考（原理图、参考算法）
+├── notes/                       # 开发随笔
+├── targetConfigs/               # CCS 调试目标配置
+│   └── TMS320F28335.ccxml
+├── .cproject                    # CCS 工程文件
+├── .projectspec                 # CCS 工程规格
+├── .syscfg                      # TI SysConfig（引脚/时钟配置）
+├── README.md                    # 项目说明
+├── AGENTS.md                    # AI Agent 行为准则
+└── CLAUDE.md                    # Claude Code 项目配置
+```
+
+### 12.1 模块依赖关系
+
+```
+app ──→ control ──→ drivers
+  │        │
+  ├─→ protection ──→ drivers
+  │        │
+  ├─→ protocols ──→ drivers
+  │
+  └─→ bsp
+```
+
+- **app** 是顶层调度者，依赖所有下层模块
+- **control** 执行控制算法，依赖 bsp（systick）和 drivers（ADC/PWM）
+- **protection** 独立运行，直接读取 ADC 并控制 TZ 模块
+- **protocols** 依赖 drivers（SCI），与 Modbus 主站通信
+- **bsp** 为最底层，提供时钟和延时基础服务
+- **include** 被所有模块引用，存放共享定义

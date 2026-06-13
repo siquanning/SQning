@@ -1,41 +1,57 @@
-const SUIT_CONFIG = {
-  bamboo: { symbol: "条", className: "bamboo" },
-  dot: { symbol: "筒", className: "dot" },
-  character: { symbol: "万", className: "character" },
-};
+// ============================================================
+// app.js — 杭州麻将 UI 层
+// ============================================================
+// 本文件负责所有渲染、音效、输入处理和游戏流程编排。
+// 所有规则判定和 AI 决策通过 engine.js 提供的接口完成。
+//
+// 引擎接口见 engine.js 中的 JSDoc 文档和 [TODO: IMPLEMENT] 标记。
+// ============================================================
 
-const HONOR_LABELS = {
-  east: "东",
-  south: "南",
-  west: "西",
-  north: "北",
-  red: "中",
-  green: "发",
-  white: "白",
-};
+import {
+  SUIT_CONFIG,
+  HONOR_LABELS,
+  CHINESE_NUMERALS,
+  SEATS,
+  INITIAL_SCORE,
+  tileKey,
+  tileLabel,
+  tileSortValue,
+  sortTiles,
+  cloneTile,
+  tileAssetName,
+  tileAssetPath,
+  isTileWild,
+  createNewGame,
+  isWinningHand,
+  isWinningWithMelds,
+  getWaitTiles,
+  getWaitTilesWithMelds,
+  getDiscardHintsWithMelds,
+  getChiOptions,
+  getPengOptions,
+  getConcealedGangChoices,
+  getDiscardHints,
+  chooseDiscard,
+  shouldPeng,
+  shouldMeldGang,
+  chooseChi,
+  chooseConcealedGang,
+  shouldPiaoCai,
+  resolveClaim,
+  calculateWinScore,
+  checkFourWindDiscard,
+  countWildInHand,
+} from "./engine.js";
+import { fromGameState, chooseBestDiscard, tileTypeIndex, computeShanten } from './ai/game-sim.js';
+import { getCoachMode, isCoachMode, onModeChange, createModeToggleButton } from './mode-toggle.js';
+import { initCoachPanel, showCoachPanel, hideCoachPanel, minimizeForDraw, expandAfterDiscard, setCoachMessages, clearCoachMessages } from './coach-panel.js';
 
-const CHINESE_NUMERALS = {
-  1: "一",
-  2: "二",
-  3: "三",
-  4: "四",
-  5: "五",
-  6: "六",
-  7: "七",
-  8: "八",
-  9: "九",
-};
-
-const SEATS = [
-  { id: 0, name: "你", wind: "东", isHuman: true, seatKey: "bottom" },
-  { id: 1, name: "下家", wind: "南", isHuman: false, seatKey: "right" },
-  { id: 2, name: "对家", wind: "西", isHuman: false, seatKey: "top" },
-  { id: 3, name: "上家", wind: "北", isHuman: false, seatKey: "left" },
-];
-
-const INITIAL_SCORE = 250;
 const TURN_DELAY = 550;
 const CLAIM_DELAY = 400;
+
+// ============================================================
+// AudioManager
+// ============================================================
 
 const AudioManager = (() => {
   let ctx = null;
@@ -113,6 +129,10 @@ const AudioManager = (() => {
   };
 })();
 
+// ============================================================
+// ParticleSpawner
+// ============================================================
+
 const ParticleSpawner = (() => {
   function burst(x, y) {
     const colors = ["#f4c767", "#c94337", "#14804e", "#236fad", "#fff6df", "#ff5d78", "#ffe9ad"];
@@ -143,6 +163,10 @@ const ParticleSpawner = (() => {
   return { burst, centerBurst };
 })();
 
+// ============================================================
+// DOM 引用
+// ============================================================
+
 const dom = {
   playerHand: document.querySelector("#playerHand"),
   playerMelds: document.querySelector("#playerMelds"),
@@ -151,7 +175,7 @@ const dom = {
   seatRight: document.querySelector("#seatRight"),
   riverBoard: document.querySelector("#riverBoard"),
   actionBar: document.querySelector("#actionBar"),
-  wallCount: document.querySelector("#wallCount"),
+  remainingCount: document.querySelector("#remainingCount"),
   turnText: document.querySelector("#turnText"),
   statusLine: document.querySelector("#statusLine"),
   wildTileBadge: document.querySelector("#wildTileBadge"),
@@ -161,877 +185,23 @@ const dom = {
   scoreStrip: document.querySelector("#scoreStrip"),
   lastDiscard: document.querySelector("#lastDiscard"),
   newGameBtn: document.querySelector("#newGameBtn"),
+  resetScoreBtn: document.querySelector("#resetScoreBtn"),
   soundBtn: document.querySelector("#soundBtn"),
+  difficultySelect: document.querySelector("#difficultySelect"),
 };
 
+// ============================================================
+// 游戏状态
+// ============================================================
+
 let game = null;
-let sharedMemo = new Map();
 
-function resetSharedMemo() { sharedMemo = new Map(); }
+// ============================================================
+// 工具函数
+// ============================================================
 
-function setupKeyboardShortcuts() {
-  document.addEventListener("keydown", (event) => {
-    if (!game || game.locked) return;
-    if (event.target.closest("input, textarea, [contenteditable]")) return;
-
-    if (game.phase === "human-discard" && !game.winner && !game.drawReason) {
-      if (event.key === "d" || event.key === "D") {
-        const selected = game.selectedTileId;
-        if (selected) { discardPlayerTile(selected); return; }
-        const player = getPlayer(0);
-        if (player.hand.length > 0) {
-          discardPlayerTile(player.hand[player.hand.length - 1].id);
-        }
-        return;
-      }
-    }
-
-    if (game.phase === "claim" && game.claimOptions.length > 0) {
-      if (event.key === " " || event.key === "Escape") {
-        event.preventDefault();
-        passClaim();
-        return;
-      }
-      const num = parseInt(event.key);
-      if (num >= 1 && num <= game.claimOptions.length) {
-        event.preventDefault();
-        game.claimOptions[num - 1].handler();
-        return;
-      }
-    }
-  });
-}
-
-function createTile(suit, rank) {
-  return { id: `${suit}-${rank}-${Math.random().toString(36).slice(2, 9)}`, suit, rank };
-}
-
-function createWall() {
-  const wall = [];
-  ["bamboo", "dot", "character"].forEach((suit) => {
-    for (let rank = 1; rank <= 9; rank += 1) {
-      for (let copy = 0; copy < 4; copy += 1) {
-        wall.push(createTile(suit, rank));
-      }
-    }
-  });
-
-  Object.keys(HONOR_LABELS).forEach((honor) => {
-    for (let copy = 0; copy < 4; copy += 1) {
-      wall.push(createTile("honor", honor));
-    }
-  });
-
-  return shuffle(wall);
-}
-
-function shuffle(list) {
-  const copy = [...list];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-function tileSortValue(tile) {
-  const suitOrder = { character: 0, dot: 1, bamboo: 2, honor: 3 };
-  if (tile.suit === "honor") {
-    const honorOrder = ["east", "south", "west", "north", "red", "green", "white"];
-    return suitOrder.honor * 100 + honorOrder.indexOf(tile.rank);
-  }
-  return suitOrder[tile.suit] * 100 + Number(tile.rank);
-}
-
-function sortTiles(tiles) {
-  tiles.sort((a, b) => tileSortValue(a) - tileSortValue(b));
-}
-
-function tileKey(tile) {
-  return `${tile.suit}:${tile.rank}`;
-}
-
-function tileLabel(tile) {
-  if (tile.suit === "honor") {
-    return HONOR_LABELS[tile.rank];
-  }
-  return `${CHINESE_NUMERALS[tile.rank]}${SUIT_CONFIG[tile.suit].symbol}`;
-}
-
-function tileGlyph(tile) {
-  if (tile.suit === "honor") {
-    const glyphs = {
-      east: "🀀",
-      south: "🀁",
-      west: "🀂",
-      north: "🀃",
-      red: "🀄",
-      green: "🀅",
-      white: "🀆",
-    };
-    return glyphs[tile.rank];
-  }
-  const glyphs = {
-    character: ["", "🀇", "🀈", "🀉", "🀊", "🀋", "🀌", "🀍", "🀎", "🀏"],
-    dot: ["", "🀙", "🀚", "🀛", "🀜", "🀝", "🀞", "🀟", "🀠", "🀡"],
-    bamboo: ["", "🀐", "🀑", "🀒", "🀓", "🀔", "🀕", "🀖", "🀗", "🀘"],
-  };
-  return glyphs[tile.suit][tile.rank];
-}
-
-function tileAssetName(tile) {
-  return tile.suit === "honor" ? `honor-${tile.rank}` : `${tile.suit}-${tile.rank}`;
-}
-
-function tileAssetPath(tile) {
-  return `./assets/tiles/${tileAssetName(tile)}.svg`;
-}
-
-function getTileFaceMarkup(tile) {
-  return `
-    <div class="tile-face">
-      <img class="tile-art" src="${tileAssetPath(tile)}" alt="" aria-hidden="true">
-    </div>
-  `;
-}
-
-function tilesToText(tiles) {
-  return tiles.map(tileLabel).join(" ");
-}
-
-function cloneTile(tile) {
-  return { ...tile };
-}
-
-function countWildcards(tiles, wildKey) {
-  let count = 0;
-  for (const tile of tiles) {
-    if (tileKey(tile) === wildKey) {
-      count += 1;
-    }
-  }
-  return count;
-}
-
-function isBaotou(tiles, wildKey, winningTile) {
-  // Baotou (爆头): the wildcard serves as the pair (将牌), paired with the winning tile.
-  // After removing the winning tile and one wildcard, the remaining 12 tiles must form 4 melds.
-  if (!winningTile || tileKey(winningTile) === wildKey) {
-    return false;
-  }
-
-  const { counts, wildCount } = getCanonicalCounts(tiles, wildKey);
-  const winKey = tileKey(winningTile);
-  const winCount = counts.get(winKey) || 0;
-  if (winCount < 1 || wildCount < 1) {
-    return false;
-  }
-
-  counts.set(winKey, winCount - 1);
-  if (counts.get(winKey) === 0) {
-    counts.delete(winKey);
-  }
-
-  return canFormSets(counts, wildCount - 1, new Map());
-}
-
-function getCanonicalCounts(tiles, wildKey) {
-  const counts = new Map();
-  let wildCount = 0;
-  for (const tile of tiles) {
-    const key = tileKey(tile);
-    if (key === wildKey) {
-      wildCount += 1;
-    } else {
-      counts.set(key, (counts.get(key) || 0) + 1);
-    }
-  }
-  return { counts, wildCount };
-}
-
-function keyToTile(key) {
-  const [suit, rank] = key.split(":");
-  return { suit, rank: suit === "honor" ? rank : Number(rank) };
-}
-
-function isSuitKey(key) {
-  return !key.startsWith("honor:");
-}
-
-function nextSuitKey(key) {
-  const tile = keyToTile(key);
-  if (tile.suit === "honor" || tile.rank >= 9) {
-    return null;
-  }
-  return `${tile.suit}:${tile.rank + 1}`;
-}
-
-function nextNextSuitKey(key) {
-  const tile = keyToTile(key);
-  if (tile.suit === "honor" || tile.rank >= 8) {
-    return null;
-  }
-  return `${tile.suit}:${tile.rank + 2}`;
-}
-
-function serializeCounts(counts) {
-  const items = [...counts.entries()].sort(([a], [b]) => (a > b ? 1 : -1));
-  return items.map(([key, value]) => `${key}:${value}`).join("|");
-}
-
-function canFormSets(counts, wildCount, memo = new Map()) {
-  const signature = `${wildCount}#${serializeCounts(counts)}`;
-  if (memo.has(signature)) {
-    return memo.get(signature);
-  }
-
-  const keys = [...counts.keys()].filter((key) => counts.get(key) > 0).sort();
-  if (keys.length === 0) {
-    const result = wildCount % 3 === 0;
-    memo.set(signature, result);
-    return result;
-  }
-
-  const firstKey = keys[0];
-  const firstCount = counts.get(firstKey);
-
-  if (firstCount >= 3) {
-    counts.set(firstKey, firstCount - 3);
-    if (counts.get(firstKey) === 0) {
-      counts.delete(firstKey);
-    }
-    if (canFormSets(counts, wildCount, memo)) {
-      memo.set(signature, true);
-      counts.set(firstKey, firstCount);
-      return true;
-    }
-    counts.set(firstKey, firstCount);
-  }
-
-  if (firstCount < 3 && wildCount >= 3 - firstCount) {
-    counts.delete(firstKey);
-    if (canFormSets(counts, wildCount - (3 - firstCount), memo)) {
-      memo.set(signature, true);
-      counts.set(firstKey, firstCount);
-      return true;
-    }
-    counts.set(firstKey, firstCount);
-  }
-
-  if (isSuitKey(firstKey)) {
-    const secondKey = nextSuitKey(firstKey);
-    const thirdKey = nextNextSuitKey(firstKey);
-    if (secondKey && thirdKey) {
-      const missing = [];
-      const usedKeys = [firstKey];
-
-      const secondCount = counts.get(secondKey) || 0;
-      const thirdCount = counts.get(thirdKey) || 0;
-
-      if (secondCount === 0) {
-        missing.push(secondKey);
-      } else {
-        usedKeys.push(secondKey);
-      }
-
-      if (thirdCount === 0) {
-        missing.push(thirdKey);
-      } else {
-        usedKeys.push(thirdKey);
-      }
-
-      if (wildCount >= missing.length) {
-        const snapshot = new Map();
-        usedKeys.forEach((key) => snapshot.set(key, counts.get(key)));
-
-        counts.set(firstKey, firstCount - 1);
-        if (counts.get(firstKey) === 0) {
-          counts.delete(firstKey);
-        }
-
-        if (secondCount > 0) {
-          counts.set(secondKey, secondCount - 1);
-          if (counts.get(secondKey) === 0) {
-            counts.delete(secondKey);
-          }
-        }
-
-        if (thirdCount > 0) {
-          counts.set(thirdKey, thirdCount - 1);
-          if (counts.get(thirdKey) === 0) {
-            counts.delete(thirdKey);
-          }
-        }
-
-        if (canFormSets(counts, wildCount - missing.length, memo)) {
-          memo.set(signature, true);
-          snapshot.forEach((value, key) => counts.set(key, value));
-          return true;
-        }
-
-        snapshot.forEach((value, key) => counts.set(key, value));
-      }
-    }
-  }
-
-  memo.set(signature, false);
-  return false;
-}
-
-function isSevenPairs(tiles, wildKey) {
-  if (tiles.length !== 14) {
-    return false;
-  }
-
-  const { counts, wildCount } = getCanonicalCounts(tiles, wildKey);
-  let oddCount = 0;
-  let pairSlots = 0;
-
-  counts.forEach((value) => {
-    oddCount += value % 2;
-    pairSlots += Math.floor(value / 2);
-  });
-
-  if (wildCount < oddCount) {
-    return false;
-  }
-
-  const remainingWild = wildCount - oddCount;
-  return pairSlots + oddCount + Math.floor(remainingWild / 2) >= 7;
-}
-
-function isStandardWin(tiles, wildKey) {
-  if (tiles.length % 3 !== 2) {
-    return false;
-  }
-
-  const { counts, wildCount } = getCanonicalCounts(tiles, wildKey);
-  const memo = new Map();
-  const uniqueKeys = [...counts.keys()];
-
-  for (const key of uniqueKeys) {
-    const count = counts.get(key);
-    if (count >= 2) {
-      counts.set(key, count - 2);
-      if (counts.get(key) === 0) {
-        counts.delete(key);
-      }
-      if (canFormSets(counts, wildCount, memo)) {
-        counts.set(key, count);
-        return true;
-      }
-      counts.set(key, count);
-    }
-
-    if (count >= 1 && wildCount >= 1) {
-      counts.set(key, count - 1);
-      if (counts.get(key) === 0) {
-        counts.delete(key);
-      }
-      if (canFormSets(counts, wildCount - 1, memo)) {
-        counts.set(key, count);
-        return true;
-      }
-      counts.set(key, count);
-    }
-  }
-
-  if (wildCount >= 2 && canFormSets(counts, wildCount - 2, memo)) {
-    return true;
-  }
-
-  return false;
-}
-
-function isWinningHand(tiles, wildKey) {
-  return isSevenPairs(tiles, wildKey) || isStandardWin(tiles, wildKey);
-}
-
-function generateAllDistinctTiles() {
-  const tiles = [];
-  ["character", "dot", "bamboo"].forEach((suit) => {
-    for (let rank = 1; rank <= 9; rank += 1) {
-      tiles.push({ suit, rank });
-    }
-  });
-  Object.keys(HONOR_LABELS).forEach((rank) => {
-    tiles.push({ suit: "honor", rank });
-  });
-  return tiles;
-}
-
-const DISTINCT_TILES = generateAllDistinctTiles();
-
-function getWaitTiles(tiles, wildKey) {
-  if (tiles.length % 3 !== 1) {
-    return [];
-  }
-  const waits = [];
-  for (const tile of DISTINCT_TILES) {
-    const trial = [...tiles.map(cloneTile), cloneTile(tile)];
-    if (isWinningHand(trial, wildKey)) {
-      waits.push(tile);
-    }
-  }
-  return waits;
-}
-
-function handSignature(tiles) {
-  return tiles.map(tileKey).sort().join(",");
-}
-
-function uniqueTilesByKey(tiles) {
-  const seen = new Set();
-  const unique = [];
-  tiles.forEach((tile) => {
-    const key = tileKey(tile);
-    if (!seen.has(key)) {
-      seen.add(key);
-      unique.push(tile);
-    }
-  });
-  return unique;
-}
-
-function removeOneTileByKey(tiles, key) {
-  let removed = false;
-  return tiles
-    .filter((tile) => {
-      if (!removed && tileKey(tile) === key) {
-        removed = true;
-        return false;
-      }
-      return true;
-    })
-    .map(cloneTile);
-}
-
-function removeTilesByKey(tiles, key, count) {
-  let removed = 0;
-  return tiles
-    .filter((tile) => {
-      if (removed < count && tileKey(tile) === key) {
-        removed += 1;
-        return false;
-      }
-      return true;
-    })
-    .map(cloneTile);
-}
-
-function simulatedTile(tile) {
-  return { ...tile, id: `sim-${tileKey(tile)}-${Math.random().toString(36).slice(2, 7)}` };
-}
-
-function countKnownTiles(key, playerId, ownHandOverride = null) {
-  let count = 0;
-  game.players.forEach((player) => {
-    const ownHand = player.id === playerId ? ownHandOverride || player.hand : null;
-    if (ownHand) {
-      ownHand.forEach((tile) => {
-        if (tileKey(tile) === key) {
-          count += 1;
-        }
-      });
-    }
-
-    player.discards.forEach((tile) => {
-      if (tileKey(tile) === key) {
-        count += 1;
-      }
-    });
-
-    player.melds.forEach((meld) => {
-      meld.tiles.forEach((tile) => {
-        if (tileKey(tile) === key) {
-          count += 1;
-        }
-      });
-    });
-  });
-  return count;
-}
-
-function getPlayerMeldCount(playerId) {
-  const player = getPlayer(playerId);
-  return player ? player.melds.length : 0;
-}
-
-function remainingTileCount(tile, playerId, ownHandOverride = null) {
-  return Math.max(0, 4 - countKnownTiles(tileKey(tile), playerId, ownHandOverride));
-}
-
-function availableWaitCount(waits, playerId, ownHandOverride = null) {
-  let count = 0;
-  const seen = new Set();
-  waits.forEach((tile) => {
-    const key = tileKey(tile);
-    if (!seen.has(key)) {
-      seen.add(key);
-      count += remainingTileCount(tile, playerId, ownHandOverride);
-    }
-  });
-  return count;
-}
-
-function publicDiscardCount(key) {
-  return game.players.reduce((sum, player) => sum + player.discards.filter((tile) => tileKey(tile) === key).length, 0);
-}
-
-function estimateDiscardDanger(tile, playerId) {
-  const key = tileKey(tile);
-  const visiblePublic = publicDiscardCount(key);
-  let danger = 6 - visiblePublic * 2.4;
-
-  if (tile.suit === "honor") {
-    if (visiblePublic === 0) danger += 2.0;
-    else if (visiblePublic >= 2) danger -= 1.8;
-  } else {
-    const rank = Number(tile.rank);
-    danger += 5 - Math.abs(5 - rank) * 0.8;
-    if (rank === 1 || rank === 9) danger -= 2.8;
-    if (rank >= 3 && rank <= 7) danger += 1.0;
-  }
-
-  if (tileKey(tile) === game.wildKey) {
-    danger += 5;
-  }
-
-  let allDiscarded = 0;
-  game.players.forEach((p) => {
-    if (p.id !== playerId) {
-      p.discards.forEach((d) => { if (tileKey(d) === key) allDiscarded += 1; });
-    }
-  });
-  danger -= allDiscarded * 1.1;
-
-  let opponentMeldBonus = 0;
-  game.players.forEach((p) => {
-    if (p.id !== playerId && p.melds.length >= 2) {
-      opponentMeldBonus += (p.melds.length - 1) * 1.2;
-    }
-  });
-  danger += opponentMeldBonus;
-
-  const wallRatio = game.wall.length / 83;
-  const lateGame = 1 - wallRatio;
-  danger += Math.max(0, lateGame - 0.3) * 5.0;
-
-  return Math.max(0, danger);
-}
-
-function evaluateShape(tiles, wildKey, meldCount = 0) {
-  const { counts, wildCount } = getCanonicalCounts(tiles, wildKey);
-  let score = wildCount * 52;
-  let pairLike = Math.floor(wildCount / 2);
-  let singletonHonors = 0;
-
-  counts.forEach((count, key) => {
-    const tile = keyToTile(key);
-    if (count >= 4) {
-      score += 44;
-      pairLike += 2;
-    } else if (count === 3) {
-      score += 34;
-      pairLike += 1;
-    } else if (count === 2) {
-      score += 18;
-      pairLike += 1;
-    } else if (tile.suit === "honor") {
-      singletonHonors += 1;
-      score -= 9;
-    }
-  });
-
-  ["character", "dot", "bamboo"].forEach((suit) => {
-    const ranks = Array.from({ length: 10 }, () => 0);
-    tiles.forEach((tile) => {
-      if (tile.suit === suit && tileKey(tile) !== wildKey) {
-        ranks[Number(tile.rank)] += 1;
-      }
-    });
-
-    for (let rank = 1; rank <= 9; rank += 1) {
-      if (ranks[rank] > 0) {
-        score += Math.max(0, 5 - Math.abs(5 - rank)) * ranks[rank] * 1.0;
-      }
-    }
-
-    const usedInSeq = Array.from({ length: 10 }, () => false);
-
-    for (let rank = 1; rank <= 7; rank += 1) {
-      if (ranks[rank] && ranks[rank + 1] && ranks[rank + 2]) {
-        score += 28;
-        usedInSeq[rank] = usedInSeq[rank + 1] = usedInSeq[rank + 2] = true;
-      }
-    }
-
-    for (let rank = 1; rank <= 8; rank += 1) {
-      if (ranks[rank] && ranks[rank + 1] && !usedInSeq[rank] && !usedInSeq[rank + 1]) {
-        const isTwoSided = rank >= 2 && rank <= 7 && rank + 1 <= 8;
-        score += isTwoSided ? 20 : 10;
-      }
-    }
-
-    for (let rank = 1; rank <= 7; rank += 1) {
-      if (ranks[rank] && ranks[rank + 2] && !usedInSeq[rank] && !usedInSeq[rank + 2]) {
-        score += 8;
-      }
-    }
-
-    for (let rank = 1; rank <= 9; rank += 1) {
-      if (ranks[rank] === 1) {
-        const hasLeft = rank > 1 && ranks[rank - 1] > 0;
-        const hasRight = rank < 9 && ranks[rank + 1] > 0;
-        if (!hasLeft && !hasRight && !usedInSeq[rank]) {
-          score -= 3;
-        }
-      }
-    }
-  });
-
-  if (tiles.length === 13 || tiles.length === 14) {
-    const cappedPairs = Math.min(pairLike, 6);
-    score += cappedPairs * 8;
-    if (pairLike >= 5) {
-      score += 24;
-    }
-    if (pairLike >= 6) {
-      score += 16;
-    }
-  }
-
-  score += meldCount * 180;
-  return { score, pairLike, singletonHonors, meldCount };
-}
-
-function evaluateWaitQuality(waits, playerId) {
-  if (waits.length === 0) return 0;
-  const distinctKeys = new Set(waits.map(tileKey));
-  let totalRemain = 0;
-  distinctKeys.forEach((key) => {
-    totalRemain += remainingTileCount(keyToTile(key), playerId);
-  });
-  const diversityBonus = Math.min(distinctKeys.size - 1, 2) * 0.12;
-  return totalRemain * (0.76 + diversityBonus);
-}
-
-function evaluateWaitingHand(tiles, playerId, depth = 1, memo = new Map(), meldCountOverride = null) {
-  const meldCount = meldCountOverride ?? getPlayerMeldCount(playerId);
-  const signature = `wait:${playerId}:${meldCount}:${depth}:${handSignature(tiles)}`;
-  if (memo.has(signature)) {
-    return memo.get(signature);
-  }
-
-  const shape = evaluateShape(tiles, game.wildKey, meldCount);
-  const waits = getWaitTiles(tiles, game.wildKey);
-  const waitRemain = availableWaitCount(waits, playerId, tiles);
-  let score = shape.score;
-  let improvement = { tileCount: 0, weightedWaits: 0, bestScore: 0 };
-
-  if (waits.length > 0) {
-    const waitQual = evaluateWaitQuality(waits, playerId);
-    score += 10000 + waitQual * 380 + waits.length * 55;
-  } else if (depth > 0) {
-    improvement = evaluateImprovingDraws(tiles, playerId, depth, memo, meldCount);
-    score += improvement.tileCount * 38 + improvement.weightedWaits * 28 + improvement.bestScore * 0.08 + improvement.shapeGain;
-  }
-
-  const result = { score, waits, waitRemain, improvement, shape };
-  memo.set(signature, result);
-  return result;
-}
-
-function evaluateImprovingDraws(waitingHand, playerId, depth, memo, meldCount) {
-  let tileCount = 0;
-  let weightedWaits = 0;
-  let bestScore = 0;
-  let shapeGain = 0;
-  const baseShapeScore = evaluateShape(waitingHand, game.wildKey, meldCount).score;
-
-  DISTINCT_TILES.forEach((tile) => {
-    const remaining = remainingTileCount(tile, playerId, waitingHand);
-    if (remaining <= 0) {
-      return;
-    }
-
-    const trial = [...waitingHand.map(cloneTile), simulatedTile(tile)];
-    const bestAfterDraw = evaluateBestDiscardForHand(trial, playerId, depth - 1, memo, meldCount);
-    bestScore = Math.max(bestScore, bestAfterDraw.score);
-    if (bestAfterDraw.waitRemain > 0) {
-      tileCount += remaining;
-      weightedWaits += bestAfterDraw.waitRemain * remaining;
-    } else {
-      const delta = bestAfterDraw.shape.score - baseShapeScore;
-      if (delta > 0) {
-        shapeGain += delta * remaining * 0.16;
-      }
-    }
-  });
-
-  return { tileCount, weightedWaits, bestScore, shapeGain };
-}
-
-function evaluateBestDiscardForHand(hand, playerId, depth = 1, memo = new Map(), meldCountOverride = null) {
-  const meldCount = meldCountOverride ?? getPlayerMeldCount(playerId);
-  const signature = `discard:${playerId}:${meldCount}:${depth}:${handSignature(hand)}`;
-  if (memo.has(signature)) {
-    return memo.get(signature);
-  }
-
-  let best = null;
-  uniqueTilesByKey(hand).forEach((tile) => {
-    const afterDiscard = removeOneTileByKey(hand, tileKey(tile));
-    const state = evaluateWaitingHand(afterDiscard, playerId, depth, memo, meldCount);
-    const wildPenalty = tileKey(tile) === game.wildKey ? 6800 : 0;
-    const dangerPenalty = estimateDiscardDanger(tile, playerId) * 16;
-    const score = state.score - wildPenalty - dangerPenalty;
-    const candidate = {
-      tile,
-      score,
-      waits: state.waits,
-      waitRemain: state.waitRemain,
-      improvement: state.improvement,
-      shape: state.shape,
-      danger: dangerPenalty,
-    };
-
-    if (!best || candidate.score > best.score || (candidate.score === best.score && tileSortValue(candidate.tile) > tileSortValue(best.tile))) {
-      best = candidate;
-    }
-  });
-
-  memo.set(signature, best);
-  return best;
-}
-
-function chooseAiDiscard(hand, playerId) {
-  resetSharedMemo();
-  const best = evaluateBestDiscardForHand(hand, playerId, 1, sharedMemo);
-  return best ? best.tile : hand[0];
-}
-
-function evaluateClaimBaseline(playerId) {
-  resetSharedMemo();
-  return evaluateWaitingHand(getPlayer(playerId).hand.map(cloneTile), playerId, 1, sharedMemo, getPlayerMeldCount(playerId));
-}
-
-function evaluateClaimDiscardState(hand, playerId, meldCountOverride) {
-  return evaluateBestDiscardForHand(hand.map(cloneTile), playerId, 1, sharedMemo, meldCountOverride);
-}
-
-function chooseAiChiChoice(playerId, tile, choices) {
-  const player = getPlayer(playerId);
-  const baseline = evaluateClaimBaseline(playerId);
-  const claimMeldCount = getPlayerMeldCount(playerId) + 1;
-  let bestChoice = null;
-
-  choices.forEach((choiceIds) => {
-    const simulatedHand = player.hand
-      .filter((handTile) => !choiceIds.includes(handTile.id))
-      .map(cloneTile);
-    const afterClaim = evaluateClaimDiscardState(simulatedHand, playerId, claimMeldCount);
-    const value = afterClaim.score;
-    if (!bestChoice || value > bestChoice.value) {
-      bestChoice = { choiceIds, value, afterClaim };
-    }
-  });
-
-  if (!bestChoice) {
-    return null;
-  }
-
-  const openPenalty = baseline.waitRemain > 0 ? 40 : 18;
-  const goodEnough = bestChoice.afterClaim.waitRemain > baseline.waitRemain || bestChoice.value >= baseline.score - openPenalty;
-  return goodEnough ? bestChoice.choiceIds : null;
-}
-
-function shouldAiPeng(playerId, tile) {
-  const player = getPlayer(playerId);
-  const baseline = evaluateClaimBaseline(playerId);
-  const claimMeldCount = getPlayerMeldCount(playerId) + 1;
-  const simulatedHand = removeTilesByKey(player.hand, tileKey(tile), 2);
-  const afterClaim = evaluateClaimDiscardState(simulatedHand, playerId, claimMeldCount);
-  const openPenalty = baseline.waitRemain > 0 ? 25 : 12;
-  return afterClaim.waitRemain > baseline.waitRemain || afterClaim.score >= baseline.score - openPenalty;
-}
-
-function shouldAiMeldGang(playerId, tile) {
-  const player = getPlayer(playerId);
-  const baseline = evaluateClaimBaseline(playerId);
-  const claimMeldCount = getPlayerMeldCount(playerId) + 1;
-  const simulatedHand = removeTilesByKey(player.hand, tileKey(tile), 3);
-  const afterGang = evaluateWaitingHand(simulatedHand, playerId, 1, sharedMemo, claimMeldCount);
-  const openPenalty = baseline.waitRemain > 0 ? 15 : 8;
-  return afterGang.waitRemain > baseline.waitRemain || afterGang.score >= baseline.score - openPenalty;
-}
-
-function chooseAiConcealedGang(playerId, choices) {
-  const player = getPlayer(playerId);
-  const currentBest = evaluateBestDiscardForHand(player.hand.map(cloneTile), playerId, 1, sharedMemo, getPlayerMeldCount(playerId));
-  const nextMeldCount = getPlayerMeldCount(playerId) + 1;
-
-  for (const tiles of choices) {
-    const key = tileKey(tiles[0]);
-    const afterGang = player.hand.filter((tile) => tileKey(tile) !== key).map(cloneTile);
-    const future = evaluateWaitingHand(afterGang, playerId, 1, sharedMemo, nextMeldCount);
-    if (future.waitRemain > currentBest.waitRemain || future.score >= currentBest.score - 10) {
-      return tiles;
-    }
-  }
-
-  return null;
-}
-
-function createPlayers() {
-  return SEATS.map((seat) => ({
-    id: seat.id,
-    name: seat.name,
-    wind: seat.wind,
-    isHuman: seat.isHuman,
-    seatKey: seat.seatKey,
-    hand: [],
-    melds: [],
-    discards: [],
-    score: INITIAL_SCORE,
-    piaoCai: false,
-  }));
-}
-
-function newRound() {
-  const wall = createWall();
-  const players = createPlayers();
-
-  for (let round = 0; round < 13; round += 1) {
-    players.forEach((player) => {
-      player.hand.push(wall.pop());
-    });
-  }
-
-  players[0].hand.push(wall.pop());
-  players.forEach((player) => sortTiles(player.hand));
-
-  const wildTile = { suit: "honor", rank: "white" };
-  const wildKey = tileKey(wildTile);
-
-  return {
-    players,
-    wall,
-    dealer: 0,
-    turn: 0,
-    phase: "human-discard",
-    selectedTileId: null,
-    claimOptions: [],
-    lastDiscard: null,
-    lastDraw: null,
-    winner: null,
-    drawReason: null,
-    wildTile,
-    wildKey,
-    message: "你先出牌，上推手牌即可打出。",
-    logs: ["新局开始，白板作财神。"],
-    locked: false,
-  };
+function getPlayer(playerId) {
+  return game.players[playerId];
 }
 
 function addLog(text) {
@@ -1043,12 +213,66 @@ function setMessage(text) {
   game.message = text;
 }
 
-function getPlayer(playerId) {
-  return game.players[playerId];
+function schedule(callback, delay) {
+  game.locked = true;
+  setTimeout(() => {
+    game.locked = false;
+    callback();
+  }, delay);
 }
 
-function isTileWild(tile) {
-  return tileKey(tile) === game.wildKey;
+function removeMatchingTiles(hand, key, count) {
+  const removed = [];
+  for (let i = hand.length - 1; i >= 0 && removed.length < count; i -= 1) {
+    if (tileKey(hand[i]) === key) {
+      removed.push(hand[i]);
+      hand.splice(i, 1);
+    }
+  }
+  return removed;
+}
+
+function removeLastDiscardFromRiver(playerId) {
+  const discards = getPlayer(playerId).discards;
+  discards.pop();
+}
+
+// ============================================================
+// 渲染函数
+// ============================================================
+
+function getTileFaceMarkup(tile) {
+  return `
+    <div class="tile-face">
+      <img class="tile-art" src="${tileAssetPath(tile)}" alt="" aria-hidden="true">
+    </div>
+  `;
+}
+
+function renderTile(tile, options = {}) {
+  const { clickable = false, selected = false, small = false, showWild = false } = options;
+  const element = document.createElement("div");
+  const classes = ["tile"];
+  const className = tile.suit === "honor" ? "honor" : SUIT_CONFIG[tile.suit].className;
+  classes.push(className);
+  if (clickable) classes.push("clickable");
+  if (selected) classes.push("selected");
+  if (small) classes.push("small");
+  if (showWild && isTileWild(tile, game.wildKey)) classes.push("wild");
+  element.className = classes.join(" ");
+
+  element.innerHTML = getTileFaceMarkup(tile);
+  element.title = tileLabel(tile);
+  return element;
+}
+
+function renderMeld(meld) {
+  const container = document.createElement("div");
+  container.className = "meld";
+  meld.tiles.forEach((tile) => {
+    container.appendChild(renderTile(tile, { small: true, showWild: true }));
+  });
+  return container;
 }
 
 function render() {
@@ -1126,15 +350,6 @@ function renderSeats() {
   });
 }
 
-function renderMeld(meld) {
-  const container = document.createElement("div");
-  container.className = "meld";
-  meld.tiles.forEach((tile) => {
-    container.appendChild(renderTile(tile, { small: true, showWild: true }));
-  });
-  return container;
-}
-
 function renderRiver() {
   dom.riverBoard.innerHTML = "";
   game.players.forEach((player) => {
@@ -1205,155 +420,66 @@ function discardGridRotation(index, seatKey) {
   return base + wobble;
 }
 
+// ============================================================
+// 手动理牌 — 自定义手牌顺序
+// ============================================================
+
+function saveHandOrder() {
+  game._handOrder = getPlayer(0).hand.map(t => t.id);
+  game._handCustomOrder = true;
+}
+
+function restoreHandOrder(player) {
+  if (!game._handOrder || game._handOrder.length === 0) {
+    sortTiles(player.hand);
+    saveHandOrder();
+    return;
+  }
+  const tileMap = new Map(player.hand.map(t => [t.id, t]));
+  const ordered = [];
+  for (const id of game._handOrder) {
+    const tile = tileMap.get(id);
+    if (tile) {
+      ordered.push(tile);
+      tileMap.delete(id);
+    }
+  }
+  const newTiles = [...tileMap.values()];
+  sortTiles(newTiles);
+  for (let i = newTiles.length - 1; i >= 0; i--) {
+    const t = newTiles[i];
+    ordered.unshift(t);
+    game._handOrder.unshift(t.id);
+  }
+  player.hand = ordered;
+}
+
+function sortPlayerHand(player) {
+  if (player.isHuman && game._handCustomOrder) {
+    restoreHandOrder(player);
+  } else {
+    sortTiles(player.hand);
+  }
+}
+
+function resetHandOrder() {
+  game._handCustomOrder = false;
+  game._handOrder = [];
+}
+
 function renderPlayerHand() {
   const player = getPlayer(0);
   dom.playerHand.innerHTML = "";
+  if (game._handCustomOrder) {
+    restoreHandOrder(player);
+  }
   player.hand.forEach((tile) => {
     const selected = game.selectedTileId === tile.id;
-    const clickable = game.phase === "human-discard" && !game.locked;
-    const el = renderTile(tile, { clickable, selected, showWild: true });
-    if (clickable) {
-      bindDiscardGesture(el, tile.id);
-    }
+    const el = renderTile(tile, { clickable: true, selected, showWild: true });
+    bindDiscardGesture(el, tile.id);
     dom.playerHand.appendChild(el);
   });
   dom.handCount.textContent = `${player.hand.length} 张`;
-}
-
-function bindDiscardGesture(element, tileId) {
-  let startY = 0;
-  let currentY = 0;
-  let pointerId = null;
-  let dragging = false;
-  let ghost = null;
-  let everAboveHand = false;
-  let detachDocumentListeners = null;
-
-  function handTop() {
-    return dom.playerHand.getBoundingClientRect().top;
-  }
-
-  function isAboveHand(y) {
-    return y < handTop() - 12;
-  }
-
-  function createGhost(srcEl) {
-    const el = document.createElement("div");
-    el.className = "tile-ghost";
-    el.innerHTML = srcEl.querySelector(".tile-face")?.outerHTML || "";
-    document.body.appendChild(el);
-    return el;
-  }
-
-  element.addEventListener("pointerdown", (event) => {
-    if (game.phase !== "human-discard" || game.locked) {
-      return;
-    }
-    event.preventDefault();
-    pointerId = event.pointerId;
-    startY = event.clientY;
-    currentY = startY;
-    everAboveHand = false;
-    dragging = true;
-    game.selectedTileId = tileId;
-    ghost = createGhost(element);
-    ghost.style.left = `${event.clientX}px`;
-    ghost.style.top = `${event.clientY}px`;
-    element.classList.add("ghosting");
-    element.setPointerCapture?.(pointerId);
-    attachDocumentGestureListeners();
-    setMessage("松手打出，拖回牌面可放回。");
-    renderStatus();
-  });
-
-  function moveGesture(event) {
-    if (!dragging || event.pointerId !== pointerId) {
-      return;
-    }
-    currentY = event.clientY;
-    if (isAboveHand(currentY)) {
-      everAboveHand = true;
-    }
-    if (ghost) {
-      ghost.style.left = `${event.clientX}px`;
-      ghost.style.top = `${event.clientY}px`;
-      ghost.classList.toggle("ghost-ready", isAboveHand(currentY));
-      ghost.classList.toggle("ghost-return", !isAboveHand(currentY));
-    }
-  }
-
-  function finishGesture(event) {
-    if (!dragging || event.pointerId !== pointerId) {
-      return;
-    }
-    dragging = false;
-    detachDocumentListeners?.();
-    detachDocumentListeners = null;
-    element.releasePointerCapture?.(pointerId);
-    element.classList.remove("ghosting", "selected");
-    if (ghost) {
-      ghost.remove();
-      ghost = null;
-    }
-    pointerId = null;
-
-    if (isAboveHand(currentY)) {
-      discardPlayerTile(tileId);
-      return;
-    }
-
-    if (!everAboveHand) {
-      discardPlayerTile(tileId);
-      return;
-    }
-
-    game.selectedTileId = null;
-    setMessage("上推手牌可以直接打出。");
-    render();
-  }
-
-  function attachDocumentGestureListeners() {
-    if (typeof document.addEventListener !== "function" || detachDocumentListeners) {
-      return;
-    }
-    document.addEventListener("pointermove", moveGesture);
-    document.addEventListener("pointerup", finishGesture);
-    document.addEventListener("pointercancel", finishGesture);
-    detachDocumentListeners = () => {
-      document.removeEventListener("pointermove", moveGesture);
-      document.removeEventListener("pointerup", finishGesture);
-      document.removeEventListener("pointercancel", finishGesture);
-    };
-  }
-
-  element.addEventListener("pointermove", moveGesture);
-  element.addEventListener("pointerup", finishGesture);
-  element.addEventListener("pointercancel", finishGesture);
-}
-
-function renderTile(tile, options = {}) {
-  const { clickable = false, selected = false, small = false, showWild = false } = options;
-  const element = document.createElement("div");
-  const classes = ["tile"];
-  const className = tile.suit === "honor" ? "honor" : SUIT_CONFIG[tile.suit].className;
-  classes.push(className);
-  if (clickable) {
-    classes.push("clickable");
-  }
-  if (selected) {
-    classes.push("selected");
-  }
-  if (small) {
-    classes.push("small");
-  }
-  if (showWild && isTileWild(tile)) {
-    classes.push("wild");
-  }
-  element.className = classes.join(" ");
-
-  element.innerHTML = getTileFaceMarkup(tile);
-  element.title = tileLabel(tile);
-  return element;
 }
 
 function renderActionBar() {
@@ -1366,19 +492,24 @@ function renderActionBar() {
 
   if (game.phase === "human-discard") {
     const player = getPlayer(0);
-    const canSelfHu = isWinningHand(player.hand, game.wildKey);
+    const canSelfHu = isWinningWithMelds(player.hand, player.melds, game.wildKey);
     const canGang = !player.piaoCai && getConcealedGangChoices(player.hand, game.wildKey).length > 0;
+    const wildCount = countWildInHand(player.hand, game.wildKey);
+
     if (canSelfHu) {
-      actions.push({ label: "胡", primary: true, handler: () => declareWin(0, player.piaoCai ? "飘财" : "自摸", null, game.lastDraw?.tile || null) });
+      const kind = player.piaoCai ? "飘财" : "自摸";
+      actions.push({ label: "胡", primary: true, handler: () => declareWin(0, kind, null, game.lastDraw?.tile || null) });
+      // 暴头状态可飘财：手中有≥2张财神时可放弃胡牌，打出财神等下一轮暴头
+      if (!player.piaoCai && wildCount >= 2) {
+        actions.push({ label: "飘财", handler: () => declarePiaoCai(0) });
+      }
+      // 飘财回轮时，若还有≥2张财神可继续飘
+      if (player.piaoCai && wildCount >= 2) {
+        actions.push({ label: "继续飘财", handler: () => declarePiaoCai(0) });
+      }
     }
     if (canGang) {
       actions.push({ label: "暗杠", handler: () => promptConcealedGang() });
-    }
-    if (!player.piaoCai && !canSelfHu) {
-      const waits = getWaitTiles(player.hand, game.wildKey);
-      if (waits.length > 0) {
-        actions.push({ label: "飘财", handler: () => declarePiaoCai(0) });
-      }
     }
   }
 
@@ -1413,7 +544,7 @@ function renderActionBar() {
 
 function renderSidebar() {
   const player = getPlayer(0);
-  const waits = game.phase === "human-discard" ? buildDiscardHints(player.hand) : getWaitTiles(player.hand, game.wildKey);
+  const waits = game.phase === "human-discard" ? getDiscardHintsWithMelds(player.hand, player.melds, game.wildKey) : getWaitTilesWithMelds(player.hand, player.melds, game.wildKey);
   dom.hintList.innerHTML = "";
 
   if (player.piaoCai) {
@@ -1421,7 +552,7 @@ function renderSidebar() {
     line.style.color = "#ffe4a4";
     line.textContent = "飘财中 · 胡牌双倍";
     dom.hintList.appendChild(line);
-    const rawWaits = getWaitTiles(player.hand, game.wildKey);
+    const rawWaits = getWaitTilesWithMelds(player.hand, player.melds, game.wildKey);
     if (rawWaits.length > 0) {
       const row = document.createElement("div");
       row.className = "wait-row";
@@ -1469,7 +600,7 @@ function renderSidebar() {
 }
 
 function renderStatus() {
-  dom.wallCount.textContent = `牌墙 ${game.wall.length}`;
+  dom.remainingCount.textContent = `剩余 ${game.tilePool.length} 张`;
   dom.turnText.textContent = `当前 ${getPlayer(game.turn).wind}位 ${getPlayer(game.turn).name}`;
   dom.statusLine.textContent = game.message;
   dom.wildTileBadge.innerHTML = `<img class="badge-tile" src="${tileAssetPath(game.wildTile)}" alt=""><span>${tileLabel(game.wildTile)}财神</span>`;
@@ -1538,26 +669,271 @@ function renderWinnerModal() {
   document.body.appendChild(modal);
 }
 
-function buildDiscardHints(hand) {
-  const hints = [];
-  const seen = new Set();
+// ============================================================
+// 手势 + 键盘输入
+// ============================================================
 
-  hand.forEach((tile) => {
-    const key = tileKey(tile);
-    if (seen.has(key)) {
-      return;
+function bindDiscardGesture(element, tileId) {
+  let startX = 0, startY = 0;
+  let currentX = 0, currentY = 0;
+  let pointerId = null;
+  let dragging = false;
+  let ghost = null;
+  let everAboveHand = false;
+  let rearranging = false;
+  let originIndex = -1;
+  let insertIndicator = null;
+  let detachDocumentListeners = null;
+
+  const HAND_REARRANGE_THRESHOLD = 12;
+
+  function handTop() {
+    return dom.playerHand.getBoundingClientRect().top;
+  }
+
+  function isAboveHand(y) {
+    return y < handTop() - 12;
+  }
+
+  function canDiscard() {
+    return game.phase === "human-discard" && !game.locked;
+  }
+
+  function createGhost(srcEl) {
+    const el = document.createElement("div");
+    el.className = "tile-ghost";
+    el.innerHTML = srcEl.querySelector(".tile-face")?.outerHTML || "";
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function handTileElements() {
+    return [...dom.playerHand.querySelectorAll(".tile:not(.insert-indicator)")];
+  }
+
+  function insertIndexAt(clientX) {
+    const tiles = handTileElements();
+    if (tiles.length === 0) return 0;
+    for (let i = 0; i < tiles.length; i++) {
+      const rect = tiles[i].getBoundingClientRect();
+      if (clientX < rect.left + rect.width / 2) return i;
     }
-    seen.add(key);
-    const trial = hand.filter((item) => item.id !== tile.id);
-    const waits = getWaitTiles(trial, game.wildKey);
-    if (waits.length > 0) {
-      hints.push({ discard: tile, waits });
+    return tiles.length;
+  }
+
+  function showInsertIndicator(clientX) {
+    hideInsertIndicator();
+    const idx = insertIndexAt(clientX);
+    insertIndicator = document.createElement("div");
+    insertIndicator.className = "insert-indicator";
+    const tiles = handTileElements();
+    if (idx < tiles.length) {
+      dom.playerHand.insertBefore(insertIndicator, tiles[idx]);
+    } else {
+      dom.playerHand.appendChild(insertIndicator);
     }
+  }
+
+  function hideInsertIndicator() {
+    if (insertIndicator) {
+      insertIndicator.remove();
+      insertIndicator = null;
+    }
+    handTileElements().forEach(c => {
+      c.classList.remove("make-room-left", "make-room-right");
+    });
+  }
+
+  element.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    pointerId = event.pointerId;
+    startX = event.clientX;
+    startY = event.clientY;
+    currentX = startX;
+    currentY = startY;
+    everAboveHand = false;
+    rearranging = false;
+    dragging = true;
+    originIndex = getPlayer(0).hand.findIndex(t => t.id === tileId);
+    game.selectedTileId = tileId;
+    ghost = createGhost(element);
+    ghost.style.left = `${event.clientX}px`;
+    ghost.style.top = `${event.clientY}px`;
+    element.classList.add("ghosting");
+    element.setPointerCapture?.(pointerId);
+    attachDocumentGestureListeners();
+    setMessage(canDiscard() ? "松手打出，水平拖拽可理牌。" : "水平拖拽可理牌。");
+    renderStatus();
   });
 
-  hints.sort((a, b) => b.waits.length - a.waits.length || tileSortValue(a.discard) - tileSortValue(b.discard));
-  return hints;
+  function moveGesture(event) {
+    if (!dragging || event.pointerId !== pointerId) {
+      return;
+    }
+    currentX = event.clientX;
+    currentY = event.clientY;
+
+    if (isAboveHand(currentY) && canDiscard()) {
+      everAboveHand = true;
+      if (rearranging) {
+        rearranging = false;
+        hideInsertIndicator();
+        element.classList.remove("rearranging");
+        renderPlayerHand();
+      }
+    }
+
+    if (!everAboveHand) {
+      const dx = Math.abs(currentX - startX);
+      const dy = Math.abs(currentY - startY);
+      if (dx > HAND_REARRANGE_THRESHOLD && dx > dy * 2) {
+        if (!rearranging) {
+          rearranging = true;
+          element.classList.add("rearranging");
+        }
+        showInsertIndicator(currentX);
+      } else if (rearranging && dy > HAND_REARRANGE_THRESHOLD) {
+        rearranging = false;
+        hideInsertIndicator();
+        element.classList.remove("rearranging");
+      }
+    }
+
+    if (ghost) {
+      ghost.style.left = `${currentX}px`;
+      ghost.style.top = rearranging ? `${handTop() + 34}px` : `${currentY}px`;
+      ghost.classList.toggle("ghost-rearrange", rearranging);
+      ghost.classList.toggle("ghost-ready", !rearranging && isAboveHand(currentY));
+      ghost.classList.toggle("ghost-return", !rearranging && !isAboveHand(currentY));
+    }
+  }
+
+  function finishGesture(event) {
+    if (!dragging || event.pointerId !== pointerId) {
+      return;
+    }
+    dragging = false;
+    detachDocumentListeners?.();
+    detachDocumentListeners = null;
+    element.releasePointerCapture?.(pointerId);
+    element.classList.remove("ghosting", "selected", "rearranging");
+    hideInsertIndicator();
+    if (ghost) {
+      ghost.remove();
+      ghost = null;
+    }
+    pointerId = null;
+
+    if (rearranging) {
+      const targetIdx = insertIndexAt(currentX);
+      const player = getPlayer(0);
+      const curIdx = player.hand.findIndex(t => t.id === tileId);
+      if (curIdx !== -1 && targetIdx !== curIdx) {
+        const adjusted = targetIdx > curIdx ? targetIdx - 1 : targetIdx;
+        const [tile] = player.hand.splice(curIdx, 1);
+        player.hand.splice(adjusted, 0, tile);
+      }
+      saveHandOrder();
+      game.selectedTileId = null;
+      setMessage("");
+      render();
+      return;
+    }
+
+    if (!canDiscard()) {
+      game.selectedTileId = null;
+      setMessage("");
+      render();
+      return;
+    }
+
+    if (isAboveHand(currentY)) {
+      discardPlayerTile(tileId);
+      return;
+    }
+
+    if (!everAboveHand) {
+      discardPlayerTile(tileId);
+      return;
+    }
+
+    game.selectedTileId = null;
+    setMessage("上推手牌可以直接打出。");
+    render();
+  }
+
+  function attachDocumentGestureListeners() {
+    if (typeof document.addEventListener !== "function" || detachDocumentListeners) {
+      return;
+    }
+    document.addEventListener("pointermove", moveGesture);
+    document.addEventListener("pointerup", finishGesture);
+    document.addEventListener("pointercancel", finishGesture);
+    detachDocumentListeners = () => {
+      document.removeEventListener("pointermove", moveGesture);
+      document.removeEventListener("pointerup", finishGesture);
+      document.removeEventListener("pointercancel", finishGesture);
+    };
+  }
+
+  element.addEventListener("pointermove", moveGesture);
+  element.addEventListener("pointerup", finishGesture);
+  element.addEventListener("pointercancel", finishGesture);
 }
+
+function setupKeyboardShortcuts() {
+  document.addEventListener("keydown", (event) => {
+    if (!game || game.locked) return;
+    if (event.target.closest("input, textarea, [contenteditable]")) return;
+
+    if (game.phase === "human-discard" && !game.winner && !game.drawReason) {
+      if (event.key === "d" || event.key === "D") {
+        const selected = game.selectedTileId;
+        if (selected) { discardPlayerTile(selected); return; }
+        const player = getPlayer(0);
+        if (player.hand.length > 0) {
+          discardPlayerTile(player.hand[player.hand.length - 1].id);
+        }
+        return;
+      }
+    }
+
+    if (game.phase === "claim" && game.claimOptions.length > 0) {
+      if (event.key === " " || event.key === "Escape") {
+        event.preventDefault();
+        passClaim();
+        return;
+      }
+      const num = parseInt(event.key);
+      if (num >= 1 && num <= game.claimOptions.length) {
+        event.preventDefault();
+        game.claimOptions[num - 1].handler();
+        return;
+      }
+    }
+  });
+}
+
+// ============================================================
+// 工具：去重牌
+// ============================================================
+
+function uniqueTilesByKey(tiles) {
+  const seen = new Set();
+  const unique = [];
+  tiles.forEach((tile) => {
+    const key = tileKey(tile);
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(tile);
+    }
+  });
+  return unique;
+}
+
+// ============================================================
+// 游戏流程 — 出牌
+// ============================================================
 
 function discardPlayerTile(tileId) {
   const player = getPlayer(0);
@@ -1567,7 +943,7 @@ function discardPlayerTile(tileId) {
   }
 
   const [tile] = player.hand.splice(index, 1);
-  sortTiles(player.hand);
+  sortPlayerHand(player);
   player.discards.push(tile);
 
   const drawRecord = game.lastDraw;
@@ -1579,159 +955,45 @@ function discardPlayerTile(tileId) {
   addLog(`你打出 ${tileLabel(tile)}。`);
   setMessage("等待其他三家判断。");
   AudioManager.discard();
+  _coachAfterDiscard(tile);
   checkClaimsAfterDiscard(0, tile);
   saveGame();
   render();
 }
 
-function getConcealedGangChoices(hand, wildKey) {
-  const counts = new Map();
-  hand.forEach((tile) => {
-    const key = tileKey(tile);
-    counts.set(key, (counts.get(key) || []).concat(tile));
-  });
-
-  return [...counts.values()].filter((tiles) => tiles.length === 4 && tileKey(tiles[0]) !== wildKey);
-}
-
-function promptConcealedGang() {
-  const choices = getConcealedGangChoices(getPlayer(0).hand, game.wildKey);
-  if (choices.length === 0) {
-    return;
-  }
-
-  game.phase = "claim";
-  game.claimOptions = choices.map((tiles) => ({
-    label: `杠 ${tileLabel(tiles[0])}`,
-    handler: () => performConcealedGang(0, tiles[0]),
-  }));
-  setMessage("选择要暗杠的牌。");
-  render();
-}
-
-function performConcealedGang(playerId, referenceTile) {
-  const player = getPlayer(playerId);
-  const matching = player.hand.filter((tile) => tileKey(tile) === tileKey(referenceTile));
-  if (matching.length < 4) {
-    return;
-  }
-
-  player.hand = player.hand.filter((tile) => tileKey(tile) !== tileKey(referenceTile));
-  player.melds.push({ type: "gang", concealed: true, tiles: matching.slice(0, 4) });
-  addLog(`${player.name} 暗杠 ${tileLabel(referenceTile)}。`);
-  AudioManager.gang();
-  game.claimOptions = [];
-  game.phase = null;
-  drawTileForPlayer(playerId, "杠后补牌");
-}
-
-function declarePiaoCai(playerId) {
-  const player = getPlayer(playerId);
-  if (player.piaoCai) return;
-  const waits = getWaitTiles(player.hand, game.wildKey);
-  if (waits.length === 0) return;
-
-  player.piaoCai = true;
-  addLog(`${player.name} 飘财！亮出财神，听牌等胡。`);
-  AudioManager.peng();
-  setMessage(`${player.name} 已飘财，摸到即打，胡牌双倍。`);
-  game.phase = null;
-  game.claimOptions = [];
-  saveGame();
-  render();
-  advanceTurn(playerId);
-}
-
-function piaoCaiAutoDiscard(playerId) {
-  const player = getPlayer(playerId);
-  const drawnTile = game.lastDraw.tile;
-  const idx = player.hand.findIndex((t) => t.id === drawnTile.id);
-  if (idx === -1) {
-    advanceTurn(playerId);
-    return;
-  }
-  const [discarded] = player.hand.splice(idx, 1);
-  sortTiles(player.hand);
-  player.discards.push(discarded);
-
-  game.lastDiscard = { playerId, tile: discarded, fromDraw: true };
-  game.claimOptions = [];
-  setMessage(`${player.name} 飘财摸到 ${tileLabel(discarded)}，即打。`);
-
-  if (player.isHuman) {
-    addLog(`你飘财摸到 ${tileLabel(discarded)}，即打。`);
-  } else {
-    addLog(`${player.name} 飘财，打出 ${tileLabel(discarded)}。`);
-  }
-  AudioManager.discard();
-  checkClaimsAfterDiscard(playerId, discarded);
-  saveGame();
-  render();
-}
-
-function advanceTurn(playerId) {
-  game.turn = (playerId + 1) % 4;
-  if (game.winner || game.drawReason) return;
-  schedule(() => takeTurn(game.turn), TURN_DELAY);
-}
-
-function shouldAiPiaoCai(playerId) {
-  const player = getPlayer(playerId);
-  const waits = getWaitTiles(player.hand, game.wildKey);
-  if (waits.length === 0) return false;
-
-  resetSharedMemo();
-  const waitRemain = availableWaitCount(waits, playerId);
-  if (waitRemain < 5) return false;
-
-  const waitQuality = evaluateWaitQuality(waits, playerId);
-  const wallsRemain = game.wall.length;
-  const drawChance = waitRemain / Math.max(1, wallsRemain);
-  const expectedValue = drawChance * waitQuality * 1.6;
-
-  return expectedValue > 0.22;
-}
-
-function passClaim() {
-  game.claimOptions = [];
-  game.phase = null;
-  AudioManager.pass();
-  if (game.lastDiscard) {
-    advanceTurnFromDiscard(game.lastDiscard.playerId);
-  }
-  saveGame();
-  render();
-}
-
-function advanceTurnFromDiscard(discarderId) {
-  const nextPlayerId = (discarderId + 1) % 4;
-  game.turn = nextPlayerId;
-  schedule(() => takeTurn(nextPlayerId), TURN_DELAY);
-}
+// ============================================================
+// 游戏流程 — 吃碰杠判定
+// ============================================================
 
 function checkClaimsAfterDiscard(discarderId, tile) {
+  // 飘财期间：任何人不能吃碰明杠（只能暗杠/自摸胡）
+  const someonePiaoCai = game.players.some(p => p.piaoCai);
+
   const claimList = [];
 
-  const nextPlayerId = (discarderId + 1) % 4;
-  const nextPlayer = getPlayer(nextPlayerId);
-  if (!nextPlayer.piaoCai) {
-    const chiChoices = getChiOptions(nextPlayer.hand, tile, game.wildKey);
-    if (chiChoices.length > 0) {
-      claimList.push({ playerId: nextPlayerId, type: "chi", priority: 1, choices: chiChoices });
+  if (!someonePiaoCai) {
+    const nextPlayerId = (discarderId + 1) % 4;
+    const nextPlayer = getPlayer(nextPlayerId);
+    if (!nextPlayer.piaoCai) {
+      // 庄下家吃庄需先亮财神（手牌中有财神才能吃）
+      const isDealerNext = discarderId === game.dealer;
+      const hasWild = nextPlayer.hand.some((t) => tileKey(t) === game.wildKey);
+      if (!isDealerNext || hasWild) {
+        const chiChoices = getChiOptions(nextPlayer.hand, tile, game.wildKey);
+        if (chiChoices.length > 0) {
+          claimList.push({ playerId: nextPlayerId, type: "chi", priority: 1, choices: chiChoices });
+        }
+      }
     }
-  }
 
-  for (let offset = 1; offset <= 3; offset += 1) {
-    const playerId = (discarderId + offset) % 4;
-    const claimant = getPlayer(playerId);
-    if (claimant.piaoCai) continue;
-    const hand = claimant.hand;
-    const count = hand.filter((handTile) => tileKey(handTile) === tileKey(tile)).length;
-    if (count >= 2 && tileKey(tile) !== game.wildKey) {
-      claimList.push({ playerId, type: "peng", priority: 2 });
-    }
-    if (count >= 3 && tileKey(tile) !== game.wildKey) {
-      claimList.push({ playerId, type: "gang", priority: 2.5 });
+    for (let offset = 1; offset <= 3; offset += 1) {
+      const playerId = (discarderId + offset) % 4;
+      const claimant = getPlayer(playerId);
+      if (claimant.piaoCai) continue;
+      const claim = getPengOptions(claimant.hand, tile, game.wildKey);
+      if (claim) {
+        claimList.push({ playerId, type: claim.type, priority: claim.type === "gang" ? 2.5 : 2 });
+      }
     }
   }
 
@@ -1740,45 +1002,19 @@ function checkClaimsAfterDiscard(discarderId, tile) {
     return;
   }
 
-  const resolvedClaim = chooseClaimToResolve(claimList, tile, discarderId);
-  if (!resolvedClaim) {
+  const chosenClaim = chooseClaimToResolve(claimList, tile, discarderId);
+  if (!chosenClaim) {
     advanceTurnFromDiscard(discarderId);
     return;
   }
-  resolveClaim(resolvedClaim, tile, discarderId);
-}
-
-function distanceFromDiscarder(discarderId, playerId) {
-  return (playerId - discarderId + 4) % 4;
+  executeClaim(chosenClaim, tile, discarderId);
 }
 
 function chooseClaimToResolve(claimList, tile, discarderId) {
-  const viableClaims = claimList.filter((claim) => {
-    const player = getPlayer(claim.playerId);
-    if (player.isHuman || claim.type === "hu") {
-      return true;
-    }
-    if (claim.type === "gang") {
-      return shouldAiMeldGang(claim.playerId, tile);
-    }
-    if (claim.type === "peng") {
-      return shouldAiPeng(claim.playerId, tile);
-    }
-    if (claim.type === "chi") {
-      return chooseAiChiChoice(claim.playerId, tile, claim.choices) !== null;
-    }
-    return false;
-  });
-
-  if (viableClaims.length === 0) {
-    return null;
-  }
-
-  viableClaims.sort((a, b) => b.priority - a.priority || distanceFromDiscarder(discarderId, a.playerId) - distanceFromDiscarder(discarderId, b.playerId));
-  return viableClaims[0];
+  return resolveClaim(claimList, tile, discarderId, game);
 }
 
-function resolveClaim(claim, tile, discarderId) {
+function executeClaim(claim, tile, discarderId) {
   const player = getPlayer(claim.playerId);
 
   if (player.isHuman) {
@@ -1790,10 +1026,10 @@ function resolveClaim(claim, tile, discarderId) {
       options.push({ label: "杠", handler: () => performMeldGang(0, tile, discarderId) });
     }
     if (claim.type === "chi") {
-      claim.choices.forEach((choice, index) => {
+      claim.choices.forEach((choice) => {
         options.push({
-          label: `吃${index + 1}`,
-          handler: () => performChi(0, tile, discarderId, choice),
+          label: `吃 · ${choice.label}`,
+          handler: () => performChi(0, tile, discarderId, choice.ids),
         });
       });
     }
@@ -1815,9 +1051,9 @@ function resolveClaim(claim, tile, discarderId) {
       return;
     }
     if (claim.type === "chi") {
-      const choice = chooseAiChiChoice(claim.playerId, tile, claim.choices);
+      const choice = chooseChi(claim.playerId, tile, claim.choices, game);
       if (choice) {
-        performChi(claim.playerId, tile, discarderId, choice);
+        performChi(claim.playerId, tile, discarderId, choice.ids);
       } else {
         advanceTurnFromDiscard(discarderId);
       }
@@ -1825,68 +1061,159 @@ function resolveClaim(claim, tile, discarderId) {
   }, CLAIM_DELAY);
 }
 
-function getChiOptions(hand, tile, wildKey) {
-  if (tile.suit === "honor" || tileKey(tile) === wildKey) {
-    return [];
+function passClaim() {
+  game.claimOptions = [];
+  game.phase = null;
+  AudioManager.pass();
+  if (game.lastDiscard) {
+    advanceTurnFromDiscard(game.lastDiscard.playerId);
   }
-  const options = [];
-  const rank = Number(tile.rank);
-  const candidates = [
-    [rank - 2, rank - 1],
-    [rank - 1, rank + 1],
-    [rank + 1, rank + 2],
-  ];
+  saveGame();
+  render();
+}
 
-  candidates.forEach((pair) => {
-    if (pair.some((value) => value < 1 || value > 9)) {
-      return;
+// ============================================================
+// 游戏流程 — 四风连打
+// ============================================================
+
+function handleFourWindDiscard(windLabel) {
+  const dice1 = Math.floor(Math.random() * 6) + 1;
+  const dice2 = Math.floor(Math.random() * 6) + 1;
+  const penalty = dice1 + dice2;
+
+  const dealer = getPlayer(game.dealer);
+  game.players.forEach((p) => {
+    if (p.id !== game.dealer) {
+      dealer.score -= penalty;
+      p.score += penalty;
     }
-    const chosen = [];
-    for (const value of pair) {
-      const tileFound = hand.find((handTile) => handTile.suit === tile.suit && Number(handTile.rank) === value && tileKey(handTile) !== wildKey && !chosen.includes(handTile.id));
-      if (!tileFound) {
-        return;
-      }
-      chosen.push(tileFound.id);
-    }
-    options.push(chosen);
   });
 
-  return options;
+  addLog(`四风连打！四家首弃均为${windLabel}，庄家掷骰子 ${dice1}+${dice2}=${penalty}，付每家${penalty}分。本局重开。`);
+  setMessage(`四风连打 — 庄家赔付${penalty * 3}分，同庄重开。`);
+  game.winner = null;
+  game.drawReason = "四风连打";
+  game.phase = null;
+  game.claimOptions = [];
+  saveGame();
+  render();
+
+  schedule(() => {
+    restartWithDealer(game.dealer);
+  }, 1800);
+}
+
+function restartWithDealer(dealerId) {
+  game = createNewGame();
+  game.dealer = dealerId;
+  game.turn = dealerId;
+  game._firstDiscards = [];
+  game._revealedTile = null;
+  // Reveal last tile of the wall for 杠后补牌
+  if (game.tilePool.length > 0) {
+    game._revealedTile = game.tilePool[game.tilePool.length - 1];
+  }
+  // If dealer is not player 0, re-deal: dealer gets 14 tiles
+  if (dealerId !== 0) {
+    const dealerPlayer = getPlayer(dealerId);
+    const player0 = getPlayer(0);
+    // Swap starting hand sizes: original code always gives player0 14 tiles
+    // For non-0 dealer, we need to adjust
+    while (dealerPlayer.hand.length < 14) {
+      dealerPlayer.hand.push(player0.hand.pop());
+    }
+    sortPlayerHand(dealerPlayer);
+    sortPlayerHand(player0);
+  }
+  game.phase = "human-discard";
+  game.message = `新局开始（${getPlayer(dealerId).wind}位连庄），上推手牌出牌。`;
+  game.logs.unshift(`新局开始，${getPlayer(dealerId).wind}位连庄。`);
+  saveGame();
+  render();
+}
+
+// ============================================================
+// 游戏流程 — 回合推进
+// ============================================================
+
+function advanceTurnFromDiscard(discarderId) {
+  game._discardCount = (game._discardCount || 0) + 1;
+
+  // 记录首弃牌（四风连打检测）
+  if (game._firstDiscards && game.lastDiscard) {
+    const alreadyRecorded = game._firstDiscards.some(d => d.playerId === discarderId);
+    if (!alreadyRecorded) {
+      game._firstDiscards.push({ playerId: discarderId, tile: game.lastDiscard.tile });
+      if (game._firstDiscards.length === 4) {
+        const result = checkFourWindDiscard(game._firstDiscards);
+        if (result.isFourWind) {
+          handleFourWindDiscard(result.windLabel);
+          return;
+        }
+      }
+    }
+  }
+
+  const nextPlayerId = (discarderId + 1) % 4;
+  game.turn = nextPlayerId;
+  schedule(() => takeTurn(nextPlayerId), TURN_DELAY);
+}
+
+function advanceTurn(playerId) {
+  game.turn = (playerId + 1) % 4;
+  if (game.winner || game.drawReason) return;
+  schedule(() => takeTurn(game.turn), TURN_DELAY);
 }
 
 function takeTurn(playerId) {
-  if (game.winner || game.drawReason) {
-    return;
-  }
+  if (game.winner || game.drawReason) return;
   game.turn = playerId;
   drawTileForPlayer(playerId, "摸牌");
 }
 
 function drawTileForPlayer(playerId, reason) {
-  if (game.wall.length === 0) {
-    game.drawReason = "牌墙已空，本局流局。";
+  if (game.tilePool.length === 0) {
+    game.drawReason = "牌已摸完，本局流局。";
+    game._nextDealer = game.dealer; // 流局原庄连庄
     setMessage(game.drawReason);
     render();
     return;
   }
 
-  const tile = game.wall.pop();
+  // 杠后补牌：从倒数第二张补，倒数第一张翻开公示
+  let tile;
+  if (reason === "杠后补牌" && game.tilePool.length >= 2) {
+    tile = game.tilePool.splice(game.tilePool.length - 2, 1)[0];
+    // _revealedTile stays as the last tile
+  } else {
+    tile = game.tilePool.pop();
+    // Update revealed tile to new last tile (if any)
+    game._revealedTile = game.tilePool.length > 0 ? game.tilePool[game.tilePool.length - 1] : null;
+  }
+
   const player = getPlayer(playerId);
   player.hand.push(tile);
-  sortTiles(player.hand);
+  sortPlayerHand(player);
   game.lastDraw = { playerId, tile, reason };
   addLog(`${player.name}${reason === "摸牌" ? "摸到" : "补到"}一张牌。`);
   AudioManager.draw();
 
-  const winningNow = isWinningHand(player.hand, game.wildKey);
+  const winningNow = isWinningWithMelds(player.hand, player.melds, game.wildKey);
   if (winningNow) {
     if (player.isHuman) {
       game.phase = "human-discard";
       const extra = player.piaoCai ? "（飘财双倍）" : "";
       setMessage((reason === "杠后补牌" ? "杠开可胡" : "你已成胡") + extra + "，可以点胡或继续上推出牌。");
+      minimizeForDraw();
       render();
       return;
+    }
+    // AI: 暴头状态可飘财（首次或继续）
+    if (countWildInHand(player.hand, game.wildKey) >= 2) {
+      if (shouldPiaoCai(playerId, game)) {
+        declarePiaoCai(playerId);
+        return;
+      }
     }
     const kind = player.piaoCai ? "飘财" : reason === "杠后补牌" ? "杠开" : "自摸";
     schedule(() => declareWin(playerId, kind, null, tile), TURN_DELAY);
@@ -1908,12 +1235,19 @@ function drawTileForPlayer(playerId, reason) {
   if (player.isHuman) {
     game.phase = "human-discard";
     setMessage(reason === "杠后补牌" ? "补牌完成，上推或按 D 键出牌。" : "轮到你，上推或按 D 键出牌。");
+    minimizeForDraw();
     render();
+    // Trigger coach analysis in background worker (non-blocking)
+    _requestCoachAnalysis('brief');
     return;
   }
 
   schedule(() => aiDiscard(playerId), TURN_DELAY);
 }
+
+// ============================================================
+// 游戏流程 — 吃碰杠执行
+// ============================================================
 
 function performPeng(playerId, tile, discarderId) {
   const player = getPlayer(playerId);
@@ -1953,7 +1287,7 @@ function performChi(playerId, tile, discarderId, choiceIds) {
     .map((id) => player.hand.find((handTile) => handTile.id === id))
     .filter(Boolean);
   player.hand = player.hand.filter((handTile) => !choiceIds.includes(handTile.id));
-  sortTiles(player.hand);
+  sortPlayerHand(player);
   const meldTiles = [...chosenTiles, tile].sort((a, b) => tileSortValue(a) - tileSortValue(b));
   player.melds.push({ type: "chi", concealed: false, tiles: meldTiles });
   removeLastDiscardFromRiver(discarderId);
@@ -1971,44 +1305,304 @@ function performChi(playerId, tile, discarderId, choiceIds) {
   }
 }
 
-function removeMatchingTiles(hand, key, count) {
-  const removed = [];
-  for (let i = hand.length - 1; i >= 0 && removed.length < count; i -= 1) {
-    if (tileKey(hand[i]) === key) {
-      removed.push(hand[i]);
-      hand.splice(i, 1);
+// ============================================================
+// 游戏流程 — 杠
+// ============================================================
+
+function promptConcealedGang() {
+  const choices = getConcealedGangChoices(getPlayer(0).hand, game.wildKey);
+  if (choices.length === 0) return;
+
+  game.phase = "claim";
+  game.claimOptions = choices.map((tiles) => ({
+    label: `杠 ${tileLabel(tiles[0])}`,
+    handler: () => performConcealedGang(0, tiles[0]),
+  }));
+  setMessage("选择要暗杠的牌。");
+  render();
+}
+
+function performConcealedGang(playerId, referenceTile) {
+  const player = getPlayer(playerId);
+  const matching = player.hand.filter((tile) => tileKey(tile) === tileKey(referenceTile));
+  if (matching.length < 4) return;
+
+  player.hand = player.hand.filter((tile) => tileKey(tile) !== tileKey(referenceTile));
+  player.melds.push({ type: "gang", concealed: true, tiles: matching.slice(0, 4) });
+  addLog(`${player.name} 暗杠 ${tileLabel(referenceTile)}。`);
+  AudioManager.gang();
+  game.claimOptions = [];
+  game.phase = null;
+  drawTileForPlayer(playerId, "杠后补牌");
+}
+
+// ============================================================
+// 游戏流程 — 飘财
+// ============================================================
+
+function declarePiaoCai(playerId) {
+  const player = getPlayer(playerId);
+
+  // 飘财需要手中至少2张财神
+  const wildCount = countWildInHand(player.hand, game.wildKey);
+  if (wildCount < 2) return;
+
+  // 找到手中一张财神牌，将其打出（保留刚摸的牌）
+  const drawnTile = game.lastDraw?.tile;
+  const wildTile = player.hand.find(t =>
+    tileKey(t) === game.wildKey && (!drawnTile || t.id !== drawnTile.id)
+  ) || player.hand.find(t => tileKey(t) === game.wildKey);
+  if (!wildTile) return;
+
+  const idx = player.hand.indexOf(wildTile);
+  player.hand.splice(idx, 1);
+  sortPlayerHand(player);
+  player.discards.push(wildTile);
+  game.lastDiscard = { playerId, tile: wildTile, fromDraw: false };
+
+  // --- 多飘：已在飘财模式，摸到胡牌后选择继续飘 ---
+  if (player.piaoCai) {
+    player.piaoCount = (player.piaoCount || 0) + 1;
+
+    const piaoMult = 1 << (player.piaoCount + 1);
+    addLog(`${player.name} 继续飘财（${player.piaoCount}飘），倍率×${piaoMult}。`);
+    AudioManager.peng();
+    setMessage(`${player.name} 继续飘财，倍率×${piaoMult}。`);
+    game.phase = null;
+    game.claimOptions = [];
+    saveGame();
+    render();
+    advanceTurn(playerId);
+    return;
+  }
+
+  // --- 首次飘财 ---
+  player.piaoCai = true;
+  player.piaoCount = (player.piaoCount || 0) + 1;
+  game._piaoCaiOrigin = playerId;
+  game._piaoCaiTurnsTaken = 0;
+  addLog(`${player.name} 飘财！打出财神亮出暴头，等下一轮自摸。`);
+  AudioManager.peng();
+  setMessage(`${player.name} 已飘财，下一轮摸任意牌暴头胡牌。`);
+  game.phase = null;
+  game.claimOptions = [];
+  saveGame();
+  render();
+  advanceTurn(playerId);
+}
+
+function piaoCaiAutoDiscard(playerId) {
+  const player = getPlayer(playerId);
+  const drawnTile = game.lastDraw.tile;
+  const idx = player.hand.findIndex((t) => t.id === drawnTile.id);
+  if (idx === -1) {
+    advanceTurn(playerId);
+    return;
+  }
+  const [discarded] = player.hand.splice(idx, 1);
+  sortPlayerHand(player);
+  player.discards.push(discarded);
+
+  game.lastDiscard = { playerId, tile: discarded, fromDraw: false };
+  game.claimOptions = [];
+  setMessage(`${player.name} 飘财摸到 ${tileLabel(discarded)}，即打。`);
+
+  if (player.isHuman) {
+    addLog(`你飘财摸到 ${tileLabel(discarded)}，即打。`);
+  } else {
+    addLog(`${player.name} 飘财，打出 ${tileLabel(discarded)}。`);
+  }
+  AudioManager.discard();
+  checkClaimsAfterDiscard(playerId, discarded);
+  saveGame();
+  render();
+}
+
+// ============================================================
+// 游戏流程 — AI 出牌（ISMCTS via Web Worker）
+// ============================================================
+
+const HONOR_ORDER = ['east', 'south', 'west', 'north', 'red', 'green', 'white'];
+
+function _tileIdxToSuitRank(idx) {
+  if (idx < 9) return { suit: 'character', rank: idx + 1 };
+  if (idx < 18) return { suit: 'dot', rank: idx - 9 + 1 };
+  if (idx < 27) return { suit: 'bamboo', rank: idx - 18 + 1 };
+  return { suit: 'honor', rank: HONOR_ORDER[idx - 27] };
+}
+
+// --- Web Worker management ---
+
+let _aiWorker = null;
+let _aiCallback = null;
+
+function _getAIWorker() {
+  if (!_aiWorker) {
+    try {
+      _aiWorker = new Worker('./ai/ai-worker.js', { type: 'module' });
+      _aiWorker.onmessage = (e) => {
+        if (!_aiCallback) return;
+        const cb = _aiCallback;
+        _aiCallback = null;
+        const data = e.data;
+        if (data.error) {
+          cb.reject(new Error(data.message));
+        } else {
+          cb.resolve(data);
+        }
+      };
+      _aiWorker.onerror = () => {
+        if (!_aiCallback) return;
+        const cb = _aiCallback;
+        _aiCallback = null;
+        cb.reject(new Error('Worker error'));
+      };
+    } catch (_e) {
+      _aiWorker = null;
     }
   }
-  return removed;
+  return _aiWorker;
 }
 
-function removeLastDiscardFromRiver(playerId) {
-  const discards = getPlayer(playerId).discards;
-  discards.pop();
+// --- Coach Web Worker (always-on, receives analysis results) ---
+
+let _coachWorker = null;
+let _coachAnalysisPending = false;
+
+function _getCoachWorker() {
+  if (!_coachWorker) {
+    try {
+      _coachWorker = new Worker('./coach/coach-worker.js?v=3', { type: 'module' });
+      _coachWorker.onmessage = (e) => {
+        _coachAnalysisPending = false;
+        const data = e.data;
+        if (data.error) {
+          console.warn('Coach worker error:', data.error);
+          return;
+        }
+        if (data.type === 'coachAnalysis' && data.messages) {
+          // Augment messages with reasoning field for the UI
+          const msgs = data.messages.map(m => ({
+            ...m,
+            summary: (m.summary || '').replace(/\bundefined\b/g, '?'),
+            reasoning: (m.candidateBreakdown || m.reasoning || '').replace(/\bundefined\b/g, '?'),
+          }));
+          setCoachMessages(msgs);
+        }
+      };
+      _coachWorker.onerror = () => {
+        _coachAnalysisPending = false;
+        console.warn('Coach worker crashed');
+      };
+    } catch (_e) {
+      _coachWorker = null;
+    }
+  }
+  return _coachWorker;
 }
 
-function aiDiscard(playerId) {
+/** Trigger coach analysis from Web Worker (non-blocking) */
+function _requestCoachAnalysis(depth = 'standard') {
+  if (!isCoachMode()) return;
+  if (_coachAnalysisPending) return; // don't queue up multiple requests
+
+  const worker = _getCoachWorker();
+  if (!worker) return;
+
+  _coachAnalysisPending = true;
+  const gameData = _serializeGameForWorker(game);
+  worker.postMessage({ type: 'analyze', gameData, depth, playerDiscard: null });
+}
+
+function _serializeGameForWorker(g) {
+  return {
+    turn: g.turn,
+    dealer: g.dealer,
+    wildTile: { suit: g.wildTile.suit, rank: g.wildTile.rank },
+    _discardCount: g._discardCount || 0,
+    players: g.players.map(p => ({
+      hand: p.hand.map(t => ({ suit: t.suit, rank: t.rank })),
+      melds: p.melds.map(m => ({
+        type: m.type,
+        concealed: m.concealed,
+        tiles: m.tiles.map(t => ({ suit: t.suit, rank: t.rank })),
+      })),
+      discards: p.discards.map(t => ({ suit: t.suit, rank: t.rank })),
+      piaoCai: p.piaoCai,
+    })),
+    tilePool: g.tilePool.map(t => ({ suit: t.suit, rank: t.rank })),
+  };
+}
+
+function _fallbackDiscard(playerId) {
+  try {
+    const sim = fromGameState(game);
+    const result = chooseBestDiscard(sim, playerId);
+    if (result.tileIdx >= 0) {
+      const sr = _tileIdxToSuitRank(result.tileIdx);
+      return { tileIdx: result.tileIdx, suit: sr.suit, rank: sr.rank, source: 'fallback' };
+    }
+  } catch (_e) { /* fall through */ }
+  // Absolute last resort
   const player = getPlayer(playerId);
-  if (!player || player.hand.length === 0 || game.winner) {
+  const last = player.hand[player.hand.length - 1];
+  return { tileIdx: -1, suit: last.suit, rank: last.rank, source: 'fallback' };
+}
+
+function _requestAIDiscard(playerId) {
+  return new Promise((resolve) => {
+    const worker = _getAIWorker();
+    const gameData = _serializeGameForWorker(game);
+    const level = game.aiDifficulty || 'normal';
+
+    const timeoutId = setTimeout(() => {
+      _aiCallback = null;
+      resolve(_fallbackDiscard(playerId));
+    }, 1000);
+
+    if (!worker) {
+      clearTimeout(timeoutId);
+      resolve(_fallbackDiscard(playerId));
+      return;
+    }
+
+    _aiCallback = {
+      resolve: (data) => {
+        clearTimeout(timeoutId);
+        resolve({ tileIdx: data.tileIdx, suit: data.suit, rank: data.rank, source: data.source || 'ismcts' });
+      },
+      reject: () => {
+        clearTimeout(timeoutId);
+        resolve(_fallbackDiscard(playerId));
+      },
+    };
+
+    worker.postMessage({ type: 'chooseDiscard', gameData, playerId, difficulty: level });
+  });
+}
+
+function _finishAIDiscard(playerId, suit, rank) {
+  const player = getPlayer(playerId);
+  const tile = player.hand.find(t => t.suit === suit && t.rank === rank);
+  if (!tile) {
+    // Fallback: AI returned a tile not in hand — discard the last tile
+    const lastTile = player.hand[player.hand.length - 1];
+    if (!lastTile) {
+      game.locked = false;
+      return;
+    }
+    doDiscardAndAdvance(playerId, lastTile);
     return;
   }
 
-  if (!player.piaoCai && shouldAiPiaoCai(playerId)) {
-    declarePiaoCai(playerId);
-    return;
-  }
+  doDiscardAndAdvance(playerId, tile);
+}
 
-  const gangChoices = getConcealedGangChoices(player.hand, game.wildKey);
-  const gangChoice = chooseAiConcealedGang(playerId, gangChoices);
-  if (gangChoice) {
-    performConcealedGang(playerId, gangChoice[0]);
-    return;
-  }
-
-  const tile = chooseAiDiscard(player.hand, playerId);
-  const index = player.hand.findIndex((item) => item.id === tile.id);
+function doDiscardAndAdvance(playerId, tile) {
+  const player = getPlayer(playerId);
+  const index = player.hand.findIndex(item => item.id === tile.id);
   player.hand.splice(index, 1);
-  sortTiles(player.hand);
+  sortPlayerHand(player);
   player.discards.push(tile);
 
   const drawRecord = game.lastDraw;
@@ -2026,6 +1620,7 @@ function aiDiscard(playerId) {
     addLog(`${player.name} 打出 ${tileLabel(tile)}。`);
   }
 
+  game.locked = false;
   AudioManager.discard();
   setMessage(`轮到 ${getPlayer((playerId + 1) % 4).name}。`);
   checkClaimsAfterDiscard(playerId, tile);
@@ -2033,59 +1628,89 @@ function aiDiscard(playerId) {
   render();
 }
 
+function aiDiscard(playerId) {
+  const player = getPlayer(playerId);
+  if (!player || player.hand.length === 0 || game.winner) return;
+
+  const gangChoices = getConcealedGangChoices(player.hand, game.wildKey);
+  const gangChoice = chooseConcealedGang(playerId, gangChoices, game);
+  if (gangChoice) {
+    performConcealedGang(playerId, gangChoice[0]);
+    return;
+  }
+
+  game.locked = true;
+  _requestAIDiscard(playerId).then(({ suit, rank }) => {
+    if (game.winner) { game.locked = false; return; }
+    _finishAIDiscard(playerId, suit, rank);
+  }).catch(() => {
+    // Safety: if anything fails, discard last tile to avoid deadlock
+    game.locked = false;
+    if (game.winner) return;
+    const p = getPlayer(playerId);
+    if (p && p.hand.length > 0) {
+      doDiscardAndAdvance(playerId, p.hand[p.hand.length - 1]);
+    }
+  });
+}
+
+// ============================================================
+// 游戏流程 — 胡牌
+// ============================================================
+
 function declareWin(playerId, kind, fromPlayerId, winningTile = null) {
   const winner = getPlayer(playerId);
   const selfDrawTile = game.lastDraw?.playerId === playerId ? game.lastDraw.tile : null;
 
   if (winningTile && fromPlayerId != null) {
     winner.hand.push(cloneTile(winningTile));
-    sortTiles(winner.hand);
+    sortPlayerHand(winner);
   }
 
-  const flags = [];
-  if (isSevenPairs(winner.hand, game.wildKey)) {
-    flags.push("七对");
-  } else {
-    flags.push("平胡");
-  }
-  if (countWildcards(winner.hand, game.wildKey) > 0) {
-    flags.push("财神入手");
-  }
-  if (kind === "杠开") {
-    flags.push("杠开");
-  }
-  if (winner.piaoCai) {
-    flags.push("飘财");
-  }
-  if (isBaotou(winner.hand, game.wildKey, winningTile || selfDrawTile)) {
-    flags.push("爆头");
+  const fullHand = [...winner.hand];
+  for (const meld of winner.melds) {
+    for (const tile of meld.tiles) fullHand.push(cloneTile(tile));
   }
 
-  const base = flags.includes("七对") ? 24 : 12;
-  const bonus = flags.includes("杠开") ? 8 : 0;
-  let total = base + bonus;
-  if (winner.piaoCai) {
-    total *= 2;
-  }
+  const isDealer = playerId === game.dealer;
+  const isFirstTurn = (game._discardCount || 0) === 0;
+  const isFirstDraw = !isDealer && winner.discards.length === 0 && (game._discardCount || 0) <= 1;
 
-  if (fromPlayerId == null) {
+  const { flags, multiplier, isSelfDraw } = calculateWinScore({
+    hand: fullHand,
+    wildKey: game.wildKey,
+    kind,
+    winningTile: winningTile || selfDrawTile,
+    piaoCount: winner.piaoCount || 0,
+    isDealer,
+    isFirstDraw,
+    isFirstTurn,
+  });
+
+  if (isSelfDraw) {
     game.players.forEach((player) => {
       if (player.id !== playerId) {
-        player.score -= total;
-        winner.score += total;
+        const isDealerPayer = player.id === game.dealer;
+        const amount = isDealer
+          ? multiplier * 8
+          : (isDealerPayer ? multiplier * 8 : multiplier * 1);
+        player.score -= amount;
+        winner.score += amount;
       }
     });
   } else {
-    getPlayer(fromPlayerId).score -= total * 2;
-    winner.score += total * 2;
+    const amount = multiplier * 8 * 2;
+    getPlayer(fromPlayerId).score -= amount;
+    winner.score += amount;
   }
 
   game.winner = {
     playerId,
     fromPlayerId,
     kind,
-    summary: `${flags.join(" · ")}，${fromPlayerId == null ? "三家付分" : "点炮付分"} ${total}${fromPlayerId == null ? "/家" : "x2"}`,
+    summary: `${flags.join(" · ")}，倍率×${multiplier}，${isSelfDraw ? "自摸三家付分" : "点炮付分"}`,
   };
+  game._nextDealer = playerId; // 赢家当庄
   game.phase = null;
   game.claimOptions = [];
   setMessage(`${winner.name}${kind}。`);
@@ -2096,18 +1721,67 @@ function declareWin(playerId, kind, fromPlayerId, winningTile = null) {
   render();
 }
 
-function schedule(callback, delay) {
-  game.locked = true;
-  setTimeout(() => {
-    game.locked = false;
-    callback();
-  }, delay);
-}
+// ============================================================
+// 存档
+// ============================================================
 
 function startNewGame() {
-  game = newRound();
+  const prevDealer = game?._nextDealer;
+  const prevScores = game ? game.players.map(p => p.score) : null;
+  game = createNewGame();
+  // Apply saved difficulty
+  game.aiDifficulty = localStorage.getItem("hangma_difficulty") || "normal";
+  // Preserve scores across rounds
+  if (prevScores) {
+    game.players.forEach((p, i) => { p.score = prevScores[i]; });
+  }
+  if (prevDealer != null) {
+    game.dealer = prevDealer;
+    game.turn = prevDealer;
+    game.message = `流局 — ${getPlayer(prevDealer).wind}位连庄，上推手牌出牌。`;
+    game.logs.unshift(`流局，${getPlayer(prevDealer).wind}位连庄。`);
+  }
+  // Reveal last tile of the wall for 杠后补牌 display
+  if (game.tilePool.length > 0) {
+    game._revealedTile = game.tilePool[game.tilePool.length - 1];
+  }
   saveGame();
+  clearCoachMessages();
   render();
+}
+
+// ---- 教练面板：弃牌后生成分析消息 ----
+
+function _coachAfterDiscard(discardedTile) {
+  if (!isCoachMode()) return;
+  expandAfterDiscard();
+
+  const worker = _getCoachWorker();
+  if (!worker) return;
+
+  // Temporarily add the discarded tile back to player's hand for pre-discard analysis
+  const player = getPlayer(0);
+  const tileIndex = player.hand.findIndex(t =>
+    t.suit === discardedTile.suit && t.rank === discardedTile.rank);
+  let addedBack = false;
+  if (tileIndex === -1 && !player.piaoCai) {
+    player.hand.push(discardedTile);
+    addedBack = true;
+  }
+
+  _coachAnalysisPending = true;
+  const gameData = _serializeGameForWorker(game);
+  worker.postMessage({
+    type: 'analyze',
+    gameData,
+    depth: 'brief',
+    playerDiscard: { suit: discardedTile.suit, rank: discardedTile.rank },
+  });
+
+  // Restore hand
+  if (addedBack) {
+    player.hand.pop();
+  }
 }
 
 function saveGame() {
@@ -2119,16 +1793,24 @@ function saveGame() {
     const saveData = {
       players: game.players.map((p) => ({
         id: p.id, name: p.name, wind: p.wind, isHuman: p.isHuman, seatKey: p.seatKey,
-        hand: p.hand.map(cloneTile), melds: p.melds, discards: p.discards.map(cloneTile), score: p.score, piaoCai: p.piaoCai,
+        hand: p.hand.map(cloneTile), melds: p.melds, discards: p.discards.map(cloneTile), score: p.score, piaoCai: p.piaoCai, piaoCount: p.piaoCount || 0,
       })),
-      wall: game.wall.map(cloneTile),
+      tilePool: game.tilePool.map(cloneTile),
       dealer: game.dealer, turn: game.turn, phase: game.phase,
       selectedTileId: game.selectedTileId, claimOptions: game.claimOptions.map((o) => ({ label: o.label })),
-      lastDiscard: game.lastDiscard ? { playerId: game.lastDiscard.playerId, tile: cloneTile(game.lastDiscard.tile) } : null,
+      lastDiscard: game.lastDiscard ? { playerId: game.lastDiscard.playerId, tile: cloneTile(game.lastDiscard.tile), fromDraw: game.lastDiscard.fromDraw } : null,
       lastDraw: game.lastDraw ? { playerId: game.lastDraw.playerId, tile: cloneTile(game.lastDraw.tile), reason: game.lastDraw.reason } : null,
       winner: game.winner, drawReason: game.drawReason,
       wildTile: cloneTile(game.wildTile), wildKey: game.wildKey,
       message: game.message, logs: [...game.logs], locked: false,
+      _discardCount: game._discardCount || 0,
+      _firstDiscards: (game._firstDiscards || []).map(d => ({ playerId: d.playerId, tile: cloneTile(d.tile) })),
+      _revealedTile: game._revealedTile ? cloneTile(game._revealedTile) : null,
+      _piaoCaiOrigin: game._piaoCaiOrigin ?? -1,
+      _handCustomOrder: game._handCustomOrder || false,
+      _handOrder: game._handOrder ? [...game._handOrder] : [],
+      _nextDealer: game._nextDealer,
+      aiDifficulty: game.aiDifficulty || 'normal',
     };
     localStorage.setItem("hangma_save", JSON.stringify(saveData));
   } catch (e) { /* quota exceeded */ }
@@ -2140,11 +1822,20 @@ function restoreGame() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     data.players.forEach((p) => { p.hand = p.hand.map((t) => ({ ...t })); p.discards = p.discards.map((t) => ({ ...t })); });
-    data.wall = data.wall.map((t) => ({ ...t }));
+    data.tilePool = data.tilePool.map((t) => ({ ...t }));
     if (data.lastDiscard) data.lastDiscard.tile = { ...data.lastDiscard.tile };
     if (data.lastDraw) data.lastDraw.tile = { ...data.lastDraw.tile };
     data.wildTile = { ...data.wildTile };
     data.locked = false;
+    data._discardCount = data._discardCount || 0;
+    data._firstDiscards = (data._firstDiscards || []).map(d => ({ playerId: d.playerId, tile: { ...d.tile } }));
+    data._revealedTile = data._revealedTile ? { ...data._revealedTile } : null;
+    data._piaoCaiOrigin = data._piaoCaiOrigin ?? -1;
+    data._piaoCaiTurnsTaken = data._piaoCaiTurnsTaken || 0;
+    data._handCustomOrder = data._handCustomOrder || false;
+    data._handOrder = data._handOrder || [];
+    data._nextDealer = data._nextDealer ?? undefined;
+    data.aiDifficulty = data.aiDifficulty || 'normal';
     data.claimOptions = [];
     data.selectedTileId = null;
     if (data.phase !== "human-discard") data.phase = "human-discard";
@@ -2152,7 +1843,31 @@ function restoreGame() {
   } catch (e) { return null; }
 }
 
+// ============================================================
+// 初始化
+// ============================================================
+
 dom.newGameBtn.addEventListener("click", startNewGame);
+
+dom.resetScoreBtn.addEventListener("click", () => {
+  game.players.forEach(p => { p.score = INITIAL_SCORE; });
+  game._nextDealer = undefined;
+  localStorage.removeItem("hangma_save");
+  startNewGame();
+});
+
+// Difficulty selector
+const DIFFICULTY_KEY = "hangma_difficulty";
+if (dom.difficultySelect) {
+  const savedDifficulty = localStorage.getItem(DIFFICULTY_KEY) || "normal";
+  dom.difficultySelect.value = savedDifficulty;
+  dom.difficultySelect.addEventListener("change", () => {
+    const val = dom.difficultySelect.value;
+    localStorage.setItem(DIFFICULTY_KEY, val);
+    if (game) game.aiDifficulty = val;
+  });
+}
+
 if (dom.soundBtn) {
   if (!AudioManager.enabled) {
     dom.soundBtn.className = "icon-button sound-off";
@@ -2168,11 +1883,50 @@ if (dom.soundBtn) {
 
 setupKeyboardShortcuts();
 
+// 听牌建议折叠
+const HINT_COLLAPSED_KEY = "hangma_hint_collapsed";
+const hintToggle = document.querySelector("#hintToggle");
+const hintPanel = hintToggle?.closest(".hint-panel");
+if (hintToggle && hintPanel) {
+  const isCollapsed = localStorage.getItem(HINT_COLLAPSED_KEY) !== "false";
+  hintPanel.classList.toggle("collapsed", isCollapsed);
+  hintToggle.textContent = isCollapsed ? "听牌 ▶" : "听牌 ▼";
+  hintToggle.addEventListener("click", () => {
+    const collapsed = hintPanel.classList.toggle("collapsed");
+    hintToggle.textContent = collapsed ? "听牌 ▶" : "听牌 ▼";
+    localStorage.setItem(HINT_COLLAPSED_KEY, String(collapsed));
+  });
+}
+
 const saved = restoreGame();
 if (saved) {
   game = saved;
   game.message = "恢复上一局，上推手牌出牌。";
 } else {
-  game = newRound();
+  game = createNewGame();
+  game.aiDifficulty = localStorage.getItem("hangma_difficulty") || "normal";
 }
 render();
+
+// ---- 教练面板初始化 ----
+initCoachPanel();
+
+// 模式切换按钮
+const modeSlot = document.querySelector("#modeToggleSlot");
+if (modeSlot) {
+  modeSlot.appendChild(createModeToggleButton());
+}
+
+// 模式变化 → 显示/隐藏教练面板
+onModeChange((mode) => {
+  if (mode === 'coach') {
+    showCoachPanel();
+  } else {
+    hideCoachPanel();
+  }
+});
+
+// 启动时自动显示教练面板（如果已是教练模式）
+if (isCoachMode()) {
+  showCoachPanel();
+}

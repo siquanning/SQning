@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node src/test-step4.mjs)",
+      "Bash(node e:\\\\repos\\\\hangma\\\\src\\\\test-win.mjs)",
+      "Bash(node \"e:/repos/hangma/src/test-win.mjs\")",
+      "Bash(node \"e:/repos/hangma/src/test-step4.mjs\")",
+      "Bash(node \"e:/repos/hangma/src/test-step5.mjs\")",
+      "Bash(mkdir -p \"e:\\\\repos\\\\hangma\\\\src\\\\ai\")",
+      "PowerShell(node test/game-sim.test.js 2>&1)",
+      "Bash(node test/ismcts.test.js)",
+      "Bash(node e:/repos/hangma/test/game-sim.test.js)"
+    ],
+    "additionalDirectories": [
+      "e:\\repos\\hangma\\src"
+    ]
+  }
+}

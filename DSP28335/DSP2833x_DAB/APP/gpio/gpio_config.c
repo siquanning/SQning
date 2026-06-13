@@ -1,8 +1,5 @@
 /*
- * gpio_config.c
- *
- *  Created on: 2026年5月9日
- *      Author: 32485
+ * gpio_config.c — SCI-A GPIO 初始化（GPIO35/36，与 DSP2833x_EPWM_modbus 一致）
  */
 
 #include "DSP2833x_Device.h"
@@ -11,22 +8,19 @@
 
 void Init_Scia_Gpio(void)
 {
-    EALLOW;  // 允许修改保护寄存器
+    EALLOW;
 
-    // --- GPIO36 配置为 SCIRXDA (接收) ---
-    GpioCtrlRegs.GPBMUX1.bit.GPIO36 = 1;   // 设置为SCI功能 (01b)
-    GpioCtrlRegs.GPBDIR.bit.GPIO36 = 0;    // 设置为输入
-    GpioCtrlRegs.GPBQSEL1.bit.GPIO36 = 3;  // 异步输入模式 (11b)
-    GpioCtrlRegs.GPBPUD.bit.GPIO36 = 0;    // 使能内部上拉
+    // GPIO36 → SCIRXDA（输入，异步，内部上拉）
+    GpioCtrlRegs.GPBMUX1.bit.GPIO36  = 1;
+    GpioCtrlRegs.GPBDIR.bit.GPIO36   = 0;
+    GpioCtrlRegs.GPBQSEL1.bit.GPIO36 = 3;
+    GpioCtrlRegs.GPBPUD.bit.GPIO36   = 0;
 
-    // --- GPIO35 配置为 SCITXDA (发送) ---
-    GpioCtrlRegs.GPBMUX1.bit.GPIO35 = 1;   // 设置为SCI功能 (01b)
-    GpioCtrlRegs.GPBDIR.bit.GPIO35 = 1;    // 设置为输出
-    GpioCtrlRegs.GPBQSEL1.bit.GPIO35 = 3;  // 异步输入模式 (配置输出时也推荐)
-    GpioCtrlRegs.GPBPUD.bit.GPIO35 = 0;    // 使能内部上拉
+    // GPIO35 → SCITXDA（输出，异步）
+    GpioCtrlRegs.GPBMUX1.bit.GPIO35  = 1;
+    GpioCtrlRegs.GPBDIR.bit.GPIO35   = 1;
+    GpioCtrlRegs.GPBQSEL1.bit.GPIO35 = 3;
+    GpioCtrlRegs.GPBPUD.bit.GPIO35   = 0;
 
-    EDIS;    // 禁止修改保护寄存器
+    EDIS;
 }
-
-
-

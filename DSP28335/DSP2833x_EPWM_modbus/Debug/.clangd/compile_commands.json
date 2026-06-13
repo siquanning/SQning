@@ -1,87 +1,87 @@
 [
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm/epwm_config.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm/epwm_config.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio/gpio_config.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio/gpio_config.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds/leds.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds/leds.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus/app_modbus.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus/app_modbus.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus/modbus_slave.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus/modbus_slave.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci/app_sci.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci/app_sci.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci/sci_driver.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci/sci_driver.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\"",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_ADC_cal.asm"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\"",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_ADC_cal.asm"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\"",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_CodeStartBranch.asm"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\"",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_CodeStartBranch.asm"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_DefaultIsr.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_DefaultIsr.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_GlobalVariableDefs.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_GlobalVariableDefs.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_Gpio.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_Gpio.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_PieCtrl.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_PieCtrl.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_PieVect.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_PieVect.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_SysCtrl.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_SysCtrl.c"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\"",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_usDelay.asm"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\"",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/DSP2833x_Libraries/DSP2833x_usDelay.asm"
    },
    {
-      "directory" : "E:/DSP28335/DSP2833x_EPWM_modbus/Debug",
-      "command"   : "clang++ -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
-      "file"      : "E:/DSP28335/DSP2833x_EPWM_modbus/User/main.c"
+      "directory" : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/common\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/leds\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/modbus\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/sci\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/gpio\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/DSP2833x_EPWM_modbus/APP/epwm\" -xc",
+      "file"      : "E:/repos/DSP28335/DSP2833x_EPWM_modbus/User/main.c"
    }
 ]

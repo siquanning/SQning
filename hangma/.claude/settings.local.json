@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const fs=require\\('fs'\\);let c=fs.readFileSync\\('src/app.js','utf8'\\);c=c.replace\\('  const isDealer = playerId === game.dealer;\\\\n  const isFirstTurn = \\(game._discardCount || 0\\) === 0;\\\\n  const isFirstDraw = !isDealer && winner.discards.length === 0 && \\(game._discardCount || 0\\) <= 1;\\\\n\\\\n  const { flags, multiplier, isSelfDraw } = calculateWinScore\\({\\\\n    hand: winner.hand,','  const fullHand = [...winner.hand];\\\\n  for \\(const meld of winner.melds\\) {\\\\n    for \\(const tile of meld.tiles\\) fullHand.push\\(cloneTile\\(tile\\)\\);\\\\n  }\\\\n\\\\n  const isDealer = playerId === game.dealer;\\\\n  const isFirstTurn = \\(game._discardCount || 0\\) === 0;\\\\n  const isFirstDraw = !isDealer && winner.discards.length === 0 && \\(game._discardCount || 0\\) <= 1;\\\\n\\\\n  const { flags, multiplier, isSelfDraw } = calculateWinScore\\({\\\\n    hand: fullHand,'\\);fs.writeFileSync\\('src/app.js',c\\);console.log\\('OK'\\)\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const lines=fs.readFileSync\\('src/app.js','utf8'\\).split\\('\\\\n'\\);for\\(let i=1444;i<1470;i++\\)console.log\\(\\(i+1\\)+': '+lines[i]\\)\")",
+      "Bash(node --input-type=module -e ' *)"
+    ]
+  }
+}

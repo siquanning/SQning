@@ -1,5 +1,100 @@
 # 与 AI 对话记录
 
+## 2026-05-21 — v2.0 架构重构：UI/引擎分离
+
+### 背景
+用户要将杭州麻将的实现逻辑去掉，保留 UI，留下接口方便重新实现。用户提供了新 PRD 在 `docs/PRD.md`（从 `E:\CLAUDE\hangzhou_majiang\docs\PRD.md` 复制）。
+
+### 决策
+- **模块方案**：ES Modules（import/export），index.html 用 `<script type="module">`
+- **架构**：`engine.js`（引擎接口+stub） + `app.js`（纯 UI+流程编排）
+- **旧逻辑处理**：直接删除，不留参考。用户将按新 PRD 从头实现。
+- **Stub 模式**：engine.js 当前为桩实现，所有规则返回 false/空，UI 可正常渲染空桌。
+
+### 变更清单
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `src/engine.js` | **新建** | 引擎接口定义 + Stub 桩。31 处 `[TODO: IMPLEMENT]`，含完整 JSDoc |
+| `src/app.js` | **重写** | UI 层，~950 行。import engine 的所有规则/AI 函数 |
+| `src/index.html` | 修改 | `<script type="module" src="./app.js">` |
+| `package.json` | 修改 | 加 `"type": "module"` |
+| `AGENTS.md` | 更新 | 新架构说明、本地运行方式 |
+| `docs/PRD.md` | 新增 | 从 CLAUDE 目录复制 |
+| `docs/talk_with_ai` | 更新 | 本记录 |
+
+### engine.js 接口速览
+
+```
+导出的常量:
+  SUIT_CONFIG, HONOR_LABELS, CHINESE_NUMERALS, SEATS, INITIAL_SCORE
+
+Tile 工具 (纯函数，已实现):
+  createTile, tileKey, tileLabel, tileGlyph, tileSortValue, sortTiles,
+  cloneTile, tileAssetName, tileAssetPath, isTileWild, shuffle
+
+状态创建 (需实现):
+  createWall() → Tile[]     — 136张洗牌
+  createPlayers() → Player[] — 已实现
+  createNewGame() → GameState — 发牌+定财神
+
+规则判定 (需实现):
+  isWinningHand(tiles, wildKey) → boolean
+  getWaitTiles(tiles, wildKey) → Tile[]
+  getChiOptions(hand, discardTile, wildKey) → tileId[][]
+  getConcealedGangChoices(hand, wildKey) → Tile[][]
+
+提示 (需实现):
+  getDiscardHints(hand, wildKey) → {discard, waits}[]
+
+AI 决策 (需实现):
+  chooseDiscard(hand, playerId, gameState) → Tile
+  shouldPeng(playerId, tile, gameState) → boolean
+  shouldMeldGang(playerId, tile, gameState) → boolean
+  chooseChi(playerId, tile, choices, gameState) → tileId[]|null
+  chooseConcealedGang(playerId, choices, gameState) → Tile[]|null
+  shouldPiaoCai(playerId, gameState) → boolean
+  resolveClaim(claimList, tile, discarderId, gameState) → ClaimItem|null
+
+计分 (需实现):
+  calculateWinScore({hand, wildKey, kind, winningTile, piaoCai})
+    → { flags: string[], total: number, isSelfDraw: boolean }
+```
+
+### 关键 PRD 差异（与旧代码不同）
+
+| 规则 | 旧代码 | PRD |
+|------|--------|-----|
+| 胡牌 | 自摸 | 只能自摸，无放炮 |
+| 计分 | 统一 250 分底，赢家得分 = 底分变动 | 庄家：8×倍率/家；闲家：庄付8×、另两闲付1× |
+| 牌型 | 七对、平胡、爆头、杠开 | 16 种牌型，叠加乘法，无封顶 |
+| 杠补 | 牌墙末尾 | 倒数第二张，倒数第一张翻开公示 |
+| 四风连打 | 无 | 有，触发后庄家掷骰子付分，本局重开 |
+| 飘财 | 2 倍 | 一飘4倍、二飘8倍、三飘16倍，参与牌型叠加 |
+| 财神 | 固定白板 | 固定白板（一致） |
+| 飘财期间 | 不可吃碰杠 | 不可吃碰明杠，但可暗杠、可自摸胡 |
+
+### 待办（下一会话）
+1. 实现 `engine.js` 中所有 `[TODO: IMPLEMENT]` 标记的函数
+2. 按 PRD 规则实现 16 种牌型判定
+3. 更新 `smoke-test.js` 测试用例
+4. 实现四风连打检测
+5. 杠后从倒数第二张补牌 + 倒数第一张公示
+
+### 本地运行
+```powershell
+cd E:\repos\hangma\src
+npx serve .          # 或 python -m http.server 8899
+# 浏览器打开 http://localhost:8899 (或 :3000)
+```
+
+### 不做的特性（初版）
+- 网络对战
+- 道具/皮肤
+- 教练模式（PRD 第8-10节，后续版本）
+
+---
+
 ## 2026-05-18 — v1.1 飘财 + AI 策略重训
 
 ### 决策
@@ -34,4 +129,4 @@
 ### 修复
 - `getCanonicalCounts`：移除 reserved 机制，所有财神牌全部计入 wildCount，不放入 counts
 - `countWildcards`：移除 `-1`，直接返回财神数量（1 张财神即算"财神入手"）
-- `isBaotou`：恢复原始判定结构（移除胡牌+1癞子→12张成4面子=爆头），配合新的 wildCount 正确运作。爆头定义：财神在将牌中（与胡牌配对），不在面子中
+- `isBaotou`：恢复原始判定结构（移除胡牌+1癞子→12张成4面子=爆头），配合新的 wildCount 正确运作。爆头定义：手牌有1张财神且已听牌，摸任意牌可胡。

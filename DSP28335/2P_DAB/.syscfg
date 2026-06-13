@@ -1,0 +1,80 @@
+/**
+ * .syscfg — SysConfig for 2P_DAB (TMS320F28335)
+ *
+ * Configures:
+ *   - Device: TMS320F28335, 176-Pin PTP package
+ *   - System clock: 150MHz (PLL from 30MHz XTAL)
+ *   - GPIO64-68: Output pins (LED1-LED5)
+ *
+ * Open this file in CCS SysConfig GUI editor (not as plain text)
+ * to modify pin assignments or add peripherals.
+ *
+ * Generated arguments:
+ * @cliArgs --device "TMS320F28335" --package "176-Pin PTP" --part "Default" --product "C2000WARE@5.04.01.00"
+ * @cliVersions 1.21.0
+ */
+
+// ============================================================================
+// Device & System
+// ============================================================================
+const system = scripting.addModule("/ti/sysconfig/SysConfigSystem", {}, false);
+const system1 = system.addInstance("System", {
+    device:            "TMS320F28335",
+    package:           "176-Pin PTP",
+    part:              "Default",
+    product:           "C2000WARE",
+    productVersion:    "5.04.01.00",
+    clkCfg_oscClk:     "30.0 MHz",
+    clkCfg_pllClk:     "150.0 MHz",
+    clkCfg_pllSrc:     "XTAL",
+});
+
+// ============================================================================
+// GPIO Outputs: LED1-LED5
+// ============================================================================
+const gpio = scripting.addModule("/ti/drivers/GPIO", {}, false);
+
+// LED1 — Heartbeat (500ms toggle)
+gpio.addInstance("LED1", {
+    name:              "LED1",
+    pin:               "GPIO64",
+    direction:         "Output",
+    initialOutput:     "Low",
+    description:       "Heartbeat LED",
+});
+
+// LED2 — Communication indicator
+gpio.addInstance("LED2", {
+    name:              "LED2",
+    pin:               "GPIO65",
+    direction:         "Output",
+    initialOutput:     "Low",
+    description:       "Modbus RX activity",
+});
+
+// LED3 — Fault indicator
+gpio.addInstance("LED3", {
+    name:              "LED3",
+    pin:               "GPIO66",
+    direction:         "Output",
+    initialOutput:     "Low",
+    description:       "Fault indicator",
+});
+
+// LED4 — Reserved
+gpio.addInstance("LED4", {
+    name:              "LED4",
+    pin:               "GPIO67",
+    direction:         "Output",
+    initialOutput:     "Low",
+    description:       "Reserved",
+});
+
+// LED5 — State indicator
+gpio.addInstance("LED5", {
+    name:              "LED5",
+    pin:               "GPIO68",
+    direction:         "Output",
+    initialOutput:     "Low",
+    description:       "State indicator",
+});

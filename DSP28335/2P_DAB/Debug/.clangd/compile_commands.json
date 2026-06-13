@@ -1,0 +1,117 @@
+[
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\"",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_ADC_cal.asm"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\"",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_CodeStartBranch.asm"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_DefaultIsr.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_GlobalVariableDefs.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_Gpio.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_PieCtrl.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_PieVect.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_SysCtrl.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\"",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_usDelay.asm"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/app/main.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/bsp/clock.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/bsp/delay.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/bsp/gpio.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/bsp/led.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/drivers/epwm.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/control/iir.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/drivers/adc.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/control/dps.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/bsp/systick.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/control/pid.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/DSP2833x_Libraries/DSP2833x_CpuTimers.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/app/state_machine.c"
+   },
+   {
+      "directory" : "E:/repos/DSP28335/2P_DAB/Debug",
+      "command"   : "clang++ -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/common/include\" -I\"E:/repos/DSP28335/C2000/C2000Ware_5_04_00_00/device_support/f2833x/headers/include\" -I\"E:/ti/ccs2051/ccs/tools/compiler/ti-cgt-c2000_25.11.0.LTS/include\" -I\"E:/repos/DSP28335/2P_DAB/firmware\" -xc",
+      "file"      : "E:/repos/DSP28335/2P_DAB/firmware/app/protection.c"
+   }
+]

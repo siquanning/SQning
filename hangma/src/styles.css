@@ -200,9 +200,24 @@ button {
   align-items: center;
 }
 
+.difficulty-select {
+  padding: 5px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffe9c4;
+  cursor: pointer;
+  font-family: inherit;
+}
+.difficulty-select:focus-visible {
+  outline: 2px solid #f4c767;
+  outline-offset: 1px;
+}
+
 .game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
+  grid-template-columns: minmax(0, 1fr) var(--right-column-width, 290px);
   gap: 12px;
   max-width: 1440px;
   margin: 0 auto;
@@ -726,6 +741,30 @@ button {
   transform: translate(-50%, -50%) rotate(-3deg);
 }
 
+.tile-ghost.ghost-rearrange {
+  opacity: 0.9;
+  filter: drop-shadow(0 0 10px rgba(244, 199, 103, 0.5)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4));
+  transform: translate(-50%, -50%) rotate(0deg) scale(1.05);
+}
+
+.tile.rearranging {
+  opacity: 0.2;
+  filter: grayscale(0.4);
+  transform: scale(0.9);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.insert-indicator {
+  width: 3px;
+  height: 68px;
+  background: #f4c767;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(244, 199, 103, 0.6);
+  flex-shrink: 0;
+  margin: 0 1px;
+  align-self: center;
+}
+
 .tile.small {
   width: 28px;
   height: 43px;
@@ -776,6 +815,20 @@ button {
 .badge-tile {
   width: 18px;
   height: 24px;
+}
+
+.revealed-tile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 12px;
+  font-size: 12px;
+  color: #ffe4a4;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 2px 8px 2px 4px;
+  vertical-align: middle;
 }
 
 .action-bar {
@@ -855,6 +908,25 @@ button {
 
 .wait-tile {
   margin-right: 1px;
+}
+
+.hint-toggle {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+}
+.hint-toggle:hover {
+  color: var(--gold);
+}
+.hint-panel.collapsed .hint-list {
+  display: none;
+}
+.hint-panel.collapsed .hint-toggle::after {
+  content: "（点击展开）";
+  font-size: 12px;
+  font-weight: 400;
+  color: #888;
+  margin-left: 6px;
 }
 
 .hint-list {
@@ -1094,5 +1166,485 @@ button {
 
   .table-core {
     min-height: 420px;
+  }
+}
+
+/* ============================================================
+   模式切换按钮
+   ============================================================ */
+
+.mode-toggle-button {
+  min-height: 34px;
+  padding: 5px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #ddd7c9;
+  background: linear-gradient(180deg, rgba(54, 54, 60, 0.9), rgba(31, 31, 36, 0.88));
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  transition: border-color 0.22s ease, background 0.22s ease, color 0.22s ease;
+}
+
+.mode-toggle-button:hover {
+  border-color: rgba(244, 199, 103, 0.5);
+  color: #ffe4a4;
+}
+
+.mode-toggle-button.coach-active {
+  border-color: rgba(72, 199, 128, 0.55);
+  color: #9af5c0;
+  background: linear-gradient(180deg, rgba(8, 42, 28, 0.88), rgba(5, 22, 12, 0.84));
+}
+
+/* ============================================================
+   教练面板 — 右侧侧边栏
+   ============================================================ */
+
+.coach-panel {
+  --coach-panel-width: 320px;
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  display: grid;
+  grid-template-rows: 40px minmax(0, 1fr);
+  width: 100%;
+  min-width: 240px;
+  overflow: hidden;
+  border: 1px solid rgba(244, 199, 103, 0.2);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(29, 18, 22, 0.9), rgba(10, 8, 10, 0.78));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.25);
+}
+
+.coach-panel.resizing {
+  transition: none;
+}
+
+/* 折叠状态：仅显示标题栏，收缩到右侧 */
+.coach-panel.collapsed {
+  width: auto;
+  min-width: 44px;
+  justify-self: end;
+}
+
+.coach-panel.collapsed .coach-panel-body {
+  display: none;
+}
+
+.coach-panel.collapsed .coach-panel-resizer {
+  display: none;
+}
+
+.coach-panel.collapsed .coach-panel-header {
+  writing-mode: vertical-rl;
+  justify-content: center;
+  padding: 4px 6px;
+}
+
+.coach-panel.collapsed .coach-panel-header-actions {
+  flex-direction: column;
+}
+
+/* 摸牌后最小化标签 */
+.coach-panel.waiting-discard .coach-panel-header {
+  border-bottom: 2px solid rgba(72, 199, 128, 0.45);
+}
+
+.coach-panel.waiting-discard .coach-panel-title {
+  color: #9af5c0;
+  font-size: 13px;
+}
+
+/* ---- 拖拽调整器 ---- */
+
+.coach-panel-resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.18s ease;
+}
+
+.coach-panel-resizer:hover,
+.coach-panel.resizing .coach-panel-resizer {
+  background: rgba(244, 199, 103, 0.25);
+}
+
+/* ---- 标题栏 ---- */
+
+.coach-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 0 10px 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  user-select: none;
+}
+
+.coach-panel-title {
+  margin: 0;
+  color: #ffe4a4;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.coach-panel-header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.coach-panel-icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #cdbb9f;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  font-size: 14px;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.coach-panel-icon-btn:hover {
+  color: #ffe4a4;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---- 消息内容区 ---- */
+
+.coach-panel-body {
+  overflow-y: auto;
+  padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.coach-messages {
+  display: grid;
+  gap: 8px;
+}
+
+.coach-empty {
+  padding: 20px 12px;
+  color: #999388;
+  font-size: 13px;
+  text-align: center;
+  white-space: pre-line;
+  line-height: 1.6;
+}
+
+/* ---- 消息卡片 ---- */
+
+.coach-msg-card {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  animation: msg-slide-in 0.25s ease;
+}
+
+@keyframes msg-slide-in {
+  0% { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.coach-msg-card.coach-msg-threat {
+  border-left: 3px solid #c94337;
+  background: rgba(201, 67, 55, 0.1);
+}
+
+.coach-msg-card.coach-msg-timing {
+  border-left: 3px solid #f4c767;
+  background: rgba(244, 199, 103, 0.08);
+}
+
+.coach-msg-card.coach-msg-discard {
+  border-left: 3px solid #236fad;
+}
+
+.coach-msg-card.coach-msg-confirm {
+  border-left: 3px solid #14804e;
+  background: rgba(20, 128, 78, 0.08);
+}
+
+.coach-msg-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.coach-msg-badge {
+  flex-shrink: 0;
+  display: inline-block;
+  min-width: 44px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.badge-threat {
+  color: #ff8a85;
+  background: rgba(201, 67, 55, 0.3);
+}
+
+.badge-timing {
+  color: #ffe4a4;
+  background: rgba(244, 199, 103, 0.25);
+}
+
+.badge-discard {
+  color: #8cc4ff;
+  background: rgba(35, 111, 173, 0.25);
+}
+
+.badge-direction {
+  color: #b9a0ff;
+  background: rgba(120, 100, 220, 0.25);
+}
+
+.badge-confirm {
+  color: #8cf5ba;
+  background: rgba(20, 128, 78, 0.25);
+}
+
+.coach-msg-summary {
+  margin: 0;
+  color: #e7dac3;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.coach-msg-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.coach-msg-tag {
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: #cdbb9f;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.coach-msg-expand {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: #b9a0ff;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.coach-msg-expand:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.coach-msg-detail {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: #cdbb9f;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ---- 路径对比（选 A vs 选 B） ---- */
+
+.coach-msg-compare-btn {
+  margin-top: 4px;
+}
+
+.coach-msg-comparison {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.coach-compare-option {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.coach-compare-a {
+  background: rgba(76, 175, 80, 0.12);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.coach-compare-b {
+  background: rgba(244, 67, 54, 0.10);
+  border: 1px solid rgba(244, 67, 54, 0.25);
+}
+
+.coach-compare-label {
+  font-weight: 600;
+  color: #ffe4a4;
+  margin-bottom: 2px;
+}
+
+.coach-compare-winrate {
+  color: #cdbb9f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.coach-compare-desc {
+  color: #a09880;
+  margin-top: 2px;
+}
+
+/* ---- 移动端 FAB + 抽屉 ---- */
+
+.coach-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 24px;
+  z-index: 100;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid rgba(244, 199, 103, 0.5);
+  border-radius: 50%;
+  color: #ffe4a4;
+  background: linear-gradient(180deg, rgba(54, 32, 29, 0.94), rgba(25, 12, 18, 0.94));
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: inherit;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  animation: fab-in 0.3s ease;
+}
+
+@keyframes fab-in {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.coach-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 12px 34px rgba(244, 199, 103, 0.2);
+}
+
+.coach-fab:active {
+  transform: scale(0.94);
+}
+
+.coach-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+}
+
+.coach-drawer.open {
+  display: block;
+}
+
+.coach-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  animation: drawer-fade-in 0.22s ease;
+}
+
+@keyframes drawer-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.coach-drawer-sheet {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: min(360px, 88vw);
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr);
+  background: linear-gradient(180deg, #1a1016, #0f0b10);
+  border-left: 1px solid rgba(244, 199, 103, 0.2);
+  box-shadow: -12px 0 48px rgba(0, 0, 0, 0.4);
+  animation: drawer-slide-in 0.26s ease;
+}
+
+@keyframes drawer-slide-in {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(0); }
+}
+
+.coach-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.coach-drawer-header h2 {
+  margin: 0;
+  color: #ffe4a4;
+  font-size: 15px;
+}
+
+.coach-drawer-close {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  color: #cdbb9f;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.coach-drawer-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.coach-drawer-body {
+  overflow-y: auto;
+  padding: 10px;
+}
+
+/* 1120px 以下：教练面板跟随游戏布局变为单列，面板流到下方 */
+@media (max-width: 1120px) {
+  .coach-panel {
+    grid-column: auto;
+    grid-row: auto;
+    max-height: 420px;
+  }
+}
+
+/* ---- 响应式：820px 以下切换为 FAB+抽屉 ---- */
+
+@media (max-width: 820px) {
+  .coach-panel {
+    display: none !important;
   }
 }

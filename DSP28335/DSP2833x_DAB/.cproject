@@ -39,11 +39,13 @@
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.SILICON_VERSION.1834643237" name="Processor version (--silicon_version, -v)" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.SILICON_VERSION" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.SILICON_VERSION.28" valueType="enumerated"/>
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.FLOAT_SUPPORT.972857170" name="Specify floating point support (--float_support)" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.FLOAT_SUPPORT" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.FLOAT_SUPPORT.fpu32" valueType="enumerated"/>
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.INCLUDE_PATH.235348259" name="Add dir to #include search path (--include_path, -I)" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.INCLUDE_PATH" valueType="includePath">
-                                    <listOptionValue value="E:\DSP28335\C2000\C2000Ware_5_04_00_00\device_support\f2833x\common\include"/>
-                                    <listOptionValue value="E:\DSP28335\C2000\C2000Ware_5_04_00_00\device_support\f2833x\headers\include"/>
+                                    <listOptionValue value="E:\repos\DSP28335\C2000\C2000Ware_5_04_00_00\device_support\f2833x\common\include"/>
+                                    <listOptionValue value="E:\repos\DSP28335\C2000\C2000Ware_5_04_00_00\device_support\f2833x\headers\include"/>
                                     <listOptionValue value="${CG_TOOL_ROOT}/include"/>
+                                    <listOptionValue value="${workspace_loc:/${ProjName}/APP/common}"/>
                                     <listOptionValue value="${workspace_loc:/${ProjName}/APP/gpio}"/>
                                     <listOptionValue value="${workspace_loc:/${ProjName}/APP/leds}"/>
+                                    <listOptionValue value="${workspace_loc:/${ProjName}/APP/modbus}"/>
                                     <listOptionValue value="${workspace_loc:/${ProjName}/APP/sci}"/>
                                 </option>
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.DEBUGGING_MODEL.260059436" name="Debugging model" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.DEBUGGING_MODEL" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.DEBUGGING_MODEL.SYMDEBUG__DWARF" valueType="enumerated"/>
