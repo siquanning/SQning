@@ -7,3 +7,5 @@
   - `DSP2833x_DAB\` — DAB 变换器 DSP 代码
   - `DSP2833x_Libraries\` — DSP 外设库
   - `C2000\C2000Ware_5_04_00_00\` — TI C2000Ware SDK（参考代码）
+## 学习笔记
+今天学会了 git add / commit / push 三个命令
