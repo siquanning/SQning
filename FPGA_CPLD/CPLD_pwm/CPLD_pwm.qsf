@@ -52,6 +52,7 @@ set_global_assignment -name VHDL_FILE pwm_capture.vhd
 set_global_assignment -name VHDL_FILE pll_20m_to_150m.vhd
 set_global_assignment -name VHDL_FILE CPLD_pwm_carrier.vhd
 set_global_assignment -name VHDL_FILE CPLD_pwm_phase.vhd
+set_global_assignment -name VHDL_FILE deadtime_gen.vhd
 set_global_assignment -name SDC_FILE CPLD_pwm.sdc
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top

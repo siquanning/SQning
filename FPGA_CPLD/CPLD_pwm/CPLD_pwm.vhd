@@ -2,10 +2,11 @@
 -- 顶层模块 —— CPLD PWM 三相完整版本
 -- =========================================================
 -- 当前状态：
---   ① ABC 三相 H1 门极透传 —— 各 4 路经异步双级触发器同步器 → 输出
---   ② ABC 三相 H2 PWM 生成 —— 载波发生器 + 单极性 PWM 调制
+--   ① ABC 三相 H1 门极透传 —— 各 4 路经异步双级触发器同步器 → 死区插入 → 输出
+--   ② ABC 三相 H2 PWM 生成 —— 载波发生器 + 单极性 PWM 调制 → 死区插入 → 输出
 --   ③ PWM 捕获模块带异步双级触发器同步器
 --   ④ PLL 将 50 MHz 晶振倍频至 150 MHz 系统时钟
+--   ⑤ 全部 24 路门极输出均经 deadtime_gen 插入死区（≈ 1.0 µs）
 --
 -- 时钟方案：
 --   外部晶振 50 MHz → PLL (×3) → 内部 150 MHz 系统时钟
@@ -24,8 +25,8 @@
 --   gates_out(19..16) = B 相 H2（CPLD PWM 生成）
 --   gates_out(23..20) = C 相 H2（CPLD PWM 生成）
 --
--- H1 透传数据路径（异步双级同步，每路独立 sync_2ff）：
---   延迟 = 2 clk ≈ 13.3 ns，输出抖动 ±1 clk (6.7 ns)
+-- H1 透传数据路径（异步双级同步 + 死区插入，每路独立 sync_2ff → deadtime_gen）：
+--   同步延迟 = 2 clk ≈ 13.3 ns，死区延迟 = 150 clk ≈ 1.0 µs
 --
 -- H2 PWM 策略（单极性、中心对齐、180° 移相）：
 --   - 载波频率 20 kHz，中心对齐上下计数，TBPRD = 3750
@@ -84,14 +85,24 @@ architecture structural of CPLD_pwm is
     -- H1 同步门极信号（12 bit = 3 相 × 4 路，PLL 锁定前强制关断）
     signal sync_h1       : std_logic_vector(11 downto 0);
 
+    -- H1 死区处理后门极信号（每相 4 bit，经 deadtime_gen 处理后输出）
+    signal dt_h1_a       : std_logic_vector(3 downto 0);   -- A 相 H1（死区后）
+    signal dt_h1_b       : std_logic_vector(3 downto 0);   -- B 相 H1（死区后）
+    signal dt_h1_c       : std_logic_vector(3 downto 0);   -- C 相 H1（死区后）
+
     -- 载波信号
     signal carrier       : integer range 0 to 3750;        -- H1 参考载波（预留）
     signal carrier_h2    : integer range 0 to 3750;        -- H2 比较载波（移相 180°）
 
     -- H2 PWM 门极信号（每相 4 bit，由 CPLD 根据调制量生成）
-    signal h2_gates_a    : std_logic_vector(3 downto 0);   -- A 相 H2
-    signal h2_gates_b    : std_logic_vector(3 downto 0);   -- B 相 H2
-    signal h2_gates_c    : std_logic_vector(3 downto 0);   -- C 相 H2
+    signal h2_gates_a    : std_logic_vector(3 downto 0);   -- A 相 H2（死区前）
+    signal h2_gates_b    : std_logic_vector(3 downto 0);   -- B 相 H2（死区前）
+    signal h2_gates_c    : std_logic_vector(3 downto 0);   -- C 相 H2（死区前）
+
+    -- H2 死区处理后门极信号（每相 4 bit，经 deadtime_gen 处理后输出）
+    signal dt_h2_a       : std_logic_vector(3 downto 0);   -- A 相 H2（死区后）
+    signal dt_h2_b       : std_logic_vector(3 downto 0);   -- B 相 H2（死区后）
+    signal dt_h2_c       : std_logic_vector(3 downto 0);   -- C 相 H2（死区后）
 
 begin
     -- =========================================================
@@ -165,12 +176,95 @@ begin
                   async_in => gates_in(11), sync_out => sync_h1(11));
 
     -- =========================================================
+    -- H1 死区时间生成模块（每相 2 个半桥臂 = A+/A- 和 B+/B-）
+    --
+    -- DSP 输出的 H1 门极信号经双级同步后，再插入死区防止半桥
+    -- 直通。死区时间 ≈ 1.0 us（150 clk × 6.67 ns @ 150 MHz）。
+    --
+    -- 信号配对：
+    --   in_p = 上管（A+ 或 B+），in_n = 下管（A- 或 B-）
+    --   sync_h1(0)=A+, (1)=A-, (2)=B+, (3)=B-
+    -- =========================================================
+
+    -- A 相 H1 死区 —— A 桥臂（A+ / A-）
+    u_dt_h1a_legA: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => sync_h1(0),
+            in_n  => sync_h1(1),
+            out_p => dt_h1_a(0),
+            out_n => dt_h1_a(1)
+        );
+
+    -- A 相 H1 死区 —— B 桥臂（B+ / B-）
+    u_dt_h1a_legB: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => sync_h1(2),
+            in_n  => sync_h1(3),
+            out_p => dt_h1_a(2),
+            out_n => dt_h1_a(3)
+        );
+
+    -- B 相 H1 死区 —— A 桥臂（A+ / A-）
+    u_dt_h1b_legA: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => sync_h1(4),
+            in_n  => sync_h1(5),
+            out_p => dt_h1_b(0),
+            out_n => dt_h1_b(1)
+        );
+
+    -- B 相 H1 死区 —— B 桥臂（B+ / B-）
+    u_dt_h1b_legB: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => sync_h1(6),
+            in_n  => sync_h1(7),
+            out_p => dt_h1_b(2),
+            out_n => dt_h1_b(3)
+        );
+
+    -- C 相 H1 死区 —— A 桥臂（A+ / A-）
+    u_dt_h1c_legA: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => sync_h1(8),
+            in_n  => sync_h1(9),
+            out_p => dt_h1_c(0),
+            out_n => dt_h1_c(1)
+        );
+
+    -- C 相 H1 死区 —— B 桥臂（B+ / B-）
+    u_dt_h1c_legB: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => sync_h1(10),
+            in_n  => sync_h1(11),
+            out_p => dt_h1_c(2),
+            out_n => dt_h1_c(3)
+        );
+
+    -- =========================================================
     -- H1 门极输出（PLL 锁定安全闭锁）
     -- 未锁定时全部关断，防止不稳定时钟导致误输出
     -- =========================================================
-    gates_out(3 downto 0)   <= sync_h1(3 downto 0)   when pll_locked_i = '1' else (others => '0');
-    gates_out(7 downto 4)   <= sync_h1(7 downto 4)   when pll_locked_i = '1' else (others => '0');
-    gates_out(11 downto 8)  <= sync_h1(11 downto 8)  when pll_locked_i = '1' else (others => '0');
+    gates_out(3 downto 0)   <= dt_h1_a when pll_locked_i = '1' else (others => '0');
+    gates_out(7 downto 4)   <= dt_h1_b when pll_locked_i = '1' else (others => '0');
+    gates_out(11 downto 8)  <= dt_h1_c when pll_locked_i = '1' else (others => '0');
 
     -- =========================================================
     -- 载波发生器 —— 中心对齐三角波 + H2 180° 移相输出
@@ -233,11 +327,95 @@ begin
         );
 
     -- =========================================================
+    -- 死区时间生成模块（每相 2 个半桥臂 = A+/A- 和 B+/B-）
+    --
+    -- 在 H2 PWM 生成与最终门极输出之间插入死区，防止半桥
+    -- 上下管同时导通（shoot-through）。死区时间 ≈ 1.0 us
+    -- （150 clk × 6.67 ns @ 150 MHz）。
+    --
+    -- 信号配对：
+    --   in_p = 上管（A+ 或 B+），in_n = 下管（A- 或 B-）
+    --   h2_gates(0)=A+, (1)=A-, (2)=B+, (3)=B-
+    -- =========================================================
+
+    -- A 相 H2 死区 —— A 桥臂（A+ / A-）
+    u_dt_a_legA: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => h2_gates_a(0),
+            in_n  => h2_gates_a(1),
+            out_p => dt_h2_a(0),
+            out_n => dt_h2_a(1)
+        );
+
+    -- A 相 H2 死区 —— B 桥臂（B+ / B-）
+    u_dt_a_legB: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => h2_gates_a(2),
+            in_n  => h2_gates_a(3),
+            out_p => dt_h2_a(2),
+            out_n => dt_h2_a(3)
+        );
+
+    -- B 相 H2 死区 —— A 桥臂（A+ / A-）
+    u_dt_b_legA: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => h2_gates_b(0),
+            in_n  => h2_gates_b(1),
+            out_p => dt_h2_b(0),
+            out_n => dt_h2_b(1)
+        );
+
+    -- B 相 H2 死区 —— B 桥臂（B+ / B-）
+    u_dt_b_legB: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => h2_gates_b(2),
+            in_n  => h2_gates_b(3),
+            out_p => dt_h2_b(2),
+            out_n => dt_h2_b(3)
+        );
+
+    -- C 相 H2 死区 —— A 桥臂（A+ / A-）
+    u_dt_c_legA: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => h2_gates_c(0),
+            in_n  => h2_gates_c(1),
+            out_p => dt_h2_c(0),
+            out_n => dt_h2_c(1)
+        );
+
+    -- C 相 H2 死区 —— B 桥臂（B+ / B-）
+    u_dt_c_legB: entity work.deadtime_gen(rtl)
+        generic map (DT_CYCLES => 150)
+        port map (
+            clk   => clk_150m,
+            rst_n => rst_n,
+            in_p  => h2_gates_c(2),
+            in_n  => h2_gates_c(3),
+            out_p => dt_h2_c(2),
+            out_n => dt_h2_c(3)
+        );
+
+    -- =========================================================
     -- H2 门极输出（PLL 锁定安全闭锁）
     -- =========================================================
-    gates_out(15 downto 12) <= h2_gates_a when pll_locked_i = '1' else (others => '0');
-    gates_out(19 downto 16) <= h2_gates_b when pll_locked_i = '1' else (others => '0');
-    gates_out(23 downto 20) <= h2_gates_c when pll_locked_i = '1' else (others => '0');
+    gates_out(15 downto 12) <= dt_h2_a when pll_locked_i = '1' else (others => '0');
+    gates_out(19 downto 16) <= dt_h2_b when pll_locked_i = '1' else (others => '0');
+    gates_out(23 downto 20) <= dt_h2_c when pll_locked_i = '1' else (others => '0');
 
     -- =========================================================
     -- PWM 捕获模块（含异步双级触发器同步器）
