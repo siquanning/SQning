@@ -1,0 +1,37 @@
+# =========================================================
+# SDC 时序约束 — CPLD_pwm
+# =========================================================
+# 器件: Cyclone IV E (EP4CE6F17C8)
+# 系统时钟: 50 MHz 晶振 → PLL (×3) → 150 MHz
+# =========================================================
+
+# -------------------------------------------------------
+# 1. 输入时钟约束 (50 MHz 外部晶振, 周期 20 ns)
+# -------------------------------------------------------
+create_clock -name clk_50m -period 20.000 [get_ports clk_50m]
+
+# -------------------------------------------------------
+# 2. PLL 生成时钟自动推导
+#    derive_pll_clocks 自动从 PLL 配置中提取:
+#      c0 = 150 MHz (周期 6.667 ns, 50% 占空比)
+# -------------------------------------------------------
+derive_pll_clocks
+
+# -------------------------------------------------------
+# 3. 时钟不确定性 (jitter + skew 裕量)
+#    Cyclone IV E PLL 典型 jitter ≈ 200 ps
+#    PLL Jitter 报告 (PLLJ_PLLSPE_INFO.txt): 30 ps jitter
+#    增加裕量以覆盖额外 skew
+# -------------------------------------------------------
+derive_clock_uncertainty
+
+# -------------------------------------------------------
+# 4. 异步输入 false path (跨时钟域同步器输入)
+#    gates_in[23:0] 和 pwm_cap_in 来自外部异步域，
+#    经过 dual-FF 同步器处理，无需时序约束
+# -------------------------------------------------------
+set_false_path -to [get_registers *sync_ff0*]
+set_false_path -to [get_registers *u_sync_aplus|sync_chain[0]*]
+set_false_path -to [get_registers *u_sync_aminus|sync_chain[0]*]
+set_false_path -to [get_registers *u_sync_bplus|sync_chain[0]*]
+set_false_path -to [get_registers *u_sync_bminus|sync_chain[0]*]
