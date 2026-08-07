@@ -1,5 +1,1 @@
 v1
-DSP_BALANCING_IMPLEMENTATION,DSP_BLOCKS,CPLD_pwm_phase:u_phase_c|lpm_mult:Mult0|mult_j9t:auto_generated|mac_out2,
-DSP_BALANCING_IMPLEMENTATION,DSP_BLOCKS,CPLD_pwm_phase:u_phase_b|lpm_mult:Mult0|mult_j9t:auto_generated|mac_out2,
-DSP_BALANCING_IMPLEMENTATION,DSP_BLOCKS,CPLD_pwm_phase:u_phase_a|lpm_mult:Mult0|mult_j9t:auto_generated|mac_out2,
-PORT_SWAPPING,PORT_SWAPPING_FINISHED,CPLD_pwm_phase:u_phase_a|lpm_mult:Mult0|mult_j9t:auto_generated|mac_mult1,
