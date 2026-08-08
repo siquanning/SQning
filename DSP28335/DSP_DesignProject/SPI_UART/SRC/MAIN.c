@@ -35,6 +35,8 @@ volatile Uint16 g_rxHead     = 0;               /* 缓冲区写入位置        
 volatile Uint16 g_rxTail     = 0;               /* 缓冲区读取位置         */
 volatile Uint16 g_rxReady    = 0;               /* 帧就绪标志: 1=有待发数据 */
 
+volatile Uint32 g_sysTick    = 0;               /* 系统滴答: ISRTimer0 每 1ms 递增 */
+
 /* ---- 函数声明 ---- */
 interrupt void ISRTimer0(void);   /* CPU Timer0 中断服务例程 */
 /* TODO: 声明其他 ISR */
@@ -141,22 +143,27 @@ void main(void)
 }
 
 /**
- * @brief Timer0 中断服务例程模板
+ * @brief Timer0 中断服务例程 — 系统滴答时基 (1ms)
+ *
+ * 由 AppConfig_InitCpuTimer0() 配置为每 1ms 触发一次。
+ * g_sysTick 可被主循环用作帧间静默计时的参考时钟,
+ * 替代 DELAY_US() 忙等待。
  *
  * 接口约定:
- *   - 调用频率: 由 ConfigCpuTimer() 的周期参数决定
+ *   - 调用频率: 1 kHz (每 1ms)
  *   - 必须清除 TIF 标志和 PIEACK
- *   - 在此执行实时控制算法 (PWM 占空比更新, ADC 读取, 控制环路等)
+ *   - 保持极短: 仅递增计数器, 不做任何耗时操作
  */
 interrupt void ISRTimer0(void)
 {
-    /* 清除定时器中断标志 */
+    /* 清除定时器中断标志, 同时重载周期值 (写 1 清除) */
     CpuTimer0Regs.TCR.bit.TIF = 1;
     CpuTimer0Regs.TCR.bit.TRB = 1;
 
-    /* TODO: 在此编写实时控制逻辑 */
+    /* 系统滴答计数 (1ms 分辨率), 主循环用于帧间超时检测 */
+    g_sysTick++;
 
-    /* 清除 PIE 中断应答 */
+    /* 清除 PIE 中断应答 (PIE Group 1) */
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 

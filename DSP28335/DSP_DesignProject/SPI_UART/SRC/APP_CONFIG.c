@@ -346,6 +346,43 @@ void AppConfig_InitSpi(void)
 }
 
 /* ================================================================
+ * CPU Timer0 初始化
+ * ================================================================ */
+
+/**
+ * @brief CPU Timer0 1ms 时基初始化 — 系统滴答 + 帧间超时检测
+ *
+ * ConfigCpuTimer(&CpuTimer0, 150.0f, 1000.0f) 内部计算:
+ *   PRD = 150 MHz × 1000 µs = 150000 个时钟周期 → 正好 1ms 周期
+ *
+ * 初始化序列:
+ *   1. 注册 ISRTimer0 到 PIE 向量表 (TINT0 = PIE Group 1, Channel 7)
+ *   2. ConfigCpuTimer() 配置 PRD + 预分频器
+ *   3. 使能 PIE Group 1 Channel 7 + CPU INT1
+ *   4. 启动定时器 (TSS=0)
+ *
+ * 注意: 全局中断 EINT/ERTM 不在这里使能, 由 main() 统一开启
+ */
+void AppConfig_InitCpuTimer0(void)
+{
+    /* 1. 注册 Timer0 ISR 到 PIE 向量表 (受 EALLOW 保护) */
+    EALLOW;
+    PieVectTable.TINT0 = &ISRTimer0;
+    EDIS;
+
+    /* 2. 配置 Timer0: 150MHz CPU 频率, 1000µs 周期 → 1ms 中断一次 */
+    /*    ConfigCpuTimer 内部自动计算 PRD = Freq_MHz × Period_usec */
+    ConfigCpuTimer(&CpuTimer0, 150.0f, 1000.0f);
+
+    /* 3. 使能 PIE Group 1 通道 7 (CPU Timer0 中断) + CPU INT1 */
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+    IER |= M_INT1;
+
+    /* 4. 启动定时器: TSS=0 (Stop Status bit = 0 → 运行) */
+    CpuTimer0Regs.TCR.bit.TSS = 0;
+}
+
+/* ================================================================
  * 应用层初始化入口
  * ================================================================ */
 
@@ -354,16 +391,18 @@ void AppConfig_InitSpi(void)
  *
  * 调用顺序:
  *   1. AppConfig_InitGpio()
- *   2. AppConfig_InitSci()   (或其他外设初始化函数)
+ *   2. AppConfig_InitSci()
+ *   3. AppConfig_InitSpi()
+ *   4. AppConfig_InitCpuTimer0()
  */
 void AppConfig_Init(void)
 {
     AppConfig_InitGpio();
     AppConfig_InitSci();
     AppConfig_InitSpi();
+    AppConfig_InitCpuTimer0();
 
     /* TODO: 按需调用其他外设初始化函数 */
     /* AppConfig_InitEPwm(); */
     /* AppConfig_InitADC();  */
-    /* AppConfig_InitCpuTimer0(); */
 }

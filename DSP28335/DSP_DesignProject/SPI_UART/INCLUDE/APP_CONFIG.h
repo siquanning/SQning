@@ -119,6 +119,9 @@ void AppConfig_InitCpuTimer0(void); /* CPU Timer0 1ms 时基+ISR     */
 extern interrupt void ISRSciRx(void);
 extern interrupt void ISRTimer0(void);
 
+/* 全局变量 (在 MAIN.c 中定义) */
+extern volatile Uint32 g_sysTick;   /* 系统滴答: ISRTimer0 每 1ms 递增 */
+
 /* 字节级收发封装 */
 void   SciSendByte(Uint16 data);
 Uint16 SciReceiveByte(void);

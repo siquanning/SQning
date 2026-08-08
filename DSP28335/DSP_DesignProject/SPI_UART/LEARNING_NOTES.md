@@ -108,6 +108,55 @@ EDIS;                                  // 重新锁上
 
 向量表是个函数指针数组，每个中断号对应一个槽位。`PieVectTable` 在受保护的寄存器区，必须先 EALLOW 才能改——这是硬件安全机制，防止程序跑飞时意外改写向量表。
 
+### 7.3 CPU Timer0 是怎么工作的（Step 3.3, 2026-08-08）
+
+F28335 有三个 32 位 CPU 定时器（Timer0/1/2），每个定时器内部长这样：
+
+```
+SYSCLKOUT (150MHz) → 预分频器 (TDDRH:TDDR) → 计数器 (TIMH:TIM)
+                         ↓                        ↓
+                    每 Tick ÷?             从 PRD 倒数到 0
+                                               ↓
+                                        触发中断 (TINT0)
+                                               ↓
+                                        自动重载 PRD → 开始下一轮
+```
+
+- **PRD**（Period Register）：设定"数到几算一个周期"。`ConfigCpuTimer(&Timer0, 150.0, 1000.0)` 算出 PRD = 150MHz × 1000µs = 150000
+- **TIM**（Timer Counter）：从 PRD 开始倒数，到 0 时触发中断
+- **TDDR**（Timer Divider）：预分频器，设为 0 = ÷1（不分频），每个 SYSCLKOUT 时钟计数一次
+- **TIF**（Timer Interrupt Flag）：计数器到 0 时硬件置 1，写 1 清 0
+- **TRB**（Timer Reload Bit）：写 1 强制重载，让计数器回到 PRD 值重新倒数
+- **TSS**（Timer Stop Status）：= 1 停止，= 0 运行
+
+### 7.4 ConfigCpuTimer() 库函数的用法（Step 3.3, 2026-08-08）
+
+```c
+ConfigCpuTimer(&CpuTimer0, 150.0f, 1000.0f);
+//              ↑          ↑        ↑
+//         定时器对象   CPU频率(MHz)  期望周期(µs)
+```
+
+TI 封装了这个函数在 `DSP2833x_CpuTimers.c` 中，内部做的事：
+1. `PRD = Freq_MHz × Period_usec`（150 × 1000 = 150000）
+2. 根据 PRD 值自动选择预分频器（太大就分频，小就 ÷1）
+3. 配置控制寄存器为连续模式
+4. **不启动定时器**——TSS 保持 1（停止），需要手动设 TSS=0 或调 `CpuTimer0Regs.TCR.bit.TSS = 0`
+
+### 7.5 中断组的隔离（Step 3.3, 2026-08-08）
+
+```
+SCI RX 中断: PIE Group 9 Channel 1 → CPU INT9
+Timer0 中断: PIE Group 1 Channel 7 → CPU INT1
+```
+
+不同 CPU 中断线（INT1 vs INT9）意味着：
+- 两个中断不会互相阻塞
+- 如果 SCI ISR 正在执行，Timer0 中断来了 → CPU 完成当前 ISR 后立刻处理 Timer0
+- 反过来也一样——实时外设的中断不会被通信中断耽误
+
+如果两个中断在同一组（如 SCI RX 和 SCI TX 都在 Group 9），则同一时刻只能处理一个——必须等当前 ISR 执行 PIEACK 后才能响应同组的另一个中断。
+
 ---
 
 ## 8. 串口/通信

@@ -236,8 +236,59 @@
 | Step | 函数签名 | 功能 |
 |------|----------|------|
 | 3.2 | `void SpiSendByte(Uint16 data)` + `Uint16 SpiReceiveByte(void)` | SPI 字节收发封装（查询方式） |
-| 3.3 | `void AppConfig_InitCpuTimer0(void)` | CPU Timer0 1ms 时基初始化 + ISR |
+| 3.3 | `void AppConfig_InitCpuTimer0(void)` + `ISRTimer0` 更新 | CPU Timer0 1ms 时基初始化 + 系统滴答 |
 | 3.4 | 主循环双向透传逻辑 | UART RX→SPI TX / SPI RX→UART TX 轮询转发 |
+
+#### Step 3.2: 实现 `void SpiSendByte(Uint16 data)` + `Uint16 SpiReceiveByte(void)` — SPI 字节级收发封装
+- [x] **状态**: `[x]` 已完成
+- [x] **函数签名**: `void SpiSendByte(Uint16 data)` / `Uint16 SpiReceiveByte(void)`
+- [x] **功能描述**: 封装 SPI 查询方式字节收发。`SpiSendByte` 等待 TX 缓冲空 → 写入 SPITXBUF → 等待 INT_FLAG → 读 SPIRXBUF 清标志（丢弃同时收到的数据）。`SpiReceiveByte` 发 0xFF 哑字节产生时钟 → 等待移位完成 → 返回 CPLD 发来的数据
+- [x] **涉及文件**:
+  - `SRC/APP_CONFIG.c` — *(修改)*: 实现两个封装函数（~40 行含注释）
+- [x] **依赖**: Step 3.1（SPI 必须先初始化）
+- [x] **预计工时**: 0.5 小时
+- [x] **测试方法**: 待 Step 3.4 主循环透传联调时验证
+- [x] **验收标准**:
+  - [x] 编译 0 errors ✓
+  - [x] 注释全部简体中文 ✓
+  - [x] git commit 完成，信息 `[Step 3.2] SpiSendByte + SpiReceiveByte` ✓
+- [x] **开发讲解**（AI 完成后填写）:
+  - 用到的 TI 库函数/封装: `SpiaRegs.SPISTS.bit.BUFFULL_FLAG`（TX 缓冲满标志）、`SpiaRegs.SPISTS.bit.INT_FLAG`（传输完成标志）、`SpiaRegs.SPITXBUF`（发送缓冲寄存器）、`SpiaRegs.SPIRXBUF`（接收缓冲寄存器），都在 `DSP2833x_Spi.h` 中定义。
+  - 为什么这样做:
+    - **SpiSendByte 为什么要读 SPIRXBUF**: SPI 是全双工总线——主机每发一字节同时也会收一字节。`INT_FLAG` 在移位完成后置位，必须读 SPIRXBUF 才能清掉这个标志。即使不关心 CPLD 发来的数据，也必须读一下把标志清了，否则下次传输会认为"上次还没完"。
+    - **SpiReceiveByte 为什么要发 0xFF**: DSP 是 SPI 主机，CLK 时钟由 DSP 提供。主机不发数据就没有 CLK 时钟，没有时钟从机就送不出数据。发哑字节 0xFF（MOSI 持续高电平）产生 8 个时钟脉冲，CPLD 在 CLK 的驱动下把它的数据放到 MISO 线上，DSP 同时采样。
+    - **两个函数都阻塞等待**: 查询方式（非中断），原地 `while()` 等硬件完成。好处是简单可靠，坏处是 CPU 空转。但在 293 kHz SPI + 每次几个字节的场景下，等待时间微乎其微（1 字节 ≈ 27μs）。
+  - 硬件原理（一句话）: SPI 是主机驱动的全双工总线——每次传输都是"交换"：主机推一个字节出去同时拉一个字节进来。想收数据？发个哑字节产生时钟就行。
+- [x] **用户确认**: [ ] 看懂本步讲解
+- [x] **完成日期**: *2026-08-08*
+
+#### Step 3.3: 实现 `void AppConfig_InitCpuTimer0(void)` + 更新 `ISRTimer0` — 系统滴答时基
+- [x] **状态**: `[x]` 已完成
+- [x] **函数签名**: `void AppConfig_InitCpuTimer0(void)` — CPU Timer0 1ms 时基初始化
+- [x] **功能描述**: 配置 CPU Timer0 每 1ms 触发一次中断（150MHz × 1000µs = 150000 周期），注册 `ISRTimer0` 到 PIE 向量表（TINT0 = PIE Group 1, Channel 7），使能 PIEIER1.INTx7 + CPU INT1，启动定时器。同时将 `ISRTimer0` 从桩函数更新为系统滴答计数器（`g_sysTick++`），为后续帧间超时检测提供 1ms 分辨率时基
+- [x] **涉及文件**:
+  - `SRC/APP_CONFIG.c` — *(修改)*: 实现 `AppConfig_InitCpuTimer0()`（~30 行），`AppConfig_Init()` 中串联调用
+  - `SRC/MAIN.c` — *(修改)*: 添加 `g_sysTick` 全局变量，`ISRTimer0` 从桩函数更新为滴答计数器
+  - `INCLUDE/APP_CONFIG.h` — *(修改)*: 添加 `extern volatile Uint32 g_sysTick`
+- [x] **依赖**: Step 3.1（SPI GPIO 已就绪），Step 2.1（PIE 中断机制已验证）
+- [x] **预计工时**: 0.5 小时
+- [x] **测试方法**: CCS Debug 配置编译通过 → 调试器中在 ISRTimer0 设断点，确认每 1ms 触发一次 → 观察 `g_sysTick` 持续递增
+- [x] **验收标准**:
+  - [x] 编译 0 errors ✓
+  - [x] 注释全部简体中文：`python tools/check_comments.py --allow bps` 通过 ✓
+  - [x] `ConfigCpuTimer` 参数正确（150MHz / 1000µs → 150000 周期）✓
+  - [x] PIE 向量注册 + 中断使能完整 ✓
+  - [x] git commit 完成 ✓
+- [x] **开发讲解**（AI 完成后填写）:
+  - 用到的 TI 库函数/封装: `ConfigCpuTimer(&CpuTimer0, 150.0f, 1000.0f)` — TI 在 `DSP2833x_CpuTimers.c` 中提供的库函数，自动计算 PRD 周期寄存器值 = Freq_MHz × Period_usec。`CpuTimer0Regs.TCR`（定时器控制寄存器位域，在 `DSP2833x_CpuTimers.h` 中定义）。`PieVectTable.TINT0`（PIE 向量表槽位 1.7）、`PieCtrlRegs.PIEIER1`（PIE 中断使能）。
+  - 为什么这样做:
+    - **为什么用 ConfigCpuTimer 而不是手写 PRD**: `ConfigCpuTimer` 是 TI 封装好的定时器配置函数，只需告诉它 CPU 频率（MHz）和期望周期（µs），它自动算 PRD 值并配置预分频器。比自己手算寄存器值更不容易出错——而且 150MHz 不是整数除 1ms 的精确倍数时，TI 的函数会处理舍入。
+    - **TINT0 的中断路由**: `PieVectTable.TINT0` 是 PIE Group 1 的第 7 个通道，对应 CPU INT1。和 SCI RX (Group 9.1 → CPU INT9) 不在同一组，不会互相阻塞。即使 SCI 中断正在处理，Timer0 中断也能排队等候。
+    - **g_sysTick 为什么是 Uint32**: 32 位计数器在 1ms 递增下可以跑约 49.7 天不溢出，比 Uint16（65 秒）安全得多。主循环用 `g_sysTick` 做帧间超时计算时，只要做差值比较即可（不用担心溢出）。
+    - **TRB=1 在 ISR 中**: 写入 1 到 TRB 会强制重载定时器计数器。在连续模式下计数器会自动重载，TRB=1 是保险操作——确保即使在中断处理期间计数器被意外修改，也能恢复正确的周期值。
+  - 硬件原理（一句话）: CPU Timer0 是 DSP 内部的 32 位硬件定时器——SYSCLKOUT（150MHz）每周期让它计数一次，从 PRD 值倒数到 0 后触发中断，然后自动重载开始下一周期。就像厨房计时器：设好 150000 个时钟滴答，到点响铃（中断），自动重置开始下一次倒计时。
+- [x] **用户确认**: [ ] 看懂本步讲解
+- [x] **完成日期**: *2026-08-08*
 
 #### 阶段 3 验收清单
 - [ ] SPI↔UART 双向透传功能正常
