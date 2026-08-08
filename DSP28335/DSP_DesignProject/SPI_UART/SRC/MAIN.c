@@ -82,21 +82,41 @@ void main(void)
     /* 7. 主循环 */
     for (;;)
     {
-        /* ---- SCI 回显: ISR 收数据 → 主循环原样发回 ---- */
+        /* ---- SCI 回显: ISR 收数据 → 等帧间超时 → 整体回显 ---- */
         if (g_rxReady)
         {
-            Uint16 i;
+            Uint16 prevHead;
+            Uint16 idleCount = 0;
 
-            /* 将缓冲区内所有字节原样发回 */
-            for (i = 0; i < g_rxHead; i++)
+            /* 等待帧间静默: 连续 4ms 无新字节到达则认为帧结束 */
+            do {
+                prevHead = g_rxHead;
+                DELAY_US(1000);              /* 等待 1ms                  */
+
+                if (g_rxHead != prevHead)
+                {
+                    idleCount = 0;           /* 有新数据, 重置静默计时    */
+                }
+                else
+                {
+                    idleCount++;             /* 无新数据, 累计静默时间    */
+                }
+            } while (idleCount < 4);         /* 连续 4ms 静默 → 帧结束    */
+
             {
-                SciSendByte(g_rxBuffer[i]);
-            }
+                Uint16 i;
 
-            /* 闪 TX LED 表示完成一次回显 */
-            CLEAR_TXLED;
-            DELAY_US(1000);
-            SET_TXLED;
+                /* 将缓冲区内所有字节原样发回 */
+                for (i = 0; i < g_rxHead; i++)
+                {
+                    SciSendByte(g_rxBuffer[i]);
+                }
+
+                /* 闪 TX LED 表示完成一次回显 */
+                CLEAR_TXLED;
+                DELAY_US(1000);
+                SET_TXLED;
+            }
 
             /* 清空缓冲区, 等待下一帧 */
             g_rxHead  = 0;
