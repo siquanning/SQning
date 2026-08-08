@@ -1,6 +1,6 @@
 /**
  * @file    APP_CONFIG.h
- * @brief   应用层配置头文件 — 引脚定义, 常量, 公开接口 (SPI_UART 透传桥)
+ * @brief   应用层配置头文件 — 引脚定义, 常量, 公开接口
  *
  * 接口约定:
  *   - 所有宏定义引脚使用大写 + 描述性名称
@@ -24,81 +24,106 @@ extern "C" {
 /* 由 DSP2833x_Examples.h 中的 PLL 配置决定:
  *   DSP28_PLLCR = 10, DSP28_DIVSEL = 2  →  CPU_CLK = 150 MHz
  *   修改 PLL 配置时, 同步更新以下宏 */
-#define CPU_CLK     150000000L  /* Hz, CPU 主频 (SYSCLKOUT)              */
-#define CPU_RATE_NS      6.667L  /* ns, 每个 CPU 周期的时间               */
-#define LSPCLK       37500000L  /* Hz, 低速外设时钟 (SYSCLKOUT/4, 默认)  */
+#define CPU_CLK     150000000L  /* Hz, CPU 主频 (SYSCLKOUT)          */
+#define LSPCLK       37500000L  /* Hz, 低速外设时钟 (SYSCLKOUT/4)   */
+#define HSPCLK       75000000L  /* Hz, 高速外设时钟 (SYSCLKOUT/2)   */
 
 /* ================================================================
- * UART (SCI-A) 配置
+ * PWM 配置
  * ================================================================ */
 
-#define SCI_BAUD        9600       /* 波特率 (bit/s)                       */
-/* BRR = LSPCLK / (BaudRate × 8) - 1 = 37,500,000 / (9600 × 8) - 1 = 487 */
-#define SCI_BRR_VALUE     ((LSPCLK / (SCI_BAUD * 8)) - 1)
+/* TODO: 根据你的开关频率修改 PWM_CLK */
+#define PWM_CLK     60000       /* Hz, PWM 开关频率                  */
+#define SP          (Uint16)(CPU_CLK / (2UL * PWM_CLK))  /* TBPRD 值 */
 
 /* ================================================================
- * SPI-A 配置
+ * SCI 通信参数
  * ================================================================ */
 
-/* SPI 波特率 = LSPCLK / (SPI_BRR + 1)
- * SPI_BRR = 127 → SPI CLK ≈ 293 kHz (最慢速率, 有效吞吐由 1ms ISR 控制) */
-#define SPI_BRR           127
+#define SCI_BAUD       9600       /* bps, UART 波特率                */
+/* BRR = LSPCLK / (Baud × 8) − 1 = 37500000 / 76800 − 1 = 487 */
+#define SCI_BRR_VALUE   487       /* SCI 波特率除数 (0x1E7)          */
 
 /* ================================================================
- * CPU Timer0 配置
+ * SPI 通信参数
  * ================================================================ */
 
-#define TIMER0_PERIOD_US 1000       /* us, Timer0 中断周期 (1ms 主循环)    */
+/* SPI 波特率: LSPCLK / (SPIBRR + 1) = 37500000 / 128 ≈ 292.97 kHz
+ * SPI 时钟速率远高于 9600bps UART, 有效吞吐量由主循环轮询周期控制
+ * SPIBRR 最大值 127 (7 位) */
+#define SPI_BRR_VALUE   127       /* SPI 波特率除数 (最慢=292.97kHz) */
 
 /* ================================================================
- * 缓冲区配置
+ * 控制参数
  * ================================================================ */
 
-#define RX_BUF_SIZE       256       /* 字节, 接收环形缓冲区大小             */
+/* TODO: 定义你的控制周期、滤波器参数等 */
 
 /* ================================================================
- * LED 引脚定义 (GPIOC 端口)
+ * GPIO 引脚定义
  * ================================================================ */
 
-/* TX LED — GPIO67 (GPIOC.3), 低电平点亮 */
-#define SET_LED_TX     GpioDataRegs.GPCSET.bit.GPIO67 = 1
-#define CLEAR_LED_TX   GpioDataRegs.GPCCLEAR.bit.GPIO67 = 1
-#define TOGGLE_LED_TX  GpioDataRegs.GPCTOGGLE.bit.GPIO67 = 1
+/* 使用宏封装 GPIO 操作, 便于阅读和维护
+ *
+ * 命名约定:
+ *   SET_<PIN_NAME>    — 置高
+ *   CLEAR_<PIN_NAME>  — 拉低
+ *   READ_<PIN_NAME>   — 读取
+ *
+ * 示例:
+ *   #define SET_LED       GpioDataRegs.GPASET.bit.GPIO5 = 1
+ *   #define CLEAR_LED     GpioDataRegs.GPACLEAR.bit.GPIO5 = 1
+ *   #define READ_LED      GpioDataRegs.GPADAT.bit.GPIO5
+ *
+ * 警告: GPIO SET/CLEAR/DAT 寄存器对不同的 PORT 使用不同的寄存器名:
+ *   GPIO0-31   →  GPASET, GPACLEAR, GPADAT  (端口 A)
+ *   GPIO32-63  →  GPBSET, GPBCLEAR, GPBDAT  (端口 B)
+ *   GPIO64-87  →  GPCSET, GPCCLEAR, GPCDAT  (端口 C)
+ */
 
-/* RX LED — GPIO68 (GPIOC.4), 低电平点亮 */
-#define SET_LED_RX     GpioDataRegs.GPCSET.bit.GPIO68 = 1
-#define CLEAR_LED_RX   GpioDataRegs.GPCCLEAR.bit.GPIO68 = 1
-#define TOGGLE_LED_RX  GpioDataRegs.GPCTOGGLE.bit.GPIO68 = 1
+/* ---- 用户 GPIO 定义 ---- */
+/* TX LED: GPIO67 (GPIOC), 低电平点亮, 发送完成时闪烁 */
+#define SET_TXLED    GpioDataRegs.GPCSET.bit.GPIO67 = 1    /* 高电平 → LED 灭 */
+#define CLEAR_TXLED  GpioDataRegs.GPCCLEAR.bit.GPIO67 = 1  /* 低电平 → LED 亮 */
+#define TOGGLE_TXLED GpioDataRegs.GPCTOGGLE.bit.GPIO67 = 1 /* 翻转 TX LED    */
+
+/* RX LED: GPIO68 (GPIOC), 低电平点亮, 收到完整帧时闪烁 */
+#define SET_RXLED    GpioDataRegs.GPCSET.bit.GPIO68 = 1    /* 高电平 → LED 灭 */
+#define CLEAR_RXLED  GpioDataRegs.GPCCLEAR.bit.GPIO68 = 1  /* 低电平 → LED 亮 */
+#define TOGGLE_RXLED GpioDataRegs.GPCTOGGLE.bit.GPIO68 = 1 /* 翻转 RX LED    */
+
+/* SPI NSS: GPIO19 (GPIOA), 输出, 永久拉低选中 CPLD */
+#define SPI_CS_LOW   GpioDataRegs.GPACLEAR.bit.GPIO19 = 1
+#define SPI_CS_HIGH  GpioDataRegs.GPASET.bit.GPIO19 = 1
 
 /* ================================================================
- * 公开函数原型 — 驱动层初始化
+ * XINTF / 外部 ADC 地址定义 (按需)
  * ================================================================ */
 
-void AppConfig_Init(void);          /* 应用层总初始化                     */
-void AppConfig_InitGpio(void);      /* GPIO 配置 (SPI/SCI/LED)           */
-void AppConfig_InitSci(void);       /* SCI-A UART 初始化                 */
-void AppConfig_InitSpi(void);       /* SPI-A 主机初始化                  */
-void AppConfig_InitCpuTimer0(void); /* CPU Timer0 1ms 时基               */
+/* 如果使用 XINTF Zone 7 连接外部设备, 在此定义基地址:
+ * #define EXT_ADC_BASIC_A   (*((volatile Uint16 *)0x200001))
+ * #define EXT_ADC_BASIC_B   (*((volatile Uint16 *)0x200002))
+ */
 
 /* ================================================================
- * 公开函数原型 — 数据收发
+ * 公开函数原型
  * ================================================================ */
 
-Uint16 SciReceiveByte(void);        /* 从 SCI RX FIFO 读 1 字节, 空返回 0xFFFF */
-void   SciSendByte(Uint16 byte);    /* 向 SCI TX FIFO 写 1 字节                 */
-Uint16 SpiTransferByte(Uint16 txByte); /* SPI 全双工传输 1 字节, 返回接收值     */
+void AppConfig_Init(void);          /* 应用层总初始化               */
+void AppConfig_InitGpio(void);      /* GPIO 配置 (SCI 引脚 + LED)   */
+void AppConfig_InitSci(void);       /* SCI-A 初始化 (9600bps+FIFO)  */
+void AppConfig_InitSpi(void);       /* SPI-A 主机模式初始化         */
+void AppConfig_InitCpuTimer0(void); /* CPU Timer0 1ms 时基+ISR     */
 
-/* ================================================================
- * 公开函数原型 — 帧缓冲管理
- * ================================================================ */
+/* 中断服务例程 (在 MAIN.c 中实现) */
+extern interrupt void ISRSciRx(void);
+extern interrupt void ISRTimer0(void);
 
-void   SciRxBuf_PushByte(Uint16 byte);  /* SCI 接收缓冲写入             */
-Uint16 SciRxBuf_PopByte(void);          /* SCI 接收缓冲读取并移除       */
-Uint16 SciRxBuf_IsFrameReady(void);     /* SCI 帧完整? (Modbus 3.5 超时) */
-
-void   SpiRxBuf_PushByte(Uint16 byte);  /* SPI 接收缓冲写入              */
-Uint16 SpiRxBuf_PopByte(void);          /* SPI 接收缓冲读取并移除        */
-Uint16 SpiRxBuf_IsFrameReady(void);     /* SPI 帧完整? (Modbus 3.5 超时) */
+/* 字节级收发封装 */
+void   SciSendByte(Uint16 data);
+Uint16 SciReceiveByte(void);
+void   SpiSendByte(Uint16 data);
+Uint16 SpiReceiveByte(void);
 
 #ifdef __cplusplus
 }

@@ -42,6 +42,26 @@ void AppConfig_InitGpio(void)
     GpioCtrlRegs.GPBQSEL1.bit.GPIO36 = 3;
     GpioCtrlRegs.GPBPUD.bit.GPIO36 = 0;
 
+    /* ---- SPI-A 引脚 (GPIO16=SIMO, GPIO17=SOMI, GPIO18=CLK, GPIO19=CS) ---- */
+    /* GPIO16: SPI-A SIMO (MOSI), MUX=3 (SPI 主功能), 推挽输出 */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 3;
+    GpioCtrlRegs.GPADIR.bit.GPIO16 = 1;
+
+    /* GPIO17: SPI-A SOMI (MISO), MUX=3 (SPI 主功能), QSEL=3 (异步输入), PUD=0 (上拉) */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 3;
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO17 = 3;
+    GpioCtrlRegs.GPAPUD.bit.GPIO17 = 0;
+
+    /* GPIO18: SPI-A CLK, MUX=3 (SPI 主功能), 推挽输出 */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 3;
+    GpioCtrlRegs.GPADIR.bit.GPIO18 = 1;
+
+    /* GPIO19: 手动 NSS (CS), MUX=0 (普通 GPIO), DIR=1 (输出), 初始高电平 (未选中) */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO19 = 1;
+    GpioCtrlRegs.GPAPUD.bit.GPIO19 = 0;
+    SPI_CS_HIGH;    /* 初始化阶段拉高, AppConfig_InitSpi() 完成后拉低选中 */
+
     /* ---- LED 引脚 (GPIO67=TX_LED, GPIO68=RX_LED) ---- */
     /* GPIO67: GPIO 输出, 初始高电平 (LED 灭) */
     GpioCtrlRegs.GPCMUX1.bit.GPIO67 = 0;
@@ -144,8 +164,8 @@ void AppConfig_InitSci(void)
     /* 7. FIFO 控制: 无自动波特率检测, 无 TX 发送延迟 */
     SciaRegs.SCIFFCT.all = 0x0000;
 
-    /* 8. 释放模块复位 (SWRESET=1), SCI 开始工作 */
-    SciaRegs.SCICTL1.all = 0x0027;
+    /* 8. 释放模块复位 (SWRESET=1), SLEEP=0 (接收所有字节, 非仅地址帧) */
+    SciaRegs.SCICTL1.all = 0x0023;
 
     /* 9. 注册 SCI RX 中断向量到 PIE 向量表 (受 EALLOW 保护) */
     EALLOW;
@@ -198,6 +218,62 @@ Uint16 SciReceiveByte(void)
  * ================================================================ */
 
 /**
+ * @brief SPI-A 主机模式初始化 — 8-bit, SPI Mode 0, ~293 kHz
+ *
+ * 按 F28335 SPI 标准初始化序列配置:
+ *   1. SPISWRESET=0 (模块复位, 配置期间暂停)
+ *   2. SPICCR=0x0007 (8-bit 字符, 空闲低电平, 非回环)
+ *   3. SPICTL=0x0006 (主机模式, 使能发送, CLK_PHASE=0 下降沿输出/上升沿锁存, 无中断)
+ *   4. SPIBRR=127 (最慢波特率: LSPCLK/128 ≈ 293 kHz)
+ *   5. SPIPRI=0x0010 (自由仿真模式, 调试断点不停止 SPI)
+ *   6. SPISWRESET=1 (释放复位, 启动 SPI 模块)
+ *   7. SPI_CS_LOW (GPIO19 拉低, 永久选中 CPLD 单从机)
+ *
+ * SPI Mode 0 说明:
+ *   - CLKPOLARITY=0: 时钟空闲低电平
+ *   - CLK_PHASE=0:  上升沿锁存数据 (CPLD→DSP), 下降沿输出数据 (DSP→CPLD)
+ *   - 这是最常见的 SPI 模式, 与标准 SPI Flash/SD 卡一致
+ *
+ * 波特率说明:
+ *   - SPIBRR=127 → SPI 时钟 = 37500000/(127+1) ≈ 292.97 kHz
+ *   - SPI 时钟远高于 UART 9600 bps, 但有效吞吐量由主循环轮询周期决定
+ *   - CPLD 作为 SPI 从机可轻松处理 293 kHz 时钟
+ *
+ * 注意: 不使用 SPI FIFO 增强模式 (标准 SPI 模式, 单缓冲 TX/RX),
+ *        收发通过 SpiSendByte/SpiReceiveByte 查询方式操作。
+ */
+void AppConfig_InitSpi(void)
+{
+    /* 1. 模块复位 (配置期间暂停 SPI 逻辑) */
+    SpiaRegs.SPICCR.bit.SPISWRESET = 0;
+
+    /* 2. 通信格式: 8 位字符, 时钟空闲低电平, 非回环模式 */
+    SpiaRegs.SPICCR.all = 0x0007;      /* SPICHAR=7 (8-bit), CLKPOLARITY=0, SPILBK=0 */
+
+    /* 3. 操作控制: 主机模式, 使能发送, 时钟相位=0, 无 SPI 中断 (轮询收发) */
+    SpiaRegs.SPICTL.all = 0x0006;      /* CLK_PHASE=0, MASTER_SLAVE=1, TALK=1, 无中断 */
+
+    /* 4. 波特率除数: 设到最慢 (SPIBRR 最大=127, 7 位限制) */
+    SpiaRegs.SPIBRR = SPI_BRR_VALUE;
+
+    /* 5. 优先级控制: 仿真挂起时继续运行 (避免调试断点导致 SPI 总线卡死) */
+    SpiaRegs.SPIPRI.all = 0x0010;      /* FREE=1, SOFT=0 */
+
+    /* 6. 延时等待, 确保 CPLD 侧已就绪 (293 kHz 下 1 字节 ≈ 27μs, 无实质影响) */
+    DELAY_US(100);
+
+    /* 7. 释放复位, 启动 SPI 模块 */
+    SpiaRegs.SPICCR.bit.SPISWRESET = 1;
+
+    /* 8. 拉低 CS 选中 CPLD (单从机, 不切换) */
+    SPI_CS_LOW;
+}
+
+/* ================================================================
+ * 应用层初始化入口
+ * ================================================================ */
+
+/**
  * @brief 应用层总初始化 — 在 main() 外设初始化阶段调用
  *
  * 调用顺序:
@@ -208,8 +284,10 @@ void AppConfig_Init(void)
 {
     AppConfig_InitGpio();
     AppConfig_InitSci();
+    AppConfig_InitSpi();
 
     /* TODO: 按需调用其他外设初始化函数 */
     /* AppConfig_InitEPwm(); */
     /* AppConfig_InitADC();  */
+    /* AppConfig_InitCpuTimer0(); */
 }
