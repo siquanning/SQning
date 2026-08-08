@@ -158,6 +158,42 @@ void AppConfig_InitSci(void)
 }
 
 /* ================================================================
+ * SCI 字节级收发封装
+ * ================================================================ */
+
+/**
+ * @brief 通过 SCI-A 发送一字节（阻塞等待 TX FIFO 非满）
+ *
+ * 在 8 位数据模式下, SCITXBUF 低 8 位为待发送数据,
+ * 高 8 位为 SCIFFTX 控制位（0 即可）。
+ *
+ * @param data 待发送字节 (仅低 8 位有效)
+ */
+void SciSendByte(Uint16 data)
+{
+    /* 等待 TX FIFO 有空位（TXFFST < 16 即可写入） */
+    while (SciaRegs.SCIFFTX.bit.TXFFST >= 16)
+    {
+        /* FIFO 满则原地等待, 由 SCI 硬件自动移出数据 */
+    }
+
+    SciaRegs.SCITXBUF = (data & 0xFF);
+}
+
+/**
+ * @brief 从 SCI-A 读取一字节（非阻塞，调用前应确认 FIFO 非空）
+ *
+ * 在 8 位数据模式下, SCIRXBUF 低 8 位为接收数据。
+ * 调用方在 ISR 中通过 RXFFST 判断 FIFO 中是否有数据再调用本函数。
+ *
+ * @return 接收到的字节 (仅低 8 位有效)
+ */
+Uint16 SciReceiveByte(void)
+{
+    return (SciaRegs.SCIRXBUF.all & 0xFF);
+}
+
+/* ================================================================
  * 应用层初始化入口
  * ================================================================ */
 
