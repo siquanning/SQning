@@ -23,9 +23,9 @@
  * @brief 初始化所有应用层 GPIO
  *
  * 引脚分配 (方案A — 单从机，CS 永久拉低):
- *   GPIO16 = SPISIMOA (MUX=3), 输出
- *   GPIO17 = SPISOMIA (MUX=3), 输入
- *   GPIO18 = SPICLKA  (MUX=3), 输出
+ *   GPIO16 = SPISIMOA (MUX=1), 输出, 异步, 内部上拉
+ *   GPIO17 = SPISOMIA (MUX=1), 输入, 异步, 内部上拉
+ *   GPIO18 = SPICLKA  (MUX=1), 输出, 异步, 内部上拉
  *   GPIO19 = GPIO 输出低 (永久 CS, 单从机)
  *   GPIO35 = SCITXDA  (MUX=1), 输出, 异步, 内部上拉
  *   GPIO36 = SCIRXDA  (MUX=1), 输入, 异步, 内部上拉
@@ -40,18 +40,24 @@ void AppConfig_InitGpio(void)
 {
     EALLOW;
 
-    /* ---- SPI-A 引脚 (GPIO16-18) ---- */
-    /* GPIO16 = SPISIMOA (MOSI → CPLD SOMI), 输出方向 */
-    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 3;
-    GpioCtrlRegs.GPADIR.bit.GPIO16  = 1;
+    /* ---- SPI-A 引脚 (GPIO16-18, MUX=1 = SPI 功能) ---- */
+    /* GPIO16 = SPISIMOA (MOSI → CPLD SOMI), 输出方向, 异步, 内部上拉 */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO16  = 1;
+    GpioCtrlRegs.GPADIR.bit.GPIO16   = 1;
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO16 = 3;
+    GpioCtrlRegs.GPAPUD.bit.GPIO16   = 0;
 
-    /* GPIO17 = SPISOMIA (MISO ← CPLD SIMO), 输入方向 */
-    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 3;
-    GpioCtrlRegs.GPADIR.bit.GPIO17  = 0;
+    /* GPIO17 = SPISOMIA (MISO ← CPLD SIMO), 输入方向, 异步, 内部上拉 */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO17  = 1;
+    GpioCtrlRegs.GPADIR.bit.GPIO17   = 0;
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO17 = 3;
+    GpioCtrlRegs.GPAPUD.bit.GPIO17   = 0;
 
-    /* GPIO18 = SPICLKA (时钟 → CPLD), 输出方向 */
-    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 3;
-    GpioCtrlRegs.GPADIR.bit.GPIO18  = 1;
+    /* GPIO18 = SPICLKA (时钟 → CPLD), 输出方向, 异步, 内部上拉 */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO18  = 1;
+    GpioCtrlRegs.GPADIR.bit.GPIO18   = 1;
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO18 = 3;
+    GpioCtrlRegs.GPAPUD.bit.GPIO18   = 0;
 
     /* GPIO19 = 普通 GPIO 输出, 拉低 → CPLD 片选永久选中 (方案A: 单从机) */
     GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;
@@ -176,10 +182,47 @@ void AppConfig_InitSci(void)
 }
 
 /* ================================================================
- * SPI 初始化 (待实现)
+ * SPI 初始化
  * ================================================================ */
 
-/* TODO: Step 2.2 — void AppConfig_InitSpi(void) */
+/**
+ * @brief 初始化 SPI-A — 主机模式 / 8-bit / 无相位滞后 / 下降沿输出
+ *
+ * 接口约定:
+ *   - GPIO16-18 的 MUX=1 (SPI 功能) 已在 AppConfig_InitGpio() 中配置
+ *   - 本函数不使能 SPI 中断 — 收发由 ISR 中轮询 SPISTS 完成
+ *   - SPI 波特率 = LSPCLK / (SPIBRR + 1)
+ *   - SWRESET=0 时冻结配置, 所有寄存器写完后 SWRESET=1 启动
+ *
+ * SPI-A 寄存器配置摘要:
+ *   SPICCR  = 0x0007  (8-bit 字符, SWRESET=0 → 配完后 0x0087 SWRESET=1)
+ *   SPICTL  = 0x0006  (主机模式, TALK=1, CLK_PHASE=0 无相位滞后, 无中断)
+ *   SPIBRR  = 127     (SPI CLK ≈ 293 kHz, 有效吞吐由 1ms ISR 软件控制)
+ */
+void AppConfig_InitSpi(void)
+{
+    /* 使能 SPI-A 外设时钟 (EALLOW 保护) */
+    EALLOW;
+    SysCtrlRegs.PCLKCR0.bit.SPIAENCLK = 1;
+    EDIS;
+
+    /* 通过 FIFO 复位 SPI (SPIRST=1 将整个 SPI 回归空闲态) */
+    SpiaRegs.SPIFFTX.all = 0x8000;
+
+    /* 通信控制: 8-bit 字符长度, SPISWRESET=0 (配置冻结中) */
+    SpiaRegs.SPICCR.all = 0x0007;
+
+    /* 控制寄存器: CLK_PHASE=0 (无相位滞后/下降沿输出),
+     * MASTER_SLAVE=1 (主机), TALK=1 (使能发送), 无中断 */
+    SpiaRegs.SPICTL.all = 0x0006;
+
+    /* 波特率 = LSPCLK / (SPI_BRR + 1) = 37.5MHz / 128 ≈ 293 kHz
+     * 这是 SPI 硬件时钟, 有效数据吞吐由 1ms ISR 轮询节奏决定 */
+    SpiaRegs.SPIBRR = SPI_BRR;
+
+    /* SWRESET=1 退出复位, 启动 SPI (CLK 开始输出) */
+    SpiaRegs.SPICCR.all = 0x0087;
+}
 
 /* ================================================================
  * 应用层初始化入口
@@ -199,7 +242,7 @@ void AppConfig_Init(void)
     AppConfig_InitGpio();
     AppConfig_InitSci();
 
+    AppConfig_InitSpi();
     /* TODO: 后续步骤按需取消注释 */
-    /* AppConfig_InitSpi();        // Step 2.2 */
     /* AppConfig_InitCpuTimer0();  // Step 2.3 */
 }

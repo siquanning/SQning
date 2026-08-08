@@ -133,25 +133,30 @@
 ---
 
 #### Step 2.2: 实现 `void AppConfig_InitSpi(void)` — 初始化 SPI-A 主机
-- [ ] **状态**: `[ ]` 待办
-- [ ] **函数签名**: `void AppConfig_InitSpi(void)`
-- [ ] **功能描述**: 配置 SPI-A 为主机模式、8-bit 数据、波特率匹配 9600 bps、使能发送接收
-- [ ] **涉及文件**:
-  - `SRC/APP_CONFIG.c` — *(修改)*: 填写 `AppConfig_InitSpi()` 函数体
-  - `INCLUDE/APP_CONFIG.h` — *(修改)*: 定义 SPI 波特率宏
-- [ ] **依赖**: Step 1.2（GPIO 必须先配好 MUX）
-- [ ] **预计工时**: 0.5 小时
-- [ ] **测试方法**: 调试器中检查 SPI-A 寄存器（SPICCR/SPICTL/SPIBRR）；用逻辑分析仪/示波器观察 CLK 引脚波形
-- [ ] **验收标准**:
-  - [ ] 编译 0 errors
-  - [ ] 注释全部简体中文
-  - [ ] SPIBRR 对应 SPI CLK ≈ 9600 bps（或接近值）
-  - [ ] 主机模式，8-bit，无相位滞后，下降沿输出
-  - [ ] CS（GPIO19/SPISTE）由 SPI 模块自动管理
-  - [ ] git commit 完成，信息 `[Step 2.2] AppConfig_InitSpi`
-- [ ] **开发讲解**（AI 完成后填写）:
-- [ ] **用户确认**: [ ] 看懂本步讲解
-- [ ] **完成日期**: *(YYYY-MM-DD)*
+- [x] **状态**: `[x]` 已完成
+- [x] **函数签名**: `void AppConfig_InitSpi(void)`
+- [x] **功能描述**: 配置 SPI-A 为主机模式、8-bit 数据、下降沿输出/无相位滞后（SPI Mode 0）、使能发送接收。同时修正 GPIO16-18 的 MUX 值（3→1，原值错误地将 SPI 引脚配成了普通 GPIO）并补充 QSEL 异步 + PUD 上拉。
+- [x] **涉及文件**:
+  - `SRC/APP_CONFIG.c` — *(修改)*: 填写 `AppConfig_InitSpi()` 函数体；修复 GPIO16-18 MUX (3→1) + QSEL/PUD；`AppConfig_Init()` 中取消注释 SPI 调用
+- [x] **依赖**: Step 1.2（GPIO 必须先配好 MUX）
+- [x] **预计工时**: 0.5 小时
+- [x] **测试方法**: 调试器中检查 SPI-A 寄存器（SPICCR/SPICTL/SPIBRR）；用逻辑分析仪/示波器观察 CLK 引脚波形
+- [x] **验收标准**:
+  - [x] 编译 0 errors
+  - [x] 注释全部简体中文
+  - [x] 主机模式，8-bit，CLK_PHASE=0（无相位滞后/下降沿输出）
+  - [x] SPI CLK ≈ 293 kHz（SPIBRR=127），有效吞吐由 1ms ISR 软件节奏匹配 UART 9600 bps
+  - [x] CS（GPIO19）由 GPIO 手动拉低（方案A：单从机永久选中），不依赖 SPI 模块自动管理
+  - [x] GPIO16-18 MUX 修正为 1（原错误值 3 = 普通 GPIO），补充 QSEL=3 异步 + PUD=0 上拉
+  - [x] git commit 完成，信息 `[Step 2.2] AppConfig_InitSpi`
+- [x] **开发讲解**（AI 完成后填写）:
+  - SPI 是同步串行通信（有独立的 CLK 时钟线），不像 UART 那样靠双方约定波特率。DSP 做主机时主动输出 CLK，从机（CPLD）被动跟随 CLK 收发数据。
+  - **SPI Mode 0（CPOL=0, CPHA=0）**：CLK 空闲为低电平，数据在下降沿输出、上升沿采样。对应寄存器配置就是 CLK_PHASE=0 + CLKPOLARITY=0（默认值）。PRD 要求"无相位滞后 + 下降沿输出"就是这个组合。
+  - **SPI 硬件时钟 vs 有效吞吐**：SPIBRR=127 对应硬件 CLK = 37.5MHz/128 ≈ 293 kHz。SPI 的波特率公式不像 SCI 那样有 ÷8 因子，所以最慢也只能降到 ~146 kHz（SPIBRR=255）。物理上无法降到 9600 Hz。但这对透传没有影响——有效吞吐由 1ms ISR 的轮询频率控制（每毫秒最多收发几个字节），SPI 硬件只需"够快够用"即可。
+  - **SPIRST 复位方式**：和 SCI 的 SWRESET 类似，SPI 用 SPIFFTX 的 bit15（SPIRST=1）先复位整个模块，然后 SPICCR bit7（SPISWRESET=0）冻结配置，配完后再 SWRESET=1 启动。两次复位是独立的两层：SPIRST 是 FIFO 层面的硬件复位，SWRESET 是协议层面的配置使能。
+  - **bug 修复**：GPIO16-18 的 MUX 之前是 3（普通 GPIO），SPI 外设根本连不上引脚。参照 TI 的 `InitSpiaGpio()` 和 F28335 数据手册的引脚复用表，SPI 功能对应的 MUX 是 1。修复加上了 QSEL=3（异步模式，防亚稳态）和 PUD=0（内部上拉，防悬空），与 SCI 引脚的处理保持一致。
+- [x] **用户确认**: [ ] 看懂本步讲解
+- [x] **完成日期**: 2026-08-08
 
 ---
 
@@ -363,6 +368,7 @@
 |---|---|---|
 | 2026-08-08 | — | 初始计划生成，10 Steps，4 阶段 |
 | 2026-08-08 | Step 1.2 | GPIO35/36 MUX 修正 (2→1) + QSEL/PUD 补充，参照 DSP2833x_DAB |
+| 2026-08-08 | Step 2.2 | SPI-A 初始化 (SPI Mode 0, 8-bit, 主机)；GPIO16-18 MUX 修正 (3→1) + QSEL/PUD |
 
 ---
 
