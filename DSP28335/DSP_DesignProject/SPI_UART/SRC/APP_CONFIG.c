@@ -27,8 +27,8 @@
  *   GPIO17 = SPISOMIA (MUX=3), 输入
  *   GPIO18 = SPICLKA  (MUX=3), 输出
  *   GPIO19 = GPIO 输出低 (永久 CS, 单从机)
- *   GPIO35 = SCITXDA  (MUX=2), 输出
- *   GPIO36 = SCIRXDA  (MUX=2), 输入
+ *   GPIO35 = SCITXDA  (MUX=1), 输出, 异步, 内部上拉
+ *   GPIO36 = SCIRXDA  (MUX=1), 输入, 异步, 内部上拉
  *   GPIO67 = LED TX (GPIO 输出高灭)
  *   GPIO68 = LED RX (GPIO 输出高灭)
  *
@@ -58,14 +58,18 @@ void AppConfig_InitGpio(void)
     GpioCtrlRegs.GPADIR.bit.GPIO19  = 1;
     GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;
 
-    /* ---- SCI-A 引脚 (GPIO35-36, MUX=2 备选位置) ---- */
-    /* GPIO35 = SCITXDA (TX → PC RX), 输出方向 */
-    GpioCtrlRegs.GPBMUX1.bit.GPIO35 = 2;
-    GpioCtrlRegs.GPBDIR.bit.GPIO35  = 1;
+    /* ---- SCI-A 引脚 (GPIO35-36, MUX=1, 参照 DSP2833x_DAB 已验证) ---- */
+    /* GPIO35 = SCITXDA (TX → PC RX), 输出方向, 异步模式 */
+    GpioCtrlRegs.GPBMUX1.bit.GPIO35  = 1;
+    GpioCtrlRegs.GPBDIR.bit.GPIO35   = 1;
+    GpioCtrlRegs.GPBQSEL1.bit.GPIO35 = 3;   /* 异步 (旁路同步触发器)       */
+    GpioCtrlRegs.GPBPUD.bit.GPIO35   = 0;   /* 内部上拉使能               */
 
-    /* GPIO36 = SCIRXDA (RX ← PC TX), 输入方向 */
-    GpioCtrlRegs.GPBMUX1.bit.GPIO36 = 2;
-    GpioCtrlRegs.GPBDIR.bit.GPIO36  = 0;
+    /* GPIO36 = SCIRXDA (RX ← PC TX), 输入方向, 异步模式 */
+    GpioCtrlRegs.GPBMUX1.bit.GPIO36  = 1;
+    GpioCtrlRegs.GPBDIR.bit.GPIO36   = 0;
+    GpioCtrlRegs.GPBQSEL1.bit.GPIO36 = 3;   /* 异步 (旁路同步触发器)       */
+    GpioCtrlRegs.GPBPUD.bit.GPIO36   = 0;   /* 内部上拉使能               */
 
     /* ---- LED 引脚 (GPIO67-68, GPIOC 端口, 低电平点亮) ---- */
     /* GPIO67 = TX LED, 初始拉高 (灭) */

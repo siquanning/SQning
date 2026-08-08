@@ -62,35 +62,21 @@ void main(void)
     EDIS;
 
     /* 4. 外设初始化 */
-    InitCpuTimers();
-    /* TODO: 配置定时器, 例如:
-     * ConfigCpuTimer(&CpuTimer0, 150, 16.666667);  // 150MHz, 16.67us周期
-     */
-
-    /* TODO: 初始化你的外设 (ePWM, ADC, SCI 等) */
-    /* AppConfig_Init(); */
+    AppConfig_Init();
 
     /* 5. 使能中断 */
-    /* TODO: 根据需要启用 PIE 组和通道, 例如:
-     * IER |= M_INT1;
-     * PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
-     * PieCtrlRegs.PIEIER1.bit.INTx7 = 1;  // Timer0 在 Group1, Channel 7
-     */
     EINT;
     ERTM;
 
-    /* 6. 应用初始化 */
-    /* TODO: 启动定时器、使能 PWM 输出等 */
-
-    /* 7. 主循环 */
+    /* 6. 主循环 — 调试阶段: SCI 回环测试 (PC→DSP→PC 原样返回) */
     for (;;)
     {
-        /* 在此放置非实时任务:
-         * - 状态机更新
-         * - 通信协议处理 (Modbus, CAN, ...)
-         * - 数据记录
-         * - 保护逻辑检查
-         */
+        /* 从 SCI RX FIFO 读字节, 有数据则原样发回 (回环测试) */
+        Uint16 rxByte = SciReceiveByte();
+        if (rxByte != 0xFFFF)
+        {
+            SciSendByte(rxByte);
+        }
     }
 }
 

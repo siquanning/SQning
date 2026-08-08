@@ -63,8 +63,8 @@
 | 17 | 输入 | SPI-A SOMI (MISO) | 接 CPLD SIMO |
 | 18 | 输出 | SPI-A CLK | DSP 提供时钟（DSP 做主机） |
 | 19 | 输出 | GPIO → CPLD NSS (CS) | 方案 A：单从机，永久拉低选中 |
-| 35 | 输出 | SCI-A TX | 接 PC RX（UART→USB），MUX=2 |
-| 36 | 输入 | SCI-A RX | 接 PC TX（UART→USB），MUX=2 |
+| 35 | 输出 | SCI-A TX | 接 PC RX（UART→USB），MUX=1 |
+| 36 | 输入 | SCI-A RX | 接 PC TX（UART→USB），MUX=1 |
 | 67 | 输出 | LED TX 指示 | 发送完成闪烁，低电平点亮，GPIOC |
 | 68 | 输出 | LED RX 指示 | 接收完成闪烁，低电平点亮，GPIOC |
 
