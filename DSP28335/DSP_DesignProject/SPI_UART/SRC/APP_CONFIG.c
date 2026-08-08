@@ -202,7 +202,7 @@ Uint16 SciReceiveByte(void)
  *
  * 调用顺序:
  *   1. AppConfig_InitGpio()
- *   2. AppConfig_InitEPwm()  (或其他外设初始化函数)
+ *   2. AppConfig_InitSci()   (或其他外设初始化函数)
  */
 void AppConfig_Init(void)
 {

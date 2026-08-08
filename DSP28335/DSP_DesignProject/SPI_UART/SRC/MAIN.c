@@ -26,7 +26,14 @@
 #include "APP_CONFIG.h"
 
 /* ---- 全局变量定义 ---- */
-/* 在此声明跨 ISR/主循环的共享变量, 使用 volatile 修饰 */
+/* 跨 ISR/主循环的共享变量, 使用 volatile 修饰 */
+
+#define RX_BUF_SIZE  256                       /* 接收缓冲区大小 (字节) */
+
+volatile Uint16 g_rxBuffer[RX_BUF_SIZE];        /* SCI 接收环形缓冲      */
+volatile Uint16 g_rxHead     = 0;               /* 缓冲区写入位置         */
+volatile Uint16 g_rxTail     = 0;               /* 缓冲区读取位置         */
+volatile Uint16 g_rxReady    = 0;               /* 帧就绪标志: 1=有待发数据 */
 
 /* ---- 函数声明 ---- */
 interrupt void ISRTimer0(void);   /* CPU Timer0 中断服务例程 */
@@ -75,6 +82,28 @@ void main(void)
     /* 7. 主循环 */
     for (;;)
     {
+        /* ---- SCI 回显: ISR 收数据 → 主循环原样发回 ---- */
+        if (g_rxReady)
+        {
+            Uint16 i;
+
+            /* 将缓冲区内所有字节原样发回 */
+            for (i = 0; i < g_rxHead; i++)
+            {
+                SciSendByte(g_rxBuffer[i]);
+            }
+
+            /* 闪 TX LED 表示完成一次回显 */
+            CLEAR_TXLED;
+            DELAY_US(1000);
+            SET_TXLED;
+
+            /* 清空缓冲区, 等待下一帧 */
+            g_rxHead  = 0;
+            g_rxTail  = 0;
+            g_rxReady = 0;
+        }
+
         /* 在此放置非实时任务:
          * - 状态机更新
          * - 通信协议处理 (Modbus, CAN, ...)
@@ -107,19 +136,52 @@ interrupt void ISRTimer0(void)
 /* ---- 用户函数实现 ---- */
 
 /**
- * @brief SCI-A RX FIFO 中断服务例程 (桩)
+ * @brief SCI-A RX FIFO 中断服务例程
  *
- * 当前为最小实现: 仅清除中断标志 + PIE 应答, 防止中断挂死
- * 完整实现将在 Step 2.3 中完成 (读取 FIFO + 回显)
+ * 触发条件: RX FIFO 中数据量 ≥ 触发深度 (1 字节)
+ *
+ * 处理逻辑:
+ *   1. 循环读取 RX FIFO 中所有字节, 存入全局接收缓冲
+ *   2. 收到数据后置帧就绪标志 g_rxReady
+ *   3. 闪 RX LED 提示收到数据
+ *   4. 缓冲满时丢弃并重新开始 (软件流控)
+ *
+ * 注意: 主循环负责将缓冲数据发回 (回显)
  */
 interrupt void ISRSciRx(void)
 {
-    /* 读取 RXBUF 清除 FIFO 中断标志 (即使不使用数据也要读) */
-    Uint16 dummy = SciaRegs.SCIRXBUF.all;
+    Uint16 rxData;
 
-    /* 清除 RX FIFO 中断标志 */
+    /* 1. 循环读取 RX FIFO 中所有待处理字节 */
+    while (SciaRegs.SCIFFRX.bit.RXFFST > 0)
+    {
+        rxData = SciReceiveByte();
+
+        /* 缓冲未满则存入, 满则丢弃整帧重新开始 */
+        if (g_rxHead < RX_BUF_SIZE)
+        {
+            g_rxBuffer[g_rxHead++] = rxData;
+        }
+        else
+        {
+            /* 缓冲溢出: 清空, 重新接收 */
+            g_rxHead = 0;
+            g_rxTail = 0;
+        }
+    }
+
+    /* 2. 有新数据则置标志, 通知主循环处理 */
+    if (g_rxHead > 0)
+    {
+        g_rxReady = 1;
+    }
+
+    /* 3. 翻转 RX LED 提示收到数据 */
+    TOGGLE_RXLED;
+
+    /* 4. 清除 RX FIFO 中断标志 */
     SciaRegs.SCIFFRX.bit.RXFFINTCLR = 1;
 
-    /* 清除 PIE Group 9 中断应答 */
+    /* 5. 清除 PIE Group 9 中断应答 */
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;
 }
