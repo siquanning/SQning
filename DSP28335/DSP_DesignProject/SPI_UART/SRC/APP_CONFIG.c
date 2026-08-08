@@ -22,30 +22,61 @@
 /**
  * @brief 初始化所有应用层 GPIO
  *
+ * 引脚分配 (方案A — 单从机，CS 永久拉低):
+ *   GPIO16 = SPISIMOA (MUX=3), 输出
+ *   GPIO17 = SPISOMIA (MUX=3), 输入
+ *   GPIO18 = SPICLKA  (MUX=3), 输出
+ *   GPIO19 = GPIO 输出低 (永久 CS, 单从机)
+ *   GPIO35 = SCITXDA  (MUX=2), 输出
+ *   GPIO36 = SCIRXDA  (MUX=2), 输入
+ *   GPIO67 = LED TX (GPIO 输出高灭)
+ *   GPIO68 = LED RX (GPIO 输出高灭)
+ *
  * 约定:
  *   - GPIO 方向: GpioCtrlRegs.GPxDIR.bit.GPIOx = 1(输出) / 0(输入)
  *   - GPIO 复用: GpioCtrlRegs.GPxMUXy.bit.GPIOx = 0(GPIO) / 其他值(外设功能)
- *   - 输入限定: GpioCtrlRegs.GPxQSELy.bit.GPIOx 用于去抖动
  */
 void AppConfig_InitGpio(void)
 {
     EALLOW;
 
-    /* TODO: 在此配置 GPIO 引脚
-     *
-     * 示例 — 配置 GPIO5 为输出:
-     *   GpioCtrlRegs.GPAMUX1.bit.GPIO5 = 0;   // GPIO 功能
-     *   GpioCtrlRegs.GPADIR.bit.GPIO5  = 1;   // 输出
-     *
-     * 示例 — 配置 GPIO6 为输入:
-     *   GpioCtrlRegs.GPAMUX1.bit.GPIO6 = 0;   // GPIO 功能
-     *   GpioCtrlRegs.GPADIR.bit.GPIO6  = 0;   // 输入
-     *   GpioCtrlRegs.GPAQSEL1.bit.GPIO6 = 0;  // 与 SYSCLKOUT 同步
-     *
-     * 示例 — 配置 LED 指示:
-     *   GpioCtrlRegs.GPAMUX1.bit.GPIO5 = 0;
-     *   GpioCtrlRegs.GPADIR.bit.GPIO5  = 1;
-     */
+    /* ---- SPI-A 引脚 (GPIO16-18) ---- */
+    /* GPIO16 = SPISIMOA (MOSI → CPLD SOMI), 输出方向 */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 3;
+    GpioCtrlRegs.GPADIR.bit.GPIO16  = 1;
+
+    /* GPIO17 = SPISOMIA (MISO ← CPLD SIMO), 输入方向 */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 3;
+    GpioCtrlRegs.GPADIR.bit.GPIO17  = 0;
+
+    /* GPIO18 = SPICLKA (时钟 → CPLD), 输出方向 */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 3;
+    GpioCtrlRegs.GPADIR.bit.GPIO18  = 1;
+
+    /* GPIO19 = 普通 GPIO 输出, 拉低 → CPLD 片选永久选中 (方案A: 单从机) */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO19  = 1;
+    GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;
+
+    /* ---- SCI-A 引脚 (GPIO35-36, MUX=2 备选位置) ---- */
+    /* GPIO35 = SCITXDA (TX → PC RX), 输出方向 */
+    GpioCtrlRegs.GPBMUX1.bit.GPIO35 = 2;
+    GpioCtrlRegs.GPBDIR.bit.GPIO35  = 1;
+
+    /* GPIO36 = SCIRXDA (RX ← PC TX), 输入方向 */
+    GpioCtrlRegs.GPBMUX1.bit.GPIO36 = 2;
+    GpioCtrlRegs.GPBDIR.bit.GPIO36  = 0;
+
+    /* ---- LED 引脚 (GPIO67-68, GPIOC 端口, 低电平点亮) ---- */
+    /* GPIO67 = TX LED, 初始拉高 (灭) */
+    GpioCtrlRegs.GPCMUX1.bit.GPIO67 = 0;
+    GpioCtrlRegs.GPCDIR.bit.GPIO67  = 1;
+    GpioDataRegs.GPCSET.bit.GPIO67   = 1;
+
+    /* GPIO68 = RX LED, 初始拉高 (灭) */
+    GpioCtrlRegs.GPCMUX1.bit.GPIO68 = 0;
+    GpioCtrlRegs.GPCDIR.bit.GPIO68  = 1;
+    GpioDataRegs.GPCSET.bit.GPIO68   = 1;
 
     EDIS;
 }

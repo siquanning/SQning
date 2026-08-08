@@ -62,7 +62,7 @@
 | 16 | 输出 | SPI-A SIMO (MOSI) | 接 CPLD SOMI |
 | 17 | 输入 | SPI-A SOMI (MISO) | 接 CPLD SIMO |
 | 18 | 输出 | SPI-A CLK | DSP 提供时钟（DSP 做主机） |
-| 19 | 输出 | SPI-A STE (CS) | CPLD 片选，低有效 |
+| 19 | 输出 | GPIO → CPLD NSS (CS) | 方案 A：单从机，永久拉低选中 |
 | 35 | 输出 | SCI-A TX | 接 PC RX（UART→USB），MUX=2 |
 | 36 | 输入 | SCI-A RX | 接 PC TX（UART→USB），MUX=2 |
 | 67 | 输出 | LED TX 指示 | 发送完成闪烁，低电平点亮，GPIOC |
@@ -81,7 +81,7 @@
 | 接口 | 连接设备 | 协议/电平 | 备注 |
 |---|---|---|---|
 | SCI-A (GPIO35/36) | PC (USB转TTL) | UART 3.3V TTL / Modbus RTU | 交叉连接：RX↔TX，MUX=2 备选引脚 |
-| SPI-A (GPIO16-19) | CPLD | SPI 3.3V / 透明帧数据 | CLK 由 DSP 提供，DSP 为主机 |
+| SPI-A (GPIO16-18) + GPIO19 | CPLD | SPI 3.3V / 透明帧数据 | CLK 由 DSP 提供，DSP 为主机；GPIO19 作为 GPIO 输出永久拉低 (单从机，CS 无需切换) |
 | GPIO67/68 | LED | 3.3V 推挽输出 | 低电平点亮，GPIOC 口，串 330Ω 限流 |
 
 ---

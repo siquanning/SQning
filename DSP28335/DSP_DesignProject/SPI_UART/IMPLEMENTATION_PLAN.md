@@ -42,28 +42,34 @@
 ### 阶段 1: 基础框架搭建
 
 #### Step 1.1: 工程初始化（确认工程名/编译验证）
-- [ ] **状态**: `[ ]` 待办
-- [ ] **对象**: 工程级配置
-- [ ] **功能描述**: 确认工程名为 SPI_UART，验证 Debug 配置可编译通过，配置基础时钟宏
-- [ ] **涉及文件**:
+- [x] **状态**: `[x]` 已完成
+- [x] **对象**: 工程级配置
+- [x] **功能描述**: 确认工程名为 SPI_UART，验证 Debug 配置可编译通过，配置基础时钟宏
+- [x] **涉及文件**:
   - `INCLUDE/APP_CONFIG.h` — *(修改)*: 确认 CPU_CLK=150MHz、SPI_CLK、SCI_BAUD 等宏定义
-- [ ] **依赖**: 无
-- [ ] **预计工时**: 0.5 小时
-- [ ] **测试方法**: CCS 中 Build Project，0 errors
-- [ ] **验收标准**:
-  - [ ] 编译 0 errors
-  - [ ] 注释全部简体中文：`python tools/check_comments.py` 通过
-  - [ ] git commit 完成，信息 `[Step 1.1] 工程初始化`
-- [ ] **开发讲解**（AI 完成后填写）:
-- [ ] **用户确认**: [ ] 看懂本步讲解
-- [ ] **完成日期**: *(YYYY-MM-DD)*
+- [x] **依赖**: 无
+- [x] **预计工时**: 0.5 小时
+- [x] **测试方法**: CCS 中 Build Project，0 errors → **通过** (warning: 编译器 6.2.7→25.11.0.LTS 自动迁移)
+- [x] **验收标准**:
+  - [x] 编译 0 errors
+  - [x] 注释全部简体中文：`python tools/check_comments.py` 通过
+  - [x] git commit 完成，信息 `[Step 1.1] 工程初始化`
+- [x] **开发讲解**（AI 完成后填写）:
+  - APP_CONFIG.h 是项目的"总开关面板"——所有引脚编号、波特率、缓冲区大小都在这里用宏定义，后续代码引用宏而不是裸数字
+  - CPU_CLK=150e6 来自 DSP2833x_Examples.h 的 PLL 配置（30MHz晶振 × 10 / 2 = 150MHz）
+  - LSPCLK=37.5e6 是低速外设时钟 = CPU_CLK/4，SCI 和 SPI 都用这个时钟源
+  - SPI_BRR=127 让 SPI 时钟降到最慢 ~293kHz，有效吞吐速率由 1ms ISR 的软件节奏控制
+  - LED 在 GPIOC 端口（GPIO67/68），用 GPCSET/G PCCLEAR 做原子操作，不干扰同端口其他引脚
+  - 编译器警告是 6.2.7→25.11.0.LTS 的自动升级提示，不影响功能
+- [x] **用户确认**: [x] 看懂本步讲解
+- [x] **完成日期**: 2026-08-08
 
 ---
 
 #### Step 1.2: 实现 `void AppConfig_InitGpio(void)` — 初始化所有应用 GPIO
 - [ ] **状态**: `[ ]` 待办
 - [ ] **函数签名**: `void AppConfig_InitGpio(void)`
-- [ ] **功能描述**: 配置 SPI-A（调用 InitSpiaGpio）、SCI-A（手动配 GPIO35/36 MUX=2）、LED（GPIO67/68 输出）
+- [ ] **功能描述**: 手动配置 SPI-A 引脚（GPIO16-18 MUX=3, GPIO19 MUX=0 输出低, 方案A单从机）、SCI-A（手动配 GPIO35/36 MUX=2）、LED（GPIO67/68 输出）
 - [ ] **涉及文件**:
   - `SRC/APP_CONFIG.c` — *(修改)*: 填写 `AppConfig_InitGpio()` 函数体
   - `INCLUDE/APP_CONFIG.h` — *(修改)*: 定义 LED 引脚宏（`SET_LED_TX`、`CLEAR_LED_TX`、`SET_LED_RX`、`CLEAR_LED_RX`）
@@ -73,7 +79,7 @@
 - [ ] **验收标准**:
   - [ ] 编译 0 errors
   - [ ] 注释全部简体中文
-  - [ ] SPI 引脚（GPIO16-19）MUX 配为 SPI 功能
+  - [ ] SPI 引脚：GPIO16(SIMO)/17(SOMI)/18(CLK) MUX=3；GPIO19 MUX=0、DIR=输出、拉低 (方案A)
   - [ ] SCI 引脚（GPIO35/36）MUX=2（SCI-A 备选位置）
   - [ ] LED 引脚（GPIO67/68）MUX=0、DIR=输出
   - [ ] git commit 完成，信息 `[Step 1.2] AppConfig_InitGpio`
