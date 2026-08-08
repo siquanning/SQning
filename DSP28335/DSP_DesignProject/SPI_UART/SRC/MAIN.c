@@ -75,8 +75,6 @@ void main(void)
     PieCtrlRegs.PIECTRL.bit.ENPIE = 1;  /* 使能 PIE 中断控制器 */
     EINT;                                /* 开全局中断 */
     ERTM;                                /* 开实时调试中断 */
-
-    /* 6. 应用初始化 */
     /* TODO: 启动定时器、使能 PWM 输出等 */
 
     /* 7. 主循环 */
@@ -105,9 +103,9 @@ void main(void)
 
             {
                 Uint16 i;
+                Uint16 count = g_rxHead;     /* 快照: 防止 ISR 在发送期间追加数据 */
 
-                /* 将缓冲区内所有字节原样发回 */
-                for (i = 0; i < g_rxHead; i++)
+                for (i = 0; i < count; i++)
                 {
                     SciSendByte(g_rxBuffer[i]);
                 }
@@ -116,12 +114,21 @@ void main(void)
                 CLEAR_TXLED;
                 DELAY_US(1000);
                 SET_TXLED;
+
+                /* 从缓冲区移除已发送的数据 */
+                g_rxHead -= count;
+                if (g_rxHead > 0)
+                {
+                    /* ISR 在发送期间追加了新数据, 前移 */
+                    Uint16 j;
+                    for (j = 0; j < g_rxHead; j++)
+                    {
+                        g_rxBuffer[j] = g_rxBuffer[count + j];
+                    }
+                }
             }
 
-            /* 清空缓冲区, 等待下一帧 */
-            g_rxHead  = 0;
-            g_rxTail  = 0;
-            g_rxReady = 0;
+            g_rxReady = (g_rxHead > 0) ? 1 : 0;
         }
 
         /* 在此放置非实时任务:
@@ -172,36 +179,39 @@ interrupt void ISRSciRx(void)
 {
     Uint16 rxData;
 
-    /* 1. 循环读取 RX FIFO 中所有待处理字节 */
-    while (SciaRegs.SCIFFRX.bit.RXFFST > 0)
-    {
-        rxData = SciReceiveByte();
-
-        /* 缓冲未满则存入, 满则丢弃整帧重新开始 */
-        if (g_rxHead < RX_BUF_SIZE)
-        {
-            g_rxBuffer[g_rxHead++] = rxData;
-        }
-        else
-        {
-            /* 缓冲溢出: 清空, 重新接收 */
-            g_rxHead = 0;
-            g_rxTail = 0;
-        }
-    }
-
-    /* 2. 有新数据则置标志, 通知主循环处理 */
-    if (g_rxHead > 0)
-    {
-        g_rxReady = 1;
-    }
-
-    /* 3. 翻转 RX LED 提示收到数据 */
-    TOGGLE_RXLED;
-
-    /* 4. 清除 RX FIFO 中断标志 */
+    /* 1. 先清除 RX FIFO 中断标志, 再读 FIFO (TI 推荐顺序) */
     SciaRegs.SCIFFRX.bit.RXFFINTCLR = 1;
 
-    /* 5. 清除 PIE Group 9 中断应答 */
+    /* 2. 确认中断标志确实置位 (防御性检查) */
+    if (SciaRegs.SCIFFRX.bit.RXFFINT == 1)
+    {
+        /* 3. 循环读取 RX FIFO 中所有待处理字节 */
+        while (SciaRegs.SCIFFRX.bit.RXFFST > 0)
+        {
+            rxData = SciReceiveByte();
+
+            /* 缓冲未满则存入, 满则丢弃整帧重新开始 */
+            if (g_rxHead < RX_BUF_SIZE)
+            {
+                g_rxBuffer[g_rxHead++] = rxData;
+            }
+            else
+            {
+                /* 缓冲溢出: 清空, 重新接收 */
+                g_rxHead = 0;
+            }
+        }
+
+        /* 4. 有新数据则置标志, 通知主循环处理 */
+        if (g_rxHead > 0)
+        {
+            g_rxReady = 1;
+        }
+
+        /* 5. 翻转 RX LED 提示收到数据 */
+        TOGGLE_RXLED;
+    }
+
+    /* 6. 清除 PIE Group 9 中断应答 */
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;
 }

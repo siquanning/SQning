@@ -214,6 +214,82 @@ Uint16 SciReceiveByte(void)
 }
 
 /* ================================================================
+ * SPI 字节级收发封装
+ *
+ * SPI 是全双工总线——主机每发一字节同时也会收一字节。
+ * SpiSendByte  发一字节, 丢弃同时收到的数据 (仅发不收场景用)
+ * SpiReceiveByte 发哑字节 0xFF 产生时钟, 返回 CPLD 发来的数据
+ * ================================================================ */
+
+/**
+ * @brief 通过 SPI-A 发送一字节（查询方式, 阻塞等待传输完成）
+ *
+ * SPI 为主机全双工模式, 发送的同时会从 CPLD 收一字节存入 SPIRXBUF。
+ * 本函数读取 SPIRXBUF 以清除 INT_FLAG, 但丢弃收到的数据。
+ * 若需同时收发, 发完后再调 SpiReceiveByte 取回 CPLD 发来的数据。
+ *
+ * 传输流程:
+ *   1. 等待 SPITXBUF 为空 (BUFFULL_FLAG == 0)
+ *   2. 写入待发送字节到 SPITXBUF, 启动 SPI 移位
+ *   3. 等待移位完成 (INT_FLAG == 1, 收/发均完成)
+ *   4. 读 SPIRXBUF 清除 INT_FLAG
+ *
+ * @param data 待发送字节 (仅低 8 位有效)
+ */
+void SpiSendByte(Uint16 data)
+{
+    /* 等待 TX 缓冲空——上一次写入的数据已转移到移位寄存器 */
+    while (SpiaRegs.SPISTS.bit.BUFFULL_FLAG == 1)
+    {
+    }
+
+    /* 写入待发字节, 硬件自动启动 SPI 移位传输 */
+    SpiaRegs.SPITXBUF = (data & 0xFF);
+
+    /* 等待一字节传输完成 (INT_FLAG 置位 = SPIRXBUF 有新数据) */
+    while (SpiaRegs.SPISTS.bit.INT_FLAG == 0)
+    {
+    }
+
+    /* 读接收缓冲以清除 INT_FLAG——此字节是 CPLD 同时发来的数据 */
+    SpiaRegs.SPIRXBUF;
+}
+
+/**
+ * @brief 从 SPI-A 接收一字节（查询方式, 发 0xFF 哑字节产生时钟）
+ *
+ * DSP 是 SPI 主机, 必须主动发时钟才能从 CPLD 收数据。
+ * 发送哑字节 0xFF (MOSI 持续高电平, 对 CPLD 无意义) 产生 8 个时钟,
+ * 同时锁存 MISO 上的数据。
+ *
+ * 传输流程:
+ *   1. 等待 SPITXBUF 为空
+ *   2. 写哑字节 0xFF 到 SPITXBUF (生成时钟, CPLD 侧视为 NOP)
+ *   3. 等待移位完成
+ *   4. 返回 SPIRXBUF 中 CPLD 发来的数据
+ *
+ * @return CPLD 发来的字节 (仅低 8 位有效)
+ */
+Uint16 SpiReceiveByte(void)
+{
+    /* 等待 TX 缓冲空 */
+    while (SpiaRegs.SPISTS.bit.BUFFULL_FLAG == 1)
+    {
+    }
+
+    /* 发哑字节产生 8 个 SPI 时钟, 同时从 MISO 线采样 CPLD 数据 */
+    SpiaRegs.SPITXBUF = 0xFF;
+
+    /* 等待传输完成 */
+    while (SpiaRegs.SPISTS.bit.INT_FLAG == 0)
+    {
+    }
+
+    /* 返回 CPLD 发来的数据 (仅低 8 位有效) */
+    return (SpiaRegs.SPIRXBUF & 0xFF);
+}
+
+/* ================================================================
  * 应用层初始化入口
  * ================================================================ */
 
