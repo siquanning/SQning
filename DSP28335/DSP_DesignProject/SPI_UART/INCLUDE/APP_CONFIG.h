@@ -24,9 +24,9 @@ extern "C" {
 /* 由 DSP2833x_Examples.h 中的 PLL 配置决定:
  *   DSP28_PLLCR = 10, DSP28_DIVSEL = 2  →  CPU_CLK = 150 MHz
  *   修改 PLL 配置时, 同步更新以下宏 */
-#define CPU_CLK        150e6       /* Hz, CPU 主频 (SYSCLKOUT)              */
-#define CPU_RATE_NS      6.667L   /* ns, 每个 CPU 周期的时间               */
-#define LSPCLK        37.5e6      /* Hz, 低速外设时钟 (SYSCLKOUT/4, 默认)  */
+#define CPU_CLK     150000000L  /* Hz, CPU 主频 (SYSCLKOUT)              */
+#define CPU_RATE_NS      6.667L  /* ns, 每个 CPU 周期的时间               */
+#define LSPCLK       37500000L  /* Hz, 低速外设时钟 (SYSCLKOUT/4, 默认)  */
 
 /* ================================================================
  * UART (SCI-A) 配置
