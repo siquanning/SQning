@@ -225,6 +225,32 @@ void AppConfig_InitSpi(void)
 }
 
 /* ================================================================
+ * CPU Timer0 初始化
+ * ================================================================ */
+
+/**
+ * @brief 初始化 CPU Timer0 — 1ms 周期中断
+ *
+ * 接口约定:
+ *   - InitCpuTimers() 必须在 main() 中先于本函数调用 (初始化定时器硬件)
+ *   - 本函数仅配置周期参数和使能中断, ISR 向量注册在 main() 中完成
+ *
+ * 参数说明:
+ *   - ConfigCpuTimer(&CpuTimer0, 150, 1000):
+ *     Freq=150 (MHz, CPU主频), Period=1000 (µs, 1ms 中断周期)
+ *
+ * 中断链路: Timer0(C28x INT1) → PIE Group1 Channel7 → CPU INT1
+ */
+void AppConfig_InitCpuTimer0(void)
+{
+    /* 配置定时器周期: 150MHz CPU → 1ms = 1000µs 中断间隔 */
+    ConfigCpuTimer(&CpuTimer0, 150.0, 1000.0);
+
+    /* 使能 PIE Group1 Channel7 (TINT0) 中断 */
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+}
+
+/* ================================================================
  * 应用层初始化入口
  * ================================================================ */
 
@@ -243,6 +269,5 @@ void AppConfig_Init(void)
     AppConfig_InitSci();
 
     AppConfig_InitSpi();
-    /* TODO: 后续步骤按需取消注释 */
-    /* AppConfig_InitCpuTimer0();  // Step 2.3 */
+    AppConfig_InitCpuTimer0();
 }

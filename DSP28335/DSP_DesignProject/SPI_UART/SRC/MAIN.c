@@ -55,11 +55,11 @@ void main(void)
 
     /* 3. 注册中断服务例程 */
     EALLOW;
-    /* TODO: 注册你的 ISR, 例如:
-     * PieVectTable.TINT0 = &ISRTimer0;
-     * PieVectTable.EPWM1_INT = &ISREPwm1;
-     */
+    PieVectTable.TINT0 = &ISRTimer0;
     EDIS;
+
+    /* 使能 CPU 中断 (TINT0 → PIE Group1 → CPU INT1) */
+    IER |= M_INT1;
 
     /* 4. 外设初始化 */
     AppConfig_Init();

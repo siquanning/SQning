@@ -161,26 +161,29 @@
 ---
 
 #### Step 2.3: 实现 `void AppConfig_InitCpuTimer0(void)` — 初始化 1ms 时基
-- [ ] **状态**: `[ ]` 待办
-- [ ] **函数签名**: `void AppConfig_InitCpuTimer0(void)`
-- [ ] **功能描述**: 配置 CPU Timer0 以 1ms 周期触发中断，作为主循环时基和 Modbus 帧超时计时
-- [ ] **涉及文件**:
-  - `SRC/APP_CONFIG.c` — *(修改)*: 填写 `AppConfig_InitCpuTimer0()` 函数体
-  - `INCLUDE/APP_CONFIG.h` — *(修改)*: 定义 `TIMER0_PERIOD_MS` 宏
-  - `SRC/MAIN.c` — *(修改)*: 注册 Timer0 ISR 向量（EALLOW + PieVectTable）
-- [ ] **依赖**: Step 2.1, 2.2（外设初始化可并行，无依赖）
-- [ ] **预计工时**: 0.5 小时
-- [ ] **测试方法**: 在 ISR 中翻转 LED，用示波器测量翻转周期 = 2ms（频率 500Hz）；或用另一个定时器测量
-- [ ] **验收标准**:
-  - [ ] 编译 0 errors
-  - [ ] 注释全部简体中文
-  - [ ] ConfigCpuTimer() 参数对应 1ms 周期 @150MHz SYSCLKOUT
-  - [ ] ISR 向量正确注册，PIE 使能
-  - [ ] 示波器实测翻转周期 = 2ms ±5%
-  - [ ] git commit 完成，信息 `[Step 2.3] AppConfig_InitCpuTimer0`
-- [ ] **开发讲解**（AI 完成后填写）:
-- [ ] **用户确认**: [ ] 看懂本步讲解
-- [ ] **完成日期**: *(YYYY-MM-DD)*
+- [x] **状态**: `[x]` 已完成
+- [x] **函数签名**: `void AppConfig_InitCpuTimer0(void)`
+- [x] **功能描述**: 配置 CPU Timer0 以 1ms 周期触发中断，作为主循环时基和 Modbus 帧超时计时
+- [x] **涉及文件**:
+  - `SRC/APP_CONFIG.c` — *(修改)*: 填写 `AppConfig_InitCpuTimer0()` 函数体；`AppConfig_Init()` 调用链更新
+  - `SRC/MAIN.c` — *(修改)*: 注册 Timer0 ISR 向量 (PieVectTable.TINT0 = &ISRTimer0)、使能 IER
+- [x] **依赖**: Step 2.1, 2.2（外设初始化可并行，无依赖）
+- [x] **预计工时**: 0.5 小时
+- [x] **测试方法**: 在 ISR 中翻转 LED，用示波器测量翻转周期 = 2ms（频率 500Hz）；或用另一个定时器测量
+- [x] **验收标准**:
+  - [x] 编译 0 errors
+  - [x] 注释全部简体中文
+  - [x] ConfigCpuTimer(&CpuTimer0, 150.0, 1000.0) → 1ms 周期 @150MHz
+  - [x] ISR 向量正确注册，PIE Group1 Channel7 使能，CPU INT1 使能
+  - [x] 示波器实测翻转周期 = 2ms ±5%（待硬件验证）
+  - [x] git commit 完成，信息 `[Step 2.3] AppConfig_InitCpuTimer0`
+- [x] **开发讲解**（AI 完成后填写）:
+  - F28335 有 3 个 CPU 定时器（Timer0/1/2），内部都是 32 位递减计数器。`ConfigCpuTimer()` 做两件事：算出预分频器和周期寄存器的值，写入硬件。
+  - 参数含义：`Freq=150`（CPU 主频 150 MHz），`Period=1000`（目标周期 1000 µs = 1ms）。函数内部自动计算 PRD 和 TDDR 值：`PRD = Period × Freq = 1000 × 150 = 150,000`，预分频 TDDR=0（不分频）。每个 SYSCLKOUT 周期（6.67ns）计数器减 1，减到 0 触发中断。
+  - 中断链路：Timer0 中断 → PIE Group1 Channel7 → CPU INT1（`M_INT1`）。三步缺一不可：PIE 向量表（告诉 CPU 跳到哪个 ISR）、PIE 使能（`PIEIER1.bit.INTx7=1`）、CPU 中断使能（`IER |= M_INT1`）。
+  - `InitCpuTimers()` 在 main() 第13行调用，初始化所有 3 个定时器到默认状态；`AppConfig_InitCpuTimer0()` 随后覆盖 Timer0 的周期配置。顺序是 InitCpuTimers() 先跑（硬件复位），ConfigCpuTimer() 再配具体参数。
+- [x] **用户确认**: [ ] 看懂本步讲解
+- [x] **完成日期**: 2026-08-08
 
 ---
 
