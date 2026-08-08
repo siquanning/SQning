@@ -76,10 +76,10 @@ void main(void)
 }
 
 /**
- * @brief Timer0 中断服务例程模板
+ * @brief Timer0 中断服务例程 — 当前阶段: 回显测试
  *
  * 接口约定:
- *   - 调用频率: 由 ConfigCpuTimer() 的周期参数决定
+ *   - 调用频率: 1ms (ConfigCpuTimer 150MHz/1000µs)
  *   - 必须清除 TIF 标志和 PIEACK
  *   - 在此执行实时控制算法 (PWM 占空比更新, ADC 读取, 控制环路等)
  */
@@ -89,7 +89,22 @@ interrupt void ISRTimer0(void)
     CpuTimer0Regs.TCR.bit.TIF = 1;
     CpuTimer0Regs.TCR.bit.TRB = 1;
 
-    /* TODO: 在此编写实时控制逻辑 */
+    /* ====== 回显测试 (临时) ======
+     * 1ms 轮询 SCI RX FIFO, 收到字节立刻原样发回
+     * 验证: 串口助手打字 → 立即看到相同字符 = UART 通路正常
+     * 后续 Step 4.1 替换为正式收发逻辑 */
+    {
+        Uint16 rxByte = SciReceiveByte();
+        if (rxByte != 0xFFFF)
+        {
+            SciSendByte(rxByte);          /* 回显: 收到什么发什么          */
+            CLEAR_LED_RX;                 /* RX LED 亮 (表示有数据进来)   */
+        }
+        else
+        {
+            SET_LED_RX;                   /* RX LED 灭                    */
+        }
+    }
 
     /* 清除 PIE 中断应答 */
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
