@@ -22,71 +22,38 @@
 /**
  * @brief 初始化所有应用层 GPIO
  *
- * 引脚分配 (方案A — 单从机，CS 永久拉低):
- *   GPIO16 = SPISIMOA (MUX=1), 输出, 异步, 内部上拉
- *   GPIO17 = SPISOMIA (MUX=1), 输入, 异步, 内部上拉
- *   GPIO18 = SPICLKA  (MUX=1), 输出, 异步, 内部上拉
- *   GPIO19 = GPIO 输出低 (永久 CS, 单从机)
- *   GPIO35 = SCITXDA  (MUX=1), 输出, 异步, 内部上拉
- *   GPIO36 = SCIRXDA  (MUX=1), 输入, 异步, 内部上拉
- *   GPIO67 = LED TX (GPIO 输出高灭)
- *   GPIO68 = LED RX (GPIO 输出高灭)
- *
  * 约定:
  *   - GPIO 方向: GpioCtrlRegs.GPxDIR.bit.GPIOx = 1(输出) / 0(输入)
- *   - GPIO 复用: GpioCtrlRegs.GPxMUXy.bit.GPIOx = 0(GPIO) / 其他值(外设功能)
+ *   - GPIO 复用: GpioCtrlRegs.GPxMUXy.bit.GPIOx = 0(GPIO) / 1(SCI) / 3(SPI)
+ *   - 输入限定: GpioCtrlRegs.GPxQSELy.bit.GPIOx: 3=异步 (通信外设)
  */
 void AppConfig_InitGpio(void)
 {
     EALLOW;
 
-    /* ---- SPI-A 引脚 (GPIO16-18, MUX=1 = SPI 功能) ---- */
-    /* GPIO16 = SPISIMOA (MOSI → CPLD SOMI), 输出方向, 异步, 内部上拉 */
-    GpioCtrlRegs.GPAMUX2.bit.GPIO16  = 1;
-    GpioCtrlRegs.GPADIR.bit.GPIO16   = 1;
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO16 = 3;
-    GpioCtrlRegs.GPAPUD.bit.GPIO16   = 0;
+    /* ---- SCI-A 引脚 (GPIO35=TX, GPIO36=RX) ---- */
+    /* GPIO35: SCI-A TX, MUX=1 (SCI 主功能), QSEL=3 (异步), PUD=0 (上拉) */
+    GpioCtrlRegs.GPBMUX1.bit.GPIO35 = 1;
+    GpioCtrlRegs.GPBQSEL1.bit.GPIO35 = 3;
+    GpioCtrlRegs.GPBPUD.bit.GPIO35 = 0;
 
-    /* GPIO17 = SPISOMIA (MISO ← CPLD SIMO), 输入方向, 异步, 内部上拉 */
-    GpioCtrlRegs.GPAMUX2.bit.GPIO17  = 1;
-    GpioCtrlRegs.GPADIR.bit.GPIO17   = 0;
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO17 = 3;
-    GpioCtrlRegs.GPAPUD.bit.GPIO17   = 0;
+    /* GPIO36: SCI-A RX, MUX=1 (SCI 主功能), QSEL=3 (异步), PUD=0 (上拉) */
+    GpioCtrlRegs.GPBMUX1.bit.GPIO36 = 1;
+    GpioCtrlRegs.GPBQSEL1.bit.GPIO36 = 3;
+    GpioCtrlRegs.GPBPUD.bit.GPIO36 = 0;
 
-    /* GPIO18 = SPICLKA (时钟 → CPLD), 输出方向, 异步, 内部上拉 */
-    GpioCtrlRegs.GPAMUX2.bit.GPIO18  = 1;
-    GpioCtrlRegs.GPADIR.bit.GPIO18   = 1;
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO18 = 3;
-    GpioCtrlRegs.GPAPUD.bit.GPIO18   = 0;
-
-    /* GPIO19 = 普通 GPIO 输出, 拉低 → CPLD 片选永久选中 (方案A: 单从机) */
-    GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;
-    GpioCtrlRegs.GPADIR.bit.GPIO19  = 1;
-    GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;
-
-    /* ---- SCI-A 引脚 (GPIO35-36, MUX=1, 参照 DSP2833x_DAB 已验证) ---- */
-    /* GPIO35 = SCITXDA (TX → PC RX), 输出方向, 异步模式 */
-    GpioCtrlRegs.GPBMUX1.bit.GPIO35  = 1;
-    GpioCtrlRegs.GPBDIR.bit.GPIO35   = 1;
-    GpioCtrlRegs.GPBQSEL1.bit.GPIO35 = 3;   /* 异步 (旁路同步触发器)       */
-    GpioCtrlRegs.GPBPUD.bit.GPIO35   = 0;   /* 内部上拉使能               */
-
-    /* GPIO36 = SCIRXDA (RX ← PC TX), 输入方向, 异步模式 */
-    GpioCtrlRegs.GPBMUX1.bit.GPIO36  = 1;
-    GpioCtrlRegs.GPBDIR.bit.GPIO36   = 0;
-    GpioCtrlRegs.GPBQSEL1.bit.GPIO36 = 3;   /* 异步 (旁路同步触发器)       */
-    GpioCtrlRegs.GPBPUD.bit.GPIO36   = 0;   /* 内部上拉使能               */
-
-    /* ---- LED 引脚 (GPIO67-68, GPIOC 端口, 低电平点亮) ---- */
-    /* GPIO67 = TX LED, 初始拉高 (灭) */
+    /* ---- LED 引脚 (GPIO67=TX_LED, GPIO68=RX_LED) ---- */
+    /* GPIO67: GPIO 输出, 初始高电平 (LED 灭) */
     GpioCtrlRegs.GPCMUX1.bit.GPIO67 = 0;
-    GpioCtrlRegs.GPCDIR.bit.GPIO67  = 1;
-    GpioDataRegs.GPCSET.bit.GPIO67   = 1;
+    GpioCtrlRegs.GPCDIR.bit.GPIO67 = 1;
+    GpioCtrlRegs.GPCPUD.bit.GPIO67 = 0;
+    SET_TXLED;      /* 初始高电平 → LED 灭 */
 
-    /* GPIO68 = RX LED, 初始拉高 (灭) */
+    /* GPIO68: GPIO 输出, 初始高电平 (LED 灭) */
     GpioCtrlRegs.GPCMUX1.bit.GPIO68 = 0;
-    GpioCtrlRegs.GPCDIR.bit.GPIO68  = 1;
-    GpioDataRegs.GPCSET.bit.GPIO68   = 1;
+    GpioCtrlRegs.GPCDIR.bit.GPIO68 = 1;
+    GpioCtrlRegs.GPCPUD.bit.GPIO68 = 0;
+    SET_RXLED;      /* 初始高电平 → LED 灭 */
 
     EDIS;
 }
@@ -131,123 +98,63 @@ void AppConfig_InitEPwm(void)
 }
 #endif
 
-/* ================================================================
- * SCI (UART) 初始化
- * ================================================================ */
-
 /**
- * @brief 初始化 SCI-A — 9600bps / 8N1 / 无硬件流控 / FIFO 8 字节
+ * @brief SCI-A 初始化 — 9600bps 8N1, FIFO 增强模式, RX 中断
  *
- * 接口约定:
- *   - GPIO35/36 的 MUX=1 (SCITXDA/SCIRXDA) 已在 AppConfig_InitGpio() 中配置
- *   - 本函数不使能 SCI 中断 — 收发由 ISR 中轮询 RXFFST/TXFFST 完成
- *   - 波特率公式: BRR = LSPCLK / (Baud × 8) - 1
- *   - SWRESET=0 时所有配置写完后, 最后 SWRESET=1 退出复位启动
+ * 按 PRD §5.5 寄存器初始化序列配置:
+ *   1. SCICCR=0x0007 (8 数据位/1 停止位/无校验/空闲线模式)
+ *   2. SCICTL1=0x0003 (RXENA+TXENA, SWRESET=0 保持复位)
+ *   3. SCICTL2.RXBKINTENA=1 (使能接收中断)
+ *   4. 波特率 BRR=487=0x1E7 (9600bps @ LSPCLK=37.5MHz)
+ *   5. SCIFFTX=0xE040 (FIFO 使能, SCIRST=1, TX FIFO 复位)
+ *   6. SCIFFRX=0x2041 + RXFFIENA=1 (RX FIFO 复位, 触发深度=1)
+ *   7. SCIFFCT=0x0000 (无自动波特率, 无 TX 延迟)
+ *   8. SCICTL1=0x0027 (SWRESET=1, 模块释放复位开始运行)
+ *   9. 注册 SCIRXINTA ISR 到 PIE 向量表
+ *   10. 使能 PIE Group 9.1 (SCI RX) + CPU INT9
  *
- * SCI-A 寄存器配置摘要:
- *   SCICCR  = 0x0007  (1 停止位 / 无校验 / 8 数据位 / 空闲线模式)
- *   SCICTL1 = 0x0023  (TX/RX 使能, SWRESET=1)
- *   BRR     = 487     (实际速率 = 9605.5bps, 误差 +0.06%)
+ * 注意: 本函数不调用 EINT/ERTM, 由 main() 在所有外设初始化完成后统一开启
  */
 void AppConfig_InitSci(void)
 {
-    /* 清除可能残留的 FIFO 中断标志 (上电后寄存器值不确定) */
+    /* 清除可能残留的 SCI 中断标志, 避免上电误触发 */
     SciaRegs.SCIFFRX.bit.RXFFINTCLR = 1;
-    SciaRegs.SCIFFTX.bit.TXFFINTCLR = 1;
+    PieCtrlRegs.PIEACK.all = 0xFFFF;
 
-    /* 通信控制寄存器: 1 停止位, 无校验, 8 位字符, 空闲线多处理器模式 */
+    /* 1. 通信参数: 8 数据位, 1 停止位, 无校验, 空闲线模式 */
     SciaRegs.SCICCR.all = 0x0007;
 
-    /* 控制寄存器 1: 使能 TX 和 RX (SWRESET=0 时仅"预置", 退出复位后才生效) */
+    /* 2. 初始控制: RXENA=1, TXENA=1, SWRESET=0 (模块保持复位, 写完所有寄存器再释放) */
     SciaRegs.SCICTL1.all = 0x0003;
 
-    /* 波特率 = LSPCLK / [(BRR+1) × 8]
-     * BRR = 37,500,000 / (9600×8) - 1 = 487 → 实际 9605.5 bps (±0.06%) */
-    SciaRegs.SCIHBAUD = (SCI_BRR_VALUE >> 8) & 0xFF;
-    SciaRegs.SCILBAUD =  SCI_BRR_VALUE & 0xFF;
+    /* 3. 使能接收中断总开关 */
+    SciaRegs.SCICTL2.bit.RXBKINTENA = 1;
 
-    /* TX FIFO: 使能 SCI FIFO 模式, 复位 TX/RX FIFO, 清除 TX 中断标志
-     * SCIFFENA=1(使能FIFO), TXFIFORESET=1(复位), TXFFINTCLR=1(清中断) */
+    /* 4. 波特率: BRR = LSPCLK/(Baud×8)−1 = 37500000/76800−1 = 487 = 0x1E7 */
+    SciaRegs.SCIHBAUD = (SCI_BRR_VALUE >> 8) & 0xFF;  /* 高字节 0x01 */
+    SciaRegs.SCILBAUD = SCI_BRR_VALUE & 0xFF;         /* 低字节 0xE7 */
+
+    /* 5. FIFO 发送配置: SCIFFENA=1 (增强模式), SCIRST=1, TXFIFO 复位 */
     SciaRegs.SCIFFTX.all = 0xE040;
 
-    /* RX FIFO: 不复位 (由 TX 寄存器统一复位), 接收触发深度=1, 无 FIFO 中断
-     * RXFIFORESET=0(不复位), RXFFIL=1(触发不起作用：中断未使能, 仅 ISR 轮询) */
-    SciaRegs.SCIFFRX.all = 0x0001;
+    /* 6. FIFO 接收配置: RXFIFO 复位, 触发深度=1 字节, 使能 RX FIFO 中断 */
+    SciaRegs.SCIFFRX.all = 0x2041;
+    SciaRegs.SCIFFRX.bit.RXFFIENA = 1;
 
-    /* FIFO 控制: 不使能自动波特率检测 */
+    /* 7. FIFO 控制: 无自动波特率检测, 无 TX 发送延迟 */
     SciaRegs.SCIFFCT.all = 0x0000;
 
-    /* SWRESET=1 退出复位, 启动 SCI (SLEEP=0 不休眠, TXWAKE=0) */
-    SciaRegs.SCICTL1.all = 0x0023;
-}
+    /* 8. 释放模块复位 (SWRESET=1), SCI 开始工作 */
+    SciaRegs.SCICTL1.all = 0x0027;
 
-/* ================================================================
- * SPI 初始化
- * ================================================================ */
-
-/**
- * @brief 初始化 SPI-A — 主机模式 / 8-bit / 无相位滞后 / 下降沿输出
- *
- * 接口约定:
- *   - GPIO16-18 的 MUX=1 (SPI 功能) 已在 AppConfig_InitGpio() 中配置
- *   - 本函数不使能 SPI 中断 — 收发由 ISR 中轮询 SPISTS 完成
- *   - SPI 波特率 = LSPCLK / (SPIBRR + 1)
- *   - SWRESET=0 时冻结配置, 所有寄存器写完后 SWRESET=1 启动
- *
- * SPI-A 寄存器配置摘要:
- *   SPICCR  = 0x0007  (8-bit 字符, SWRESET=0 → 配完后 0x0087 SWRESET=1)
- *   SPICTL  = 0x0006  (主机模式, TALK=1, CLK_PHASE=0 无相位滞后, 无中断)
- *   SPIBRR  = 127     (SPI CLK ≈ 293 kHz, 有效吞吐由 1ms ISR 软件控制)
- */
-void AppConfig_InitSpi(void)
-{
-    /* 使能 SPI-A 外设时钟 (EALLOW 保护) */
+    /* 9. 注册 SCI RX 中断向量到 PIE 向量表 (受 EALLOW 保护) */
     EALLOW;
-    SysCtrlRegs.PCLKCR0.bit.SPIAENCLK = 1;
+    PieVectTable.SCIRXINTA = &ISRSciRx;
     EDIS;
 
-    /* 通过 FIFO 复位 SPI (SPIRST=1 将整个 SPI 回归空闲态) */
-    SpiaRegs.SPIFFTX.all = 0x8000;
-
-    /* 通信控制: 8-bit 字符长度, SPISWRESET=0 (配置冻结中) */
-    SpiaRegs.SPICCR.all = 0x0007;
-
-    /* 控制寄存器: CLK_PHASE=0 (无相位滞后/下降沿输出),
-     * MASTER_SLAVE=1 (主机), TALK=1 (使能发送), 无中断 */
-    SpiaRegs.SPICTL.all = 0x0006;
-
-    /* 波特率 = LSPCLK / (SPI_BRR + 1) = 37.5MHz / 128 ≈ 293 kHz
-     * 这是 SPI 硬件时钟, 有效数据吞吐由 1ms ISR 轮询节奏决定 */
-    SpiaRegs.SPIBRR = SPI_BRR;
-
-    /* SWRESET=1 退出复位, 启动 SPI (CLK 开始输出) */
-    SpiaRegs.SPICCR.all = 0x0087;
-}
-
-/* ================================================================
- * CPU Timer0 初始化
- * ================================================================ */
-
-/**
- * @brief 初始化 CPU Timer0 — 1ms 周期中断
- *
- * 接口约定:
- *   - InitCpuTimers() 必须在 main() 中先于本函数调用 (初始化定时器硬件)
- *   - 本函数仅配置周期参数和使能中断, ISR 向量注册在 main() 中完成
- *
- * 参数说明:
- *   - ConfigCpuTimer(&CpuTimer0, 150, 1000):
- *     Freq=150 (MHz, CPU主频), Period=1000 (µs, 1ms 中断周期)
- *
- * 中断链路: Timer0(C28x INT1) → PIE Group1 Channel7 → CPU INT1
- */
-void AppConfig_InitCpuTimer0(void)
-{
-    /* 配置定时器周期: 150MHz CPU → 1ms = 1000µs 中断间隔 */
-    ConfigCpuTimer(&CpuTimer0, 150.0, 1000.0);
-
-    /* 使能 PIE Group1 Channel7 (TINT0) 中断 */
-    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+    /* 10. 使能 PIE Group 9 通道 1 (SCIRXINTA) + CPU INT9 */
+    PieCtrlRegs.PIEIER9.bit.INTx1 = 1;
+    IER |= M_INT9;
 }
 
 /* ================================================================
@@ -258,59 +165,15 @@ void AppConfig_InitCpuTimer0(void)
  * @brief 应用层总初始化 — 在 main() 外设初始化阶段调用
  *
  * 调用顺序:
- *   1. AppConfig_InitGpio()  — GPIO 复用 (SPI/SCI/LED)
- *   2. AppConfig_InitSci()   — SCI-A UART 初始化
- *   3. AppConfig_InitSpi()   — SPI-A 主机初始化 (Step 2.2)
- *   4. AppConfig_InitCpuTimer0() — 1ms 时基 (Step 2.3)
+ *   1. AppConfig_InitGpio()
+ *   2. AppConfig_InitEPwm()  (或其他外设初始化函数)
  */
 void AppConfig_Init(void)
 {
     AppConfig_InitGpio();
     AppConfig_InitSci();
 
-    AppConfig_InitSpi();
-    AppConfig_InitCpuTimer0();
-}
-
-/* ================================================================
- * UART 字节收发 (应用层封装 — 禁止在主循环中直接操作 SCI 寄存器)
- * ================================================================ */
-
-/**
- * @brief 从 SCI-A RX FIFO 读取 1 字节
- *
- * 接口约定:
- *   - 在 Timer0 ISR 中调用 (1ms 周期轮询)
- *   - 不阻塞: FIFO 空时返回 0xFFFF (sentinel)
- *
- * @return 收到的 8-bit 数据 (0x00~0xFF), FIFO 空时返回 0xFFFF
- */
-Uint16 SciReceiveByte(void)
-{
-    /* RXFFST: 0=空, 1~15=等待读取的字节数 */
-    if (SciaRegs.SCIFFRX.bit.RXFFST > 0)
-    {
-        return (Uint16)SciaRegs.SCIRXBUF.bit.RXDT;
-    }
-    return 0xFFFF;
-}
-
-/**
- * @brief 向 SCI-A TX FIFO 写入 1 字节
- *
- * 接口约定:
- *   - 在 Timer0 ISR 中调用 (1ms 周期)
- *   - 9600 bps 下每 ms 仅能发送 ~1 字节, FIFO 正常情况下不会满
- *   - 若 FIFO 满则忙等 (理论上不会触发)
- *
- * @param byte 待发送的 8-bit 数据 (仅低 8 位有效)
- */
-void SciSendByte(Uint16 byte)
-{
-    /* TXFFST: 0=空, 16=FIFO 满。忙等直到有空位 */
-    while (SciaRegs.SCIFFTX.bit.TXFFST >= 16)
-    {
-        /* 9600 波特下 TX FIFO 不应满, 此分支为安全兜底 */
-    }
-    SciaRegs.SCITXBUF = byte & 0xFF;
+    /* TODO: 按需调用其他外设初始化函数 */
+    /* AppConfig_InitEPwm(); */
+    /* AppConfig_InitADC();  */
 }

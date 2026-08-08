@@ -53,33 +53,42 @@ void main(void)
     IFR = 0x0000;
     InitPieVectTable();
 
-    /* 3. 注册中断服务例程 */
-    EALLOW;
-    PieVectTable.TINT0 = &ISRTimer0;
-    EDIS;
-
-    /* 使能 CPU 中断 (TINT0 → PIE Group1 → CPU INT1) */
-    IER |= M_INT1;
+    /* 3. 注册中断服务例程 (AppConfig_InitXxx 中通过 EALLOW/EDIS 完成) */
 
     /* 4. 外设初始化 */
+    InitCpuTimers();
+    /* TODO: 配置定时器, 例如:
+     * ConfigCpuTimer(&CpuTimer0, 150, 16.666667);  // 150MHz, 16.67us周期
+     */
+
+    /* 应用层 GPIO + 外设初始化 (SCI-A ISR 注册 + PIE 使能在其内部完成) */
     AppConfig_Init();
 
     /* 5. 使能中断 */
-    EINT;
-    ERTM;
+    PieCtrlRegs.PIECTRL.bit.ENPIE = 1;  /* 使能 PIE 中断控制器 */
+    EINT;                                /* 开全局中断 */
+    ERTM;                                /* 开实时调试中断 */
 
-    /* 6. 主循环 — 空转 (实时逻辑在 ISR 中完成) */
+    /* 6. 应用初始化 */
+    /* TODO: 启动定时器、使能 PWM 输出等 */
+
+    /* 7. 主循环 */
     for (;;)
     {
-        /* TODO Step 4.1: ISR 中轮询 SCI/SPI 收发 */
+        /* 在此放置非实时任务:
+         * - 状态机更新
+         * - 通信协议处理 (Modbus, CAN, ...)
+         * - 数据记录
+         * - 保护逻辑检查
+         */
     }
 }
 
 /**
- * @brief Timer0 中断服务例程 — 当前阶段: 回显测试
+ * @brief Timer0 中断服务例程模板
  *
  * 接口约定:
- *   - 调用频率: 1ms (ConfigCpuTimer 150MHz/1000µs)
+ *   - 调用频率: 由 ConfigCpuTimer() 的周期参数决定
  *   - 必须清除 TIF 标志和 PIEACK
  *   - 在此执行实时控制算法 (PWM 占空比更新, ADC 读取, 控制环路等)
  */
@@ -89,26 +98,28 @@ interrupt void ISRTimer0(void)
     CpuTimer0Regs.TCR.bit.TIF = 1;
     CpuTimer0Regs.TCR.bit.TRB = 1;
 
-    /* ====== 回显测试 (临时) ======
-     * 1ms 轮询 SCI RX FIFO, 收到字节立刻原样发回
-     * 验证: 串口助手打字 → 立即看到相同字符 = UART 通路正常
-     * 后续 Step 4.1 替换为正式收发逻辑 */
-    {
-        Uint16 rxByte = SciReceiveByte();
-        if (rxByte != 0xFFFF)
-        {
-            SciSendByte(rxByte);          /* 回显: 收到什么发什么          */
-            CLEAR_LED_RX;                 /* RX LED 亮 (表示有数据进来)   */
-        }
-        else
-        {
-            SET_LED_RX;                   /* RX LED 灭                    */
-        }
-    }
+    /* TODO: 在此编写实时控制逻辑 */
 
     /* 清除 PIE 中断应答 */
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }
 
 /* ---- 用户函数实现 ---- */
-/* TODO: 在此添加驱动层和应用层函数 */
+
+/**
+ * @brief SCI-A RX FIFO 中断服务例程 (桩)
+ *
+ * 当前为最小实现: 仅清除中断标志 + PIE 应答, 防止中断挂死
+ * 完整实现将在 Step 2.3 中完成 (读取 FIFO + 回显)
+ */
+interrupt void ISRSciRx(void)
+{
+    /* 读取 RXBUF 清除 FIFO 中断标志 (即使不使用数据也要读) */
+    Uint16 dummy = SciaRegs.SCIRXBUF.all;
+
+    /* 清除 RX FIFO 中断标志 */
+    SciaRegs.SCIFFRX.bit.RXFFINTCLR = 1;
+
+    /* 清除 PIE Group 9 中断应答 */
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;
+}
