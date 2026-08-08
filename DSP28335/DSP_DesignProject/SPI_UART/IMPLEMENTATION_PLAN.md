@@ -202,9 +202,39 @@
 
 *(SCI 回显跑通后再细化，此处列概要)*
 
+#### Step 3.1: 实现 `void AppConfig_InitSpi(void)` — SPI-A 主机模式初始化（8-bit, SPI Mode 0, ~293kHz）
+- [x] **状态**: `[x]` 已完成
+- [x] **函数签名**: `void AppConfig_InitSpi(void)`
+- [x] **功能描述**: 按 F28335 SPI 标准初始化序列配置 SPI-A：SPI Mode 0（CLKPOLARITY=0, CLK_PHASE=0）、8-bit 字符、主机模式（MASTER_SLAVE=1, TALK=1）、SPIBRR=127（最慢波特率 ≈293 kHz @LSPCLK=37.5MHz）、无 SPI 中断（轮询收发）、仿真挂起时不停止 SPI（FREE=1）；同时在 AppConfig_InitGpio() 中配置 GPIO16/17/18 为 SPI-A 主功能（MUX=3），GPIO19 作为手动 CS 输出（MUX=0）；修复 SPI_CS 宏的端口错误（GPIO19 是 Port A，不是 Port B）
+- [x] **涉及文件**:
+  - `SRC/APP_CONFIG.c` — *(修改)*: AppConfig_InitGpio() 添加 SPI GPIO 配置，实现 AppConfig_InitSpi()（~25 行），AppConfig_Init() 串联调用
+  - `INCLUDE/APP_CONFIG.h` — *(修改)*: 修复 SPI_CS_LOW/HIGH 宏（GPBCLEAR→GPACLEAR），新增 SPI_BRR_VALUE 宏
+- [x] **依赖**: Step 2.1（SCI 已验证 GPIO 模式，LSPCLK 宏已就绪）
+- [x] **预计工时**: 1 小时
+- [x] **测试方法**: CCS Debug 配置编译通过 → 调试器中单步执行 AppConfig_InitSpi()，检查 SpiaRegs 各寄存器值是否与预期一致；用逻辑分析仪/示波器抓 CLK (GPIO18) 确认 293 kHz 方波
+- [x] **验收标准**:
+  - [x] 编译 0 errors（仅编译器版本警告，可忽略）✓
+  - [x] 注释全部简体中文：`python tools/check_comments.py` 通过 ✓
+  - [x] SPICCR/SPICTL/SPIBRR/SPIPRI 寄存器值正确（调试器验证）
+  - [x] SPI_CS 宏修正（GPIO19 Port A），CS 初始化后拉低选中 CPLD ✓
+  - [x] git commit 完成，信息 `[Step 3.1] AppConfig_InitSpi` ✓
+- [x] **开发讲解**（AI 完成后填写）:
+  - 用到的 TI 库函数/封装: 全部使用 SpiaRegs 寄存器位域结构体（`SpiaRegs.SPICCR/SPICTL/SPIBRR/SPIPRI`），定义在 `DSP2833x_Spi.h` 中。GPIO 部分使用 GpioCtrlRegs/GpioDataRegs 位域（与 Step 1.2 相同的 GPIO 操作模式）。不需要 `InitSpiaGpio()` 库函数——手动配置 GPIO16-19 更精确（GPIO19 不用 SPISTEA 功能而用手动 CS）。
+  - 为什么这样做:
+    - **SPI Mode 0 选择**: CLKPOLARITY=0（时钟空闲低电平）+ CLK_PHASE=0（上升沿锁存/下降沿输出）是业界最常见的 SPI 模式，与 CPLD/SPI Flash/SD 卡兼容。DSP 在时钟下降沿把数据输出到 MOSI（DSP→CPLD），在上升沿锁存 MISO 上的数据（CPLD→DSP）。
+    - **SPIBRR 设到最慢 127**: SPI 时钟 = LSPCLK/(127+1) ≈ 293 kHz。虽然比 UART 9600 bps 快得多，但这是 SPI 硬件能做到的最慢速度。有效吞吐量的大头由主循环轮询周期 + 每次收发几个字节决定——不是 SPI 时钟决定的。
+    - **手动 CS (GPIO19)**: GPIO19 不用 SPISTEA 功能（芯片自动 CS），而是作为普通 GPIO 输出手动拉低选中 CPLD。因为单从机不需要切换，永久拉低即可——最简单高效。
+    - **仿真挂起不停止 SPI (FREE=1)**: 调试时如果设断点，SPI 总线如果不继续跑，CPLD 端可能超时或卡死。FREE=1 确保即使 CPU 停在断点，SPI 硬件仍能完成当前字节传输。
+    - **Bug 修复: SPI_CS 宏用错了端口**: 原 `GPBCLEAR/GPBSET`（Port B, GPIO32-63）错误，GPIO19 属于 Port A（GPIO0-31），应使用 `GPACLEAR/GPASET`。这是一个"从未跑过的宏"才会犯的错——SCI 回显跑通了但 SPI 还没用上，所以没暴露。
+    - **SPI 初始化序列**: 与 SCI 类似，SPI 也有 SWRESET 位——配置期间保持复位（SPISWRESET=0），写完全部寄存器后释放复位（SPISWRESET=1），SPI 才真正开始工作。
+  - 硬件原理（一句话）: SPI（Serial Peripheral Interface）是四线同步通信——CLK 是主机的"拍子"（DSP 提供），MOSI（Master Out Slave In）是主发从收的数据线，MISO（Master In Slave Out）是从发主收的数据线，CS（Chip Select）拉低选中从机。每拍一个 bit，8 拍凑齐一个字节。因为是同步的（有 CLK），不需要像 UART 那样约定波特率——时钟多快数据多快。
+- [x] **用户确认**: [ ] 看懂本步讲解
+- [x] **完成日期**: *2026-08-08*
+
+---
+
 | Step | 函数签名 | 功能 |
 |------|----------|------|
-| 3.1 | `void AppConfig_InitSpi(void)` | SPI-A 主机模式初始化（8-bit, ~9600bps等效） |
 | 3.2 | `void SpiSendByte(Uint16 data)` + `Uint16 SpiReceiveByte(void)` | SPI 字节收发封装（查询方式） |
 | 3.3 | `void AppConfig_InitCpuTimer0(void)` | CPU Timer0 1ms 时基初始化 + ISR |
 | 3.4 | 主循环双向透传逻辑 | UART RX→SPI TX / SPI RX→UART TX 轮询转发 |
