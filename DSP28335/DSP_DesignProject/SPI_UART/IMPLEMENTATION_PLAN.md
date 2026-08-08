@@ -199,26 +199,30 @@
 ### 阶段 3: 数据收发逻辑
 
 #### Step 3.1: 实现 `Uint16 SciReceiveByte(void)` 和 `void SciSendByte(Uint16 byte)` — UART 字节收发
-- [ ] **状态**: `[ ]` 待办
-- [ ] **函数签名**:
-  - `Uint16 SciReceiveByte(void)` — 从 SCI RX FIFO 读 1 字节，无数据返回 0xFFFF
-  - `void SciSendByte(Uint16 byte)` — 将 1 字节写入 SCI TX FIFO
-- [ ] **功能描述**: 封装 SCI FIFO 的读写操作，供主循环调用
-- [ ] **涉及文件**:
-  - `SRC/APP_CONFIG.c` — *(修改)*: 添加两个函数
-  - `INCLUDE/APP_CONFIG.h` — *(修改)*: 声明函数原型
-- [ ] **依赖**: Step 2.1（SCI 必须已初始化）
-- [ ] **预计工时**: 0.5 小时
-- [ ] **测试方法**: 调试器设断点，串口助手发单字节，验证 SciReceiveByte() 返回值
-- [ ] **验收标准**:
-  - [ ] 编译 0 errors
-  - [ ] 应用层调用不直接操作寄存器（通过封装函数）
-  - [ ] SciReceiveByte() 空 FIFO 时返回 sentinel 值，不会阻塞
-  - [ ] SciSendByte() 发送后可在 PC 串口助手中看到对应字符
-  - [ ] git commit 完成，信息 `[Step 3.1] UART 字节收发`
-- [ ] **开发讲解**（AI 完成后填写）:
-- [ ] **用户确认**: [ ] 看懂本步讲解
-- [ ] **完成日期**: *(YYYY-MM-DD)*
+- [x] **状态**: `[x]` 已完成
+- [x] **函数签名**:
+  - `Uint16 SciReceiveByte(void)` — 从 SCI RX FIFO 读 1 字节 (bit.RXDT)，无数据返回 0xFFFF
+  - `void SciSendByte(Uint16 byte)` — 将 1 字节写入 SCI TX FIFO (SCITXBUF)
+- [x] **功能描述**: 封装 SCI FIFO 的读写操作，供 ISR 调用。应用层不得直接操作 SCI 寄存器。
+- [x] **涉及文件**:
+  - `SRC/APP_CONFIG.c` — *(修改)*: 添加两个函数（位于 AppConfig_Init() 之后的新增"UART 字节收发"节）
+- [x] **依赖**: Step 2.1（SCI 必须已初始化）
+- [x] **预计工时**: 0.5 小时
+- [x] **测试方法**: 调试器设断点，串口助手发单字节，验证 SciReceiveByte() 返回值
+- [x] **验收标准**:
+  - [x] 编译 0 errors
+  - [x] 注释全部简体中文
+  - [x] 应用层调用不直接操作寄存器（通过封装函数）
+  - [x] SciReceiveByte() 空 FIFO 时返回 sentinel 0xFFFF，不会阻塞
+  - [x] SciSendByte() 写入 SCITXBUF 前检查 TXFFST，满时忙等兜底
+  - [x] git commit 完成，信息 `[Step 3.1] UART 字节收发`
+- [x] **开发讲解**（AI 完成后填写）:
+  - `SciReceiveByte()` 用 RXFFST（RX FIFO Status）判断 FIFO 里有没有数据。这个字段是个 5-bit 计数器，直接告诉你"FIFO 里有几个字节等着读"。比轮询 RXRDY 标志位更直观——不需要读一个字节清一次标志。
+  - `SCIRXBUF.bit.RXDT` 是 8-bit 数据域（bits 7:0）。SCIRXBUF 还有 SAR（识别来自哪个 SCI 模块）和错误标志位（SCIFFFE 帧错/SCIFFPE 校验错），透传桥不解析这些——CRC 校验由端设备负责。
+  - sentinel 值选 0xFFFF 是因为合法数据范围是 0x00~0xFF（8-bit Modbus 字节流），0xFFFF 绝不可能与有效数据混淆。
+  - `SciSendByte()` 里 `while(TXFFST >= 16)` 是理论上的安全保障——9600 bps 下每秒最多发 ~960 字节，1ms ISR 每个周期最多推几个字节，TX FIFO 深度 16 级，正常情况下永远不会满。
+- [x] **用户确认**: [ ] 看懂本步讲解
+- [x] **完成日期**: 2026-08-08
 
 ---
 

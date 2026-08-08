@@ -271,3 +271,46 @@ void AppConfig_Init(void)
     AppConfig_InitSpi();
     AppConfig_InitCpuTimer0();
 }
+
+/* ================================================================
+ * UART 字节收发 (应用层封装 — 禁止在主循环中直接操作 SCI 寄存器)
+ * ================================================================ */
+
+/**
+ * @brief 从 SCI-A RX FIFO 读取 1 字节
+ *
+ * 接口约定:
+ *   - 在 Timer0 ISR 中调用 (1ms 周期轮询)
+ *   - 不阻塞: FIFO 空时返回 0xFFFF (sentinel)
+ *
+ * @return 收到的 8-bit 数据 (0x00~0xFF), FIFO 空时返回 0xFFFF
+ */
+Uint16 SciReceiveByte(void)
+{
+    /* RXFFST: 0=空, 1~15=等待读取的字节数 */
+    if (SciaRegs.SCIFFRX.bit.RXFFST > 0)
+    {
+        return (Uint16)SciaRegs.SCIRXBUF.bit.RXDT;
+    }
+    return 0xFFFF;
+}
+
+/**
+ * @brief 向 SCI-A TX FIFO 写入 1 字节
+ *
+ * 接口约定:
+ *   - 在 Timer0 ISR 中调用 (1ms 周期)
+ *   - 9600 bps 下每 ms 仅能发送 ~1 字节, FIFO 正常情况下不会满
+ *   - 若 FIFO 满则忙等 (理论上不会触发)
+ *
+ * @param byte 待发送的 8-bit 数据 (仅低 8 位有效)
+ */
+void SciSendByte(Uint16 byte)
+{
+    /* TXFFST: 0=空, 16=FIFO 满。忙等直到有空位 */
+    while (SciaRegs.SCIFFTX.bit.TXFFST >= 16)
+    {
+        /* 9600 波特下 TX FIFO 不应满, 此分支为安全兜底 */
+    }
+    SciaRegs.SCITXBUF = byte & 0xFF;
+}
