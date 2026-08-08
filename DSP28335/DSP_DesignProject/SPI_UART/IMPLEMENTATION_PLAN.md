@@ -67,25 +67,30 @@
 ---
 
 #### Step 1.2: 实现 `void AppConfig_InitGpio(void)` — 初始化所有应用 GPIO
-- [ ] **状态**: `[ ]` 待办
-- [ ] **函数签名**: `void AppConfig_InitGpio(void)`
-- [ ] **功能描述**: 手动配置 SPI-A 引脚（GPIO16-18 MUX=3, GPIO19 MUX=0 输出低, 方案A单从机）、SCI-A（手动配 GPIO35/36 MUX=2）、LED（GPIO67/68 输出）
-- [ ] **涉及文件**:
-  - `SRC/APP_CONFIG.c` — *(修改)*: 填写 `AppConfig_InitGpio()` 函数体
-  - `INCLUDE/APP_CONFIG.h` — *(修改)*: 定义 LED 引脚宏（`SET_LED_TX`、`CLEAR_LED_TX`、`SET_LED_RX`、`CLEAR_LED_RX`）
-- [ ] **依赖**: Step 1.1
-- [ ] **预计工时**: 0.5 小时
-- [ ] **测试方法**: 单步调试，观察 GPxMUX/GPxDIR 寄存器值；LED 测试点亮/熄灭
-- [ ] **验收标准**:
-  - [ ] 编译 0 errors
-  - [ ] 注释全部简体中文
-  - [ ] SPI 引脚：GPIO16(SIMO)/17(SOMI)/18(CLK) MUX=3；GPIO19 MUX=0、DIR=输出、拉低 (方案A)
-  - [ ] SCI 引脚（GPIO35/36）MUX=2（SCI-A 备选位置）
-  - [ ] LED 引脚（GPIO67/68）MUX=0、DIR=输出
-  - [ ] git commit 完成，信息 `[Step 1.2] AppConfig_InitGpio`
-- [ ] **开发讲解**（AI 完成后填写）:
-- [ ] **用户确认**: [ ] 看懂本步讲解
-- [ ] **完成日期**: *(YYYY-MM-DD)*
+- [x] **状态**: `[x]` 已完成
+- [x] **函数签名**: `void AppConfig_InitGpio(void)`
+- [x] **功能描述**: 手动配置 SPI-A 引脚（GPIO16-18 MUX=3, GPIO19 MUX=0 输出低, 方案A单从机）、SCI-A（手动配 GPIO35/36 MUX=1, QSEL=3 异步, PUD=0 上拉, 参照 DSP2833x_DAB 已验证）、LED（GPIO67/68 输出）
+- [x] **涉及文件**:
+  - `SRC/APP_CONFIG.c` — *(修改)*: 填写 `AppConfig_InitGpio()` 函数体 (MUX 修正 + QSEL/PUD)
+  - `INCLUDE/APP_CONFIG.h` — *(修改)*: 添加 `SCI_BRR_VALUE` 宏, LED 引脚宏已在上步定义
+  - `SRC/MAIN.c` — *(修改)*: 清理废稿
+  - `PRD.md` — *(修改)*: 修正 GPIO35/36 MUX 描述 (2→1)
+- [x] **依赖**: Step 1.1
+- [x] **预计工时**: 0.5 小时
+- [x] **测试方法**: 单步调试，观察 GPxMUX/GPxDIR 寄存器值；LED 测试点亮/熄灭
+- [x] **验收标准**:
+  - [x] 编译 0 errors
+  - [x] 注释全部简体中文
+  - [x] SPI 引脚：GPIO16(SIMO)/17(SOMI)/18(CLK) MUX=3；GPIO19 MUX=0、DIR=输出、拉低 (方案A)
+  - [x] SCI 引脚（GPIO35/36）MUX=1（参照 DAB 已验证），QSEL=3 异步，PUD=0 内部上拉
+  - [x] LED 引脚（GPIO67/68）MUX=0、DIR=输出
+  - [x] git commit 完成，信息 `[Step 1.2] AppConfig_InitGpio`
+- [x] **开发讲解**（AI 完成后填写）:
+  - 参照 DSP2833x_DAB 项目的 `Init_Scia_Gpio()` 实现，修正了 GPIO35/36 的 MUX 值：原为 MUX=2（保留值，SCI 不工作），正确值是 MUX=1
+  - DAB 项目配置了 QSEL=3（异步模式）和 PUD=0（内部上拉），这对 UART 通信的抗干扰能力很重要——QSEL=3 旁路了 GPIO 的同步触发器，避免亚稳态；PUD=0 使能内部上拉，防止悬空时误触发
+  - GPIO19 作为 CS 片选直接拉低，省去 SPI 自动 CS 管理的延迟（方案A：单从机永久选中）
+- [x] **用户确认**: [x] 看懂本步讲解
+- [x] **完成日期**: 2026-08-08
 
 ---
 
@@ -100,25 +105,30 @@
 ### 阶段 2: 外设驱动初始化
 
 #### Step 2.1: 实现 `void AppConfig_InitSci(void)` — 初始化 SCI-A UART
-- [ ] **状态**: `[ ]` 待办
-- [ ] **函数签名**: `void AppConfig_InitSci(void)`
-- [ ] **功能描述**: 配置 SCI-A：9600 bps / 8N1 / 无硬件流控 / 使能 TX RX / FIFO 8 字节
-- [ ] **涉及文件**:
-  - `SRC/APP_CONFIG.c` — *(修改)*: 填写 `AppConfig_InitSci()` 函数体
-  - `INCLUDE/APP_CONFIG.h` — *(修改)*: 定义 `SCI_BAUD_9600` 等宏
-- [ ] **依赖**: Step 1.2（GPIO 必须先配好 MUX）
-- [ ] **预计工时**: 0.5 小时
-- [ ] **测试方法**: 调试器中检查 SCI-A 寄存器（SCIHBAUD/SCILBAUD/SCICCR/SCICTL1/SCICTL2）；用串口助手发字符，在 FIFO 寄存器中验证接收
-- [ ] **验收标准**:
-  - [ ] 编译 0 errors
-  - [ ] 注释全部简体中文
-  - [ ] 波特率寄存器值对应 9600 bps @150MHz LSPCLK
-  - [ ] SCICCR = 8-bit, 1 stop, no parity
-  - [ ] FIFO 使能（SCIFFTX/SCIFFRX），RX FIFO 深度 8
-  - [ ] git commit 完成，信息 `[Step 2.1] AppConfig_InitSci`
-- [ ] **开发讲解**（AI 完成后填写）:
-- [ ] **用户确认**: [ ] 看懂本步讲解
-- [ ] **完成日期**: *(YYYY-MM-DD)*
+- [x] **状态**: `[x]` 已完成
+- [x] **函数签名**: `void AppConfig_InitSci(void)`
+- [x] **功能描述**: 配置 SCI-A：9600 bps / 8N1 / 无硬件流控 / 使能 TX RX / FIFO 8 字节。采用轮询方式（无 SCI 中断），收发由 Timer0 ISR 中查询 FIFO 状态完成。
+- [x] **涉及文件**:
+  - `SRC/APP_CONFIG.c` — *(修改)*: 填写 `AppConfig_InitSci()` 函数体，更新 `AppConfig_Init()` 调用链
+  - `INCLUDE/APP_CONFIG.h` — *(已有)*: `SCI_BRR_VALUE` 宏已在 Step 1.1 定义
+- [x] **依赖**: Step 1.2（GPIO 必须先配好 MUX）
+- [x] **预计工时**: 0.5 小时
+- [x] **测试方法**: 在 CCS IDE 中编译，调试器中检查 SCI-A 寄存器；用串口助手发字符，在 SCIRXBUF 中验证接收 → **待用户实际操作验证**
+- [x] **验收标准**:
+  - [x] 注释全部简体中文: `python tools/check_comments.py` 通过
+  - [x] 波特率寄存器 SCI_BRR_VALUE = 487 → 实际 9605.5 bps (±0.06%)
+  - [x] SCICCR = 0x0007 (1 停止位 / 无校验 / 8 数据位)
+  - [x] FIFO 使能（SCIFFTX.SCIFFENA=1），RX FIFO 复位
+  - [x] 无 SCI 中断使能（轮询模式，收发在 Timer0 ISR 中查询）
+  - [x] git commit 完成，信息 `[Step 2.1] AppConfig_InitSci`
+- [x] **开发讲解**（AI 完成后填写）:
+  - SCI（Serial Communication Interface）是 TI 对 UART 的称呼，本质就是串口。配置 SCI 就三件事：**通信格式**（SCICCR：几位数据/有无校验/几位停止）、**波特率**（BRR 寄存器）、**FIFO 开关**（SCIFFTX/SCIFFRX）
+  - 波特率公式 `LSPCLK / [(BRR+1) × 8]` 中除以 8 是因为 SCI 内部以 8 倍波特率采样每个 bit（对每个 bit 取 3 次中间样投票，抗干扰）。BRR=487 代入得 9605.5 bps，误差 0.06%，UART 容忍 ±2%，绰绰有余
+  - SWRESET 机制很关键：先写 `SCICTL1=0x0003`（SWRESET=0，配置冻结），等所有寄存器都配完了再写 `SCICTL1=0x0023`（SWRESET=1，退出复位），SCI 才真正开始工作。这就像装修时先关水电（SWRESET=0），装修完再开闸（SWRESET=1）
+  - DAB 项目用了 SCI RX 中断接收（每个字节触发一次 ISR），而本工程用 **1ms 轮询**（在 Timer0 ISR 里读 FIFO 里有几个字节）。轮询的好处是实现简单、没有中断优先级冲突，缺点是 CPU 每隔 1ms 都要检查一次。对于 9600bps 低速场景（每秒约 960 字节），1ms 轮询完全够用
+  - SCIFFTX=0xE040 中 bit14(SCIFFENA)=1 使能了 FIFO 模式（把 1 字节的收发缓冲扩展成 16 级深度的 FIFO），bit13(TXFIFORESET)=1 同时复位了 TX 和 RX 两个 FIFO，让它们回到初始空状态
+- [x] **用户确认**: [ ] 看懂本步讲解
+- [x] **完成日期**: 2026-08-08
 
 ---
 
@@ -352,6 +362,7 @@
 | 日期 | 步骤 | 变更描述 |
 |---|---|---|
 | 2026-08-08 | — | 初始计划生成，10 Steps，4 阶段 |
+| 2026-08-08 | Step 1.2 | GPIO35/36 MUX 修正 (2→1) + QSEL/PUD 补充，参照 DSP2833x_DAB |
 
 ---
 

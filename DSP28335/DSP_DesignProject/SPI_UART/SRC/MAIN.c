@@ -68,15 +68,10 @@ void main(void)
     EINT;
     ERTM;
 
-    /* 6. 主循环 — 调试阶段: SCI 回环测试 (PC→DSP→PC 原样返回) */
+    /* 6. 主循环 — 空转 (实时逻辑在 ISR 中完成) */
     for (;;)
     {
-        /* 从 SCI RX FIFO 读字节, 有数据则原样发回 (回环测试) */
-        Uint16 rxByte = SciReceiveByte();
-        if (rxByte != 0xFFFF)
-        {
-            SciSendByte(rxByte);
-        }
+        /* TODO Step 4.1: ISR 中轮询 SCI/SPI 收发 */
     }
 }
 

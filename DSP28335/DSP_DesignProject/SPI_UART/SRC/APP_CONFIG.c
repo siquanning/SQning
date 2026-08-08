@@ -125,14 +125,61 @@ void AppConfig_InitEPwm(void)
 }
 #endif
 
-/* TODO: 添加其他外设初始化函数
+/* ================================================================
+ * SCI (UART) 初始化
+ * ================================================================ */
+
+/**
+ * @brief 初始化 SCI-A — 9600bps / 8N1 / 无硬件流控 / FIFO 8 字节
  *
- * void AppConfig_InitADC(void)    — 配置 ADC (级联/双序列, 采样窗, SOC 触发源)
- * void AppConfig_InitSCI(void)    — 配置 SCI 串口 (波特率, FIFO, 中断)
- * void AppConfig_InitSPI(void)    — 配置 SPI (模式, 速率, FIFO)
- * void AppConfig_InitECan(void)   — 配置 eCAN (波特率, 邮箱, 中断)
- * void AppConfig_InitXINTF(void)  — 配置外部存储器接口时序
+ * 接口约定:
+ *   - GPIO35/36 的 MUX=1 (SCITXDA/SCIRXDA) 已在 AppConfig_InitGpio() 中配置
+ *   - 本函数不使能 SCI 中断 — 收发由 ISR 中轮询 RXFFST/TXFFST 完成
+ *   - 波特率公式: BRR = LSPCLK / (Baud × 8) - 1
+ *   - SWRESET=0 时所有配置写完后, 最后 SWRESET=1 退出复位启动
+ *
+ * SCI-A 寄存器配置摘要:
+ *   SCICCR  = 0x0007  (1 停止位 / 无校验 / 8 数据位 / 空闲线模式)
+ *   SCICTL1 = 0x0023  (TX/RX 使能, SWRESET=1)
+ *   BRR     = 487     (实际速率 = 9605.5bps, 误差 +0.06%)
  */
+void AppConfig_InitSci(void)
+{
+    /* 清除可能残留的 FIFO 中断标志 (上电后寄存器值不确定) */
+    SciaRegs.SCIFFRX.bit.RXFFINTCLR = 1;
+    SciaRegs.SCIFFTX.bit.TXFFINTCLR = 1;
+
+    /* 通信控制寄存器: 1 停止位, 无校验, 8 位字符, 空闲线多处理器模式 */
+    SciaRegs.SCICCR.all = 0x0007;
+
+    /* 控制寄存器 1: 使能 TX 和 RX (SWRESET=0 时仅"预置", 退出复位后才生效) */
+    SciaRegs.SCICTL1.all = 0x0003;
+
+    /* 波特率 = LSPCLK / [(BRR+1) × 8]
+     * BRR = 37,500,000 / (9600×8) - 1 = 487 → 实际 9605.5 bps (±0.06%) */
+    SciaRegs.SCIHBAUD = (SCI_BRR_VALUE >> 8) & 0xFF;
+    SciaRegs.SCILBAUD =  SCI_BRR_VALUE & 0xFF;
+
+    /* TX FIFO: 使能 SCI FIFO 模式, 复位 TX/RX FIFO, 清除 TX 中断标志
+     * SCIFFENA=1(使能FIFO), TXFIFORESET=1(复位), TXFFINTCLR=1(清中断) */
+    SciaRegs.SCIFFTX.all = 0xE040;
+
+    /* RX FIFO: 不复位 (由 TX 寄存器统一复位), 接收触发深度=1, 无 FIFO 中断
+     * RXFIFORESET=0(不复位), RXFFIL=1(触发不起作用：中断未使能, 仅 ISR 轮询) */
+    SciaRegs.SCIFFRX.all = 0x0001;
+
+    /* FIFO 控制: 不使能自动波特率检测 */
+    SciaRegs.SCIFFCT.all = 0x0000;
+
+    /* SWRESET=1 退出复位, 启动 SCI (SLEEP=0 不休眠, TXWAKE=0) */
+    SciaRegs.SCICTL1.all = 0x0023;
+}
+
+/* ================================================================
+ * SPI 初始化 (待实现)
+ * ================================================================ */
+
+/* TODO: Step 2.2 — void AppConfig_InitSpi(void) */
 
 /* ================================================================
  * 应用层初始化入口
@@ -142,15 +189,17 @@ void AppConfig_InitEPwm(void)
  * @brief 应用层总初始化 — 在 main() 外设初始化阶段调用
  *
  * 调用顺序:
- *   1. AppConfig_InitGpio()
- *   2. AppConfig_InitEPwm()  (或其他外设初始化函数)
+ *   1. AppConfig_InitGpio()  — GPIO 复用 (SPI/SCI/LED)
+ *   2. AppConfig_InitSci()   — SCI-A UART 初始化
+ *   3. AppConfig_InitSpi()   — SPI-A 主机初始化 (Step 2.2)
+ *   4. AppConfig_InitCpuTimer0() — 1ms 时基 (Step 2.3)
  */
 void AppConfig_Init(void)
 {
     AppConfig_InitGpio();
+    AppConfig_InitSci();
 
-    /* TODO: 按需调用外设初始化函数 */
-    /* AppConfig_InitEPwm(); */
-    /* AppConfig_InitADC();  */
-    /* AppConfig_InitSCI();  */
+    /* TODO: 后续步骤按需取消注释 */
+    /* AppConfig_InitSpi();        // Step 2.2 */
+    /* AppConfig_InitCpuTimer0();  // Step 2.3 */
 }
