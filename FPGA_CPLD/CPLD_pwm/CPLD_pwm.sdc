@@ -1,7 +1,7 @@
 # =========================================================
 # SDC 时序约束 — CPLD_pwm
 # =========================================================
-# 器件: Cyclone IV E (EP4CE10F17C8)
+# 器件: Cyclone IV E (EP4CE6F17C8)
 # 系统时钟: 50 MHz 晶振 → PLL (×3) → 150 MHz
 # =========================================================
 
@@ -27,10 +27,11 @@ derive_clock_uncertainty
 
 # -------------------------------------------------------
 # 4. 异步输入 false path (跨时钟域同步器输入)
-#    gates_in[11:0] 和 pwm_cap_in 来自外部异步域，
+#    gates_in[23:0] 和 pwm_cap_in 来自外部异步域，
 #    经过 dual-FF 同步器处理，无需时序约束
-#    - *sync_ff0*     : pwm_capture 内部同步器第一级
-#    - *sync_chain[0]*: 12 路 sync_2ff 实例第一级（H1 透传）
 # -------------------------------------------------------
 set_false_path -to [get_registers *sync_ff0*]
-set_false_path -to [get_registers *sync_chain[0]*]
+set_false_path -to [get_registers *u_sync_aplus|sync_chain[0]*]
+set_false_path -to [get_registers *u_sync_aminus|sync_chain[0]*]
+set_false_path -to [get_registers *u_sync_bplus|sync_chain[0]*]
+set_false_path -to [get_registers *u_sync_bminus|sync_chain[0]*]

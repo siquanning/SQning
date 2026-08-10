@@ -44,18 +44,6 @@ entity CPLD_pwm_phase is
 end entity;
 
 architecture rtl of CPLD_pwm_phase is
-    -- =========================================================
-    -- 固定占空比宏定义（调试用）
-    -- USE_FIXED_DUTY = true  时，忽略外部 modulation 输入，
-    -- 使用 FIXED_DUTY_Q15 作为调制量。
-    -- FIXED_DUTY_Q15 = duty × 32768
-    --   0.50 → 16384
-    --   0.25 →  8192
-    --   0.75 → 24576
-    -- =========================================================
-    constant USE_FIXED_DUTY  : boolean := true;
-    constant FIXED_DUTY_Q15  : integer := 8192;   -- 0.50 × 32768
-
     -- TBPRD：载波峰值，150M / (2 × 20k) = 3750
     constant TBPRD         : integer := 3750;
 
@@ -101,13 +89,8 @@ begin
                 -- -------------------------------------------------------
                 -- ② 调制量读取与限幅
                 -- 将 Q15 signed 转为 integer，钳位至 ±0.98
-                -- USE_FIXED_DUTY=true 时使用固定占空比，忽略外部输入
                 -- -------------------------------------------------------
-                if USE_FIXED_DUTY then
-                    mod_int := FIXED_DUTY_Q15;
-                else
-                    mod_int := to_integer(modulation);
-                end if;
+                mod_int := to_integer(modulation);
                 if mod_int > MOD_CLAMP_MAX then
                     mod_int := MOD_CLAMP_MAX;             -- 钳位上限 +0.98
                 elsif mod_int < MOD_CLAMP_MIN then

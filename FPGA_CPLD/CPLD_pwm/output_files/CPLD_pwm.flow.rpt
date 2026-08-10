@@ -1,5 +1,5 @@
 Flow report for CPLD_pwm
-Fri Aug 07 15:02:33 2026
+Fri Aug 07 11:23:46 2026
 Quartus II 64-Bit Version 13.0.1 Build 232 06/12/2013 Service Pack 1 SJ Web Edition
 
 
@@ -40,21 +40,21 @@ applicable agreement for further details.
 +--------------------------------------------------------------------------------------+
 ; Flow Summary                                                                         ;
 +------------------------------------+-------------------------------------------------+
-; Flow Status                        ; Successful - Fri Aug 07 15:02:31 2026           ;
+; Flow Status                        ; Successful - Fri Aug 07 11:23:44 2026           ;
 ; Quartus II 64-Bit Version          ; 13.0.1 Build 232 06/12/2013 SP 1 SJ Web Edition ;
 ; Revision Name                      ; CPLD_pwm                                        ;
 ; Top-level Entity Name              ; CPLD_pwm                                        ;
 ; Family                             ; Cyclone IV E                                    ;
 ; Device                             ; EP4CE10F17C8                                    ;
 ; Timing Models                      ; Final                                           ;
-; Total logic elements               ; 447 / 10,320 ( 4 % )                            ;
-;     Total combinational functions  ; 401 / 10,320 ( 4 % )                            ;
-;     Dedicated logic registers      ; 305 / 10,320 ( 3 % )                            ;
-; Total registers                    ; 305                                             ;
+; Total logic elements               ; 443 / 10,320 ( 4 % )                            ;
+;     Total combinational functions  ; 386 / 10,320 ( 4 % )                            ;
+;     Dedicated logic registers      ; 119 / 10,320 ( 1 % )                            ;
+; Total registers                    ; 119                                             ;
 ; Total pins                         ; 133 / 180 ( 74 % )                              ;
 ; Total virtual pins                 ; 0                                               ;
 ; Total memory bits                  ; 0 / 423,936 ( 0 % )                             ;
-; Embedded Multiplier 9-bit elements ; 0 / 46 ( 0 % )                                  ;
+; Embedded Multiplier 9-bit elements ; 6 / 46 ( 13 % )                                 ;
 ; Total PLLs                         ; 1 / 2 ( 50 % )                                  ;
 +------------------------------------+-------------------------------------------------+
 
@@ -64,7 +64,7 @@ applicable agreement for further details.
 +-------------------+---------------------+
 ; Option            ; Setting             ;
 +-------------------+---------------------+
-; Start date & time ; 08/07/2026 15:02:24 ;
+; Start date & time ; 08/07/2026 11:23:35 ;
 ; Main task         ; Compilation         ;
 ; Revision Name     ; CPLD_pwm            ;
 +-------------------+---------------------+
@@ -75,11 +75,15 @@ applicable agreement for further details.
 +-------------------------------------+---------------------------------+---------------+-------------+------------+
 ; Assignment Name                     ; Value                           ; Default Value ; Entity Name ; Section Id ;
 +-------------------------------------+---------------------------------+---------------+-------------+------------+
-; COMPILER_SIGNATURE_ID               ; 207794393477254.178608614430008 ; --            ; --          ; --         ;
+; COMPILER_SIGNATURE_ID               ; 207794393477254.178607301531184 ; --            ; --          ; --         ;
 ; IP_TOOL_NAME                        ; ALTPLL                          ; --            ; --          ; --         ;
+; IP_TOOL_NAME                        ; ALTPLL                          ; --            ; --          ; --         ;
+; IP_TOOL_VERSION                     ; 13.0                            ; --            ; --          ; --         ;
 ; IP_TOOL_VERSION                     ; 13.0                            ; --            ; --          ; --         ;
 ; MAX_CORE_JUNCTION_TEMP              ; 85                              ; --            ; --          ; --         ;
 ; MIN_CORE_JUNCTION_TEMP              ; 0                               ; --            ; --          ; --         ;
+; MISC_FILE                           ; pll_20m_to_150m.cmp             ; --            ; --          ; --         ;
+; MISC_FILE                           ; pll_20m_to_150m.ppf             ; --            ; --          ; --         ;
 ; MISC_FILE                           ; pll_50m_to_150m.cmp             ; --            ; --          ; --         ;
 ; MISC_FILE                           ; pll_50m_to_150m.ppf             ; --            ; --          ; --         ;
 ; OUTPUT_IO_TIMING_FAR_END_VMEAS      ; Half Signal Swing               ; --            ; --          ; --         ;
@@ -98,11 +102,11 @@ applicable agreement for further details.
 +---------------------------+--------------+-------------------------+---------------------+------------------------------------+
 ; Module Name               ; Elapsed Time ; Average Processors Used ; Peak Virtual Memory ; Total CPU Time (on all processors) ;
 +---------------------------+--------------+-------------------------+---------------------+------------------------------------+
-; Analysis & Synthesis      ; 00:00:02     ; 1.0                     ; 4630 MB             ; 00:00:01                           ;
+; Analysis & Synthesis      ; 00:00:02     ; 1.0                     ; 4629 MB             ; 00:00:02                           ;
 ; Fitter                    ; 00:00:04     ; 1.0                     ; 4907 MB             ; 00:00:04                           ;
-; Assembler                 ; 00:00:00     ; 1.0                     ; 4552 MB             ; 00:00:01                           ;
-; TimeQuest Timing Analyzer ; 00:00:01     ; 1.0                     ; 4603 MB             ; 00:00:01                           ;
-; Total                     ; 00:00:07     ; --                      ; --                  ; 00:00:07                           ;
+; Assembler                 ; 00:00:01     ; 1.0                     ; 4556 MB             ; 00:00:01                           ;
+; TimeQuest Timing Analyzer ; 00:00:02     ; 1.0                     ; 4601 MB             ; 00:00:01                           ;
+; Total                     ; 00:00:09     ; --                      ; --                  ; 00:00:08                           ;
 +---------------------------+--------------+-------------------------+---------------------+------------------------------------+
 
 

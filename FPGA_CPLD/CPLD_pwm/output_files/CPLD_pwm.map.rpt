@@ -1,5 +1,5 @@
 Analysis & Synthesis report for CPLD_pwm
-Fri Aug 07 15:02:25 2026
+Fri Aug 07 11:23:37 2026
 Quartus II 64-Bit Version 13.0.1 Build 232 06/12/2013 Service Pack 1 SJ Web Edition
 
 
@@ -13,54 +13,45 @@ Quartus II 64-Bit Version 13.0.1 Build 232 06/12/2013 Service Pack 1 SJ Web Edit
   5. Analysis & Synthesis Source Files Read
   6. Analysis & Synthesis Resource Usage Summary
   7. Analysis & Synthesis Resource Utilization by Entity
-  8. Analysis & Synthesis IP Cores Summary
-  9. Registers Protected by Synthesis
- 10. Registers Removed During Synthesis
- 11. Removed Registers Triggering Further Register Optimizations
- 12. General Register Statistics
- 13. Inverted Register Statistics
- 14. Multiplexer Restructuring Statistics (Restructuring Performed)
- 15. Source assignments for sync_2ff:u_sync_a_h1_0
- 16. Source assignments for sync_2ff:u_sync_a_h1_1
- 17. Source assignments for sync_2ff:u_sync_a_h1_2
- 18. Source assignments for sync_2ff:u_sync_a_h1_3
- 19. Source assignments for sync_2ff:u_sync_b_h1_0
- 20. Source assignments for sync_2ff:u_sync_b_h1_1
- 21. Source assignments for sync_2ff:u_sync_b_h1_2
- 22. Source assignments for sync_2ff:u_sync_b_h1_3
- 23. Source assignments for sync_2ff:u_sync_c_h1_0
- 24. Source assignments for sync_2ff:u_sync_c_h1_1
- 25. Source assignments for sync_2ff:u_sync_c_h1_2
- 26. Source assignments for sync_2ff:u_sync_c_h1_3
- 27. Parameter Settings for User Entity Instance: pll_50m_to_150m:u_pll|altpll:altpll_component
- 28. Parameter Settings for User Entity Instance: sync_2ff:u_sync_a_h1_0
- 29. Parameter Settings for User Entity Instance: sync_2ff:u_sync_a_h1_1
- 30. Parameter Settings for User Entity Instance: sync_2ff:u_sync_a_h1_2
- 31. Parameter Settings for User Entity Instance: sync_2ff:u_sync_a_h1_3
- 32. Parameter Settings for User Entity Instance: sync_2ff:u_sync_b_h1_0
- 33. Parameter Settings for User Entity Instance: sync_2ff:u_sync_b_h1_1
- 34. Parameter Settings for User Entity Instance: sync_2ff:u_sync_b_h1_2
- 35. Parameter Settings for User Entity Instance: sync_2ff:u_sync_b_h1_3
- 36. Parameter Settings for User Entity Instance: sync_2ff:u_sync_c_h1_0
- 37. Parameter Settings for User Entity Instance: sync_2ff:u_sync_c_h1_1
- 38. Parameter Settings for User Entity Instance: sync_2ff:u_sync_c_h1_2
- 39. Parameter Settings for User Entity Instance: sync_2ff:u_sync_c_h1_3
- 40. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1a_legA
- 41. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1a_legB
- 42. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1b_legA
- 43. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1b_legB
- 44. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1c_legA
- 45. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1c_legB
- 46. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_a_legA
- 47. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_a_legB
- 48. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_b_legA
- 49. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_b_legB
- 50. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_c_legA
- 51. Parameter Settings for User Entity Instance: deadtime_gen:u_dt_c_legB
- 52. altpll Parameter Settings by Entity Instance
- 53. Port Connectivity Checks: "CPLD_pwm_carrier:u_carrier"
- 54. Elapsed Time Per Partition
- 55. Analysis & Synthesis Messages
+  8. Analysis & Synthesis DSP Block Usage Summary
+  9. Analysis & Synthesis IP Cores Summary
+ 10. Registers Protected by Synthesis
+ 11. General Register Statistics
+ 12. Inverted Register Statistics
+ 13. Multiplexer Restructuring Statistics (Restructuring Performed)
+ 14. Source assignments for sync_2ff:u_sync_a_h1_0
+ 15. Source assignments for sync_2ff:u_sync_a_h1_1
+ 16. Source assignments for sync_2ff:u_sync_a_h1_2
+ 17. Source assignments for sync_2ff:u_sync_a_h1_3
+ 18. Source assignments for sync_2ff:u_sync_b_h1_0
+ 19. Source assignments for sync_2ff:u_sync_b_h1_1
+ 20. Source assignments for sync_2ff:u_sync_b_h1_2
+ 21. Source assignments for sync_2ff:u_sync_b_h1_3
+ 22. Source assignments for sync_2ff:u_sync_c_h1_0
+ 23. Source assignments for sync_2ff:u_sync_c_h1_1
+ 24. Source assignments for sync_2ff:u_sync_c_h1_2
+ 25. Source assignments for sync_2ff:u_sync_c_h1_3
+ 26. Parameter Settings for User Entity Instance: pll_50m_to_150m:u_pll|altpll:altpll_component
+ 27. Parameter Settings for User Entity Instance: sync_2ff:u_sync_a_h1_0
+ 28. Parameter Settings for User Entity Instance: sync_2ff:u_sync_a_h1_1
+ 29. Parameter Settings for User Entity Instance: sync_2ff:u_sync_a_h1_2
+ 30. Parameter Settings for User Entity Instance: sync_2ff:u_sync_a_h1_3
+ 31. Parameter Settings for User Entity Instance: sync_2ff:u_sync_b_h1_0
+ 32. Parameter Settings for User Entity Instance: sync_2ff:u_sync_b_h1_1
+ 33. Parameter Settings for User Entity Instance: sync_2ff:u_sync_b_h1_2
+ 34. Parameter Settings for User Entity Instance: sync_2ff:u_sync_b_h1_3
+ 35. Parameter Settings for User Entity Instance: sync_2ff:u_sync_c_h1_0
+ 36. Parameter Settings for User Entity Instance: sync_2ff:u_sync_c_h1_1
+ 37. Parameter Settings for User Entity Instance: sync_2ff:u_sync_c_h1_2
+ 38. Parameter Settings for User Entity Instance: sync_2ff:u_sync_c_h1_3
+ 39. Parameter Settings for Inferred Entity Instance: CPLD_pwm_phase:u_phase_a|lpm_mult:Mult0
+ 40. Parameter Settings for Inferred Entity Instance: CPLD_pwm_phase:u_phase_b|lpm_mult:Mult0
+ 41. Parameter Settings for Inferred Entity Instance: CPLD_pwm_phase:u_phase_c|lpm_mult:Mult0
+ 42. altpll Parameter Settings by Entity Instance
+ 43. lpm_mult Parameter Settings by Entity Instance
+ 44. Port Connectivity Checks: "CPLD_pwm_carrier:u_carrier"
+ 45. Elapsed Time Per Partition
+ 46. Analysis & Synthesis Messages
 
 
 
@@ -86,19 +77,19 @@ applicable agreement for further details.
 +--------------------------------------------------------------------------------------+
 ; Analysis & Synthesis Summary                                                         ;
 +------------------------------------+-------------------------------------------------+
-; Analysis & Synthesis Status        ; Successful - Fri Aug 07 15:02:25 2026           ;
+; Analysis & Synthesis Status        ; Successful - Fri Aug 07 11:23:37 2026           ;
 ; Quartus II 64-Bit Version          ; 13.0.1 Build 232 06/12/2013 SP 1 SJ Web Edition ;
 ; Revision Name                      ; CPLD_pwm                                        ;
 ; Top-level Entity Name              ; CPLD_pwm                                        ;
 ; Family                             ; Cyclone IV E                                    ;
-; Total logic elements               ; 460                                             ;
-;     Total combinational functions  ; 400                                             ;
-;     Dedicated logic registers      ; 305                                             ;
-; Total registers                    ; 305                                             ;
+; Total logic elements               ; 445                                             ;
+;     Total combinational functions  ; 385                                             ;
+;     Dedicated logic registers      ; 119                                             ;
+; Total registers                    ; 119                                             ;
 ; Total pins                         ; 133                                             ;
 ; Total virtual pins                 ; 0                                               ;
 ; Total memory bits                  ; 0                                               ;
-; Embedded Multiplier 9-bit elements ; 0                                               ;
+; Embedded Multiplier 9-bit elements ; 6                                               ;
 ; Total PLLs                         ; 1                                               ;
 +------------------------------------+-------------------------------------------------+
 
@@ -211,7 +202,6 @@ Parallel compilation was disabled, but you have multiple processors available. E
 ; pwm_capture.vhd                  ; yes             ; User VHDL File               ; E:/repos/FPGA_CPLD/CPLD_pwm/pwm_capture.vhd                         ;         ;
 ; CPLD_pwm_carrier.vhd             ; yes             ; User VHDL File               ; E:/repos/FPGA_CPLD/CPLD_pwm/CPLD_pwm_carrier.vhd                    ;         ;
 ; CPLD_pwm_phase.vhd               ; yes             ; User VHDL File               ; E:/repos/FPGA_CPLD/CPLD_pwm/CPLD_pwm_phase.vhd                      ;         ;
-; deadtime_gen.vhd                 ; yes             ; User VHDL File               ; E:/repos/FPGA_CPLD/CPLD_pwm/deadtime_gen.vhd                        ;         ;
 ; pll_50m_to_150m.vhd              ; yes             ; User Wizard-Generated File   ; E:/repos/FPGA_CPLD/CPLD_pwm/pll_50m_to_150m.vhd                     ;         ;
 ; altpll.tdf                       ; yes             ; Megafunction                 ; d:/altera/13.0sp1/quartus/libraries/megafunctions/altpll.tdf        ;         ;
 ; aglobal130.inc                   ; yes             ; Megafunction                 ; d:/altera/13.0sp1/quartus/libraries/megafunctions/aglobal130.inc    ;         ;
@@ -219,6 +209,12 @@ Parallel compilation was disabled, but you have multiple processors available. E
 ; stratixii_pll.inc                ; yes             ; Megafunction                 ; d:/altera/13.0sp1/quartus/libraries/megafunctions/stratixii_pll.inc ;         ;
 ; cycloneii_pll.inc                ; yes             ; Megafunction                 ; d:/altera/13.0sp1/quartus/libraries/megafunctions/cycloneii_pll.inc ;         ;
 ; db/pll_50m_to_150m_altpll.v      ; yes             ; Auto-Generated Megafunction  ; E:/repos/FPGA_CPLD/CPLD_pwm/db/pll_50m_to_150m_altpll.v             ;         ;
+; lpm_mult.tdf                     ; yes             ; Megafunction                 ; d:/altera/13.0sp1/quartus/libraries/megafunctions/lpm_mult.tdf      ;         ;
+; lpm_add_sub.inc                  ; yes             ; Megafunction                 ; d:/altera/13.0sp1/quartus/libraries/megafunctions/lpm_add_sub.inc   ;         ;
+; multcore.inc                     ; yes             ; Megafunction                 ; d:/altera/13.0sp1/quartus/libraries/megafunctions/multcore.inc      ;         ;
+; bypassff.inc                     ; yes             ; Megafunction                 ; d:/altera/13.0sp1/quartus/libraries/megafunctions/bypassff.inc      ;         ;
+; altshift.inc                     ; yes             ; Megafunction                 ; d:/altera/13.0sp1/quartus/libraries/megafunctions/altshift.inc      ;         ;
+; db/mult_j9t.tdf                  ; yes             ; Auto-Generated Megafunction  ; E:/repos/FPGA_CPLD/CPLD_pwm/db/mult_j9t.tdf                         ;         ;
 +----------------------------------+-----------------+------------------------------+---------------------------------------------------------------------+---------+
 
 
@@ -227,31 +223,31 @@ Parallel compilation was disabled, but you have multiple processors available. E
 +---------------------------------------------+------------------------------------------------------------------------------------------------------+
 ; Resource                                    ; Usage                                                                                                ;
 +---------------------------------------------+------------------------------------------------------------------------------------------------------+
-; Estimated Total logic elements              ; 460                                                                                                  ;
+; Estimated Total logic elements              ; 445                                                                                                  ;
 ;                                             ;                                                                                                      ;
-; Total combinational functions               ; 400                                                                                                  ;
+; Total combinational functions               ; 385                                                                                                  ;
 ; Logic element usage by number of LUT inputs ;                                                                                                      ;
-;     -- 4 input functions                    ; 87                                                                                                   ;
-;     -- 3 input functions                    ; 20                                                                                                   ;
-;     -- <=2 input functions                  ; 293                                                                                                  ;
+;     -- 4 input functions                    ; 119                                                                                                  ;
+;     -- 3 input functions                    ; 97                                                                                                   ;
+;     -- <=2 input functions                  ; 169                                                                                                  ;
 ;                                             ;                                                                                                      ;
 ; Logic elements by mode                      ;                                                                                                      ;
-;     -- normal mode                          ; 190                                                                                                  ;
-;     -- arithmetic mode                      ; 210                                                                                                  ;
+;     -- normal mode                          ; 193                                                                                                  ;
+;     -- arithmetic mode                      ; 192                                                                                                  ;
 ;                                             ;                                                                                                      ;
-; Total registers                             ; 305                                                                                                  ;
-;     -- Dedicated logic registers            ; 305                                                                                                  ;
+; Total registers                             ; 119                                                                                                  ;
+;     -- Dedicated logic registers            ; 119                                                                                                  ;
 ;     -- I/O registers                        ; 0                                                                                                    ;
 ;                                             ;                                                                                                      ;
 ; I/O pins                                    ; 133                                                                                                  ;
-; Embedded Multiplier 9-bit elements          ; 0                                                                                                    ;
+; Embedded Multiplier 9-bit elements          ; 6                                                                                                    ;
 ; Total PLLs                                  ; 1                                                                                                    ;
 ;     -- PLLs                                 ; 1                                                                                                    ;
 ;                                             ;                                                                                                      ;
 ; Maximum fan-out node                        ; pll_50m_to_150m:u_pll|altpll:altpll_component|pll_50m_to_150m_altpll:auto_generated|wire_pll1_clk[0] ;
-; Maximum fan-out                             ; 328                                                                                                  ;
-; Total fan-out                               ; 2468                                                                                                 ;
-; Average fan-out                             ; 2.54                                                                                                 ;
+; Maximum fan-out                             ; 145                                                                                                  ;
+; Total fan-out                               ; 1751                                                                                                 ;
+; Average fan-out                             ; 2.25                                                                                                 ;
 +---------------------------------------------+------------------------------------------------------------------------------------------------------+
 
 
@@ -260,23 +256,17 @@ Parallel compilation was disabled, but you have multiple processors available. E
 +--------------------------------------------------+-------------------+--------------+-------------+--------------+---------+-----------+------+--------------+-----------------------------------------------------------------------------------------------+--------------+
 ; Compilation Hierarchy Node                       ; LC Combinationals ; LC Registers ; Memory Bits ; DSP Elements ; DSP 9x9 ; DSP 18x18 ; Pins ; Virtual Pins ; Full Hierarchy Name                                                                           ; Library Name ;
 +--------------------------------------------------+-------------------+--------------+-------------+--------------+---------+-----------+------+--------------+-----------------------------------------------------------------------------------------------+--------------+
-; |CPLD_pwm                                        ; 400 (21)          ; 305 (0)      ; 0           ; 0            ; 0       ; 0         ; 133  ; 0            ; |CPLD_pwm                                                                                     ; work         ;
+; |CPLD_pwm                                        ; 385 (24)          ; 119 (0)      ; 0           ; 6            ; 0       ; 3         ; 133  ; 0            ; |CPLD_pwm                                                                                     ; work         ;
 ;    |CPLD_pwm_carrier:u_carrier|                  ; 57 (57)           ; 13 (13)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_carrier:u_carrier                                                          ; work         ;
-;    |CPLD_pwm_phase:u_phase_a|                    ; 8 (8)             ; 3 (3)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_a                                                            ; work         ;
-;    |CPLD_pwm_phase:u_phase_b|                    ; 4 (4)             ; 3 (3)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_b                                                            ; work         ;
-;    |CPLD_pwm_phase:u_phase_c|                    ; 4 (4)             ; 3 (3)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_c                                                            ; work         ;
-;    |deadtime_gen:u_dt_a_legA|                    ; 12 (12)           ; 9 (9)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_a_legA                                                            ; work         ;
-;    |deadtime_gen:u_dt_a_legB|                    ; 26 (26)           ; 18 (18)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_a_legB                                                            ; work         ;
-;    |deadtime_gen:u_dt_b_legA|                    ; 12 (12)           ; 9 (9)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_b_legA                                                            ; work         ;
-;    |deadtime_gen:u_dt_b_legB|                    ; 26 (26)           ; 18 (18)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_b_legB                                                            ; work         ;
-;    |deadtime_gen:u_dt_c_legA|                    ; 12 (12)           ; 9 (9)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_c_legA                                                            ; work         ;
-;    |deadtime_gen:u_dt_c_legB|                    ; 26 (26)           ; 18 (18)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_c_legB                                                            ; work         ;
-;    |deadtime_gen:u_dt_h1a_legA|                  ; 26 (26)           ; 18 (18)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_h1a_legA                                                          ; work         ;
-;    |deadtime_gen:u_dt_h1a_legB|                  ; 26 (26)           ; 18 (18)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_h1a_legB                                                          ; work         ;
-;    |deadtime_gen:u_dt_h1b_legA|                  ; 26 (26)           ; 18 (18)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_h1b_legA                                                          ; work         ;
-;    |deadtime_gen:u_dt_h1b_legB|                  ; 26 (26)           ; 18 (18)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_h1b_legB                                                          ; work         ;
-;    |deadtime_gen:u_dt_h1c_legA|                  ; 26 (26)           ; 18 (18)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_h1c_legA                                                          ; work         ;
-;    |deadtime_gen:u_dt_h1c_legB|                  ; 26 (26)           ; 18 (18)      ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|deadtime_gen:u_dt_h1c_legB                                                          ; work         ;
+;    |CPLD_pwm_phase:u_phase_a|                    ; 89 (89)           ; 4 (4)        ; 0           ; 2            ; 0       ; 1         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_a                                                            ; work         ;
+;       |lpm_mult:Mult0|                           ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_a|lpm_mult:Mult0                                             ; work         ;
+;          |mult_j9t:auto_generated|               ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_a|lpm_mult:Mult0|mult_j9t:auto_generated                     ; work         ;
+;    |CPLD_pwm_phase:u_phase_b|                    ; 89 (89)           ; 4 (4)        ; 0           ; 2            ; 0       ; 1         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_b                                                            ; work         ;
+;       |lpm_mult:Mult0|                           ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_b|lpm_mult:Mult0                                             ; work         ;
+;          |mult_j9t:auto_generated|               ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_b|lpm_mult:Mult0|mult_j9t:auto_generated                     ; work         ;
+;    |CPLD_pwm_phase:u_phase_c|                    ; 90 (90)           ; 4 (4)        ; 0           ; 2            ; 0       ; 1         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_c                                                            ; work         ;
+;       |lpm_mult:Mult0|                           ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_c|lpm_mult:Mult0                                             ; work         ;
+;          |mult_j9t:auto_generated|               ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0    ; 0            ; |CPLD_pwm|CPLD_pwm_phase:u_phase_c|lpm_mult:Mult0|mult_j9t:auto_generated                     ; work         ;
 ;    |pll_50m_to_150m:u_pll|                       ; 1 (0)             ; 1 (0)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|pll_50m_to_150m:u_pll                                                               ; work         ;
 ;       |altpll:altpll_component|                  ; 1 (0)             ; 1 (0)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|pll_50m_to_150m:u_pll|altpll:altpll_component                                       ; work         ;
 ;          |pll_50m_to_150m_altpll:auto_generated| ; 1 (1)             ; 1 (1)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|pll_50m_to_150m:u_pll|altpll:altpll_component|pll_50m_to_150m_altpll:auto_generated ; work         ;
@@ -295,6 +285,24 @@ Parallel compilation was disabled, but you have multiple processors available. E
 ;    |sync_2ff:u_sync_c_h1_3|                      ; 0 (0)             ; 2 (2)        ; 0           ; 0            ; 0       ; 0         ; 0    ; 0            ; |CPLD_pwm|sync_2ff:u_sync_c_h1_3                                                              ; work         ;
 +--------------------------------------------------+-------------------+--------------+-------------+--------------+---------+-----------+------+--------------+-----------------------------------------------------------------------------------------------+--------------+
 Note: For table entries with two numbers listed, the numbers in parentheses indicate the number of resources of the given type used by the specific entity alone. The numbers listed outside of parentheses indicate the total resources of the given type used by the specific entity and all of its sub-entities in the hierarchy.
+
+
++-----------------------------------------------------+
+; Analysis & Synthesis DSP Block Usage Summary        ;
++---------------------------------------+-------------+
+; Statistic                             ; Number Used ;
++---------------------------------------+-------------+
+; Simple Multipliers (9-bit)            ; 0           ;
+; Simple Multipliers (18-bit)           ; 3           ;
+; Embedded Multiplier Blocks            ; --          ;
+; Embedded Multiplier 9-bit elements    ; 6           ;
+; Signed Embedded Multipliers           ; 3           ;
+; Unsigned Embedded Multipliers         ; 0           ;
+; Mixed Sign Embedded Multipliers       ; 0           ;
+; Variable Sign Embedded Multipliers    ; 0           ;
+; Dedicated Input Shift Register Chains ; 0           ;
++---------------------------------------+-------------+
+Note: number of Embedded Multiplier Blocks used is only available after a successful fit.
 
 
 +---------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -338,49 +346,17 @@ Note: For table entries with two numbers listed, the numbers in parentheses indi
 +--------------------------------------+------------------------------------------------------------------+--------------------------------------------+
 
 
-+---------------------------------------------------------------------------------+
-; Registers Removed During Synthesis                                              ;
-+----------------------------------------+----------------------------------------+
-; Register name                          ; Reason for Removal                     ;
-+----------------------------------------+----------------------------------------+
-; CPLD_pwm_phase:u_phase_c|h2_gates[1]   ; Stuck at GND due to stuck port data_in ;
-; CPLD_pwm_phase:u_phase_b|h2_gates[1]   ; Stuck at GND due to stuck port data_in ;
-; CPLD_pwm_phase:u_phase_a|h2_gates[1]   ; Stuck at GND due to stuck port data_in ;
-; deadtime_gen:u_dt_c_legA|cnt_n[0..7]   ; Lost fanout                            ;
-; deadtime_gen:u_dt_c_legA|n_reg         ; Stuck at GND due to stuck port data_in ;
-; deadtime_gen:u_dt_b_legA|cnt_n[0..7]   ; Lost fanout                            ;
-; deadtime_gen:u_dt_b_legA|n_reg         ; Stuck at GND due to stuck port data_in ;
-; deadtime_gen:u_dt_a_legA|cnt_n[0..7]   ; Lost fanout                            ;
-; deadtime_gen:u_dt_a_legA|n_reg         ; Stuck at GND due to stuck port data_in ;
-; Total Number of Removed Registers = 30 ;                                        ;
-+----------------------------------------+----------------------------------------+
-
-
-+-----------------------------------------------------------------------------------------------------------+
-; Removed Registers Triggering Further Register Optimizations                                               ;
-+--------------------------------------+---------------------------+----------------------------------------+
-; Register name                        ; Reason for Removal        ; Registers Removed due to This Register ;
-+--------------------------------------+---------------------------+----------------------------------------+
-; CPLD_pwm_phase:u_phase_c|h2_gates[1] ; Stuck at GND              ; deadtime_gen:u_dt_c_legA|n_reg         ;
-;                                      ; due to stuck port data_in ;                                        ;
-; CPLD_pwm_phase:u_phase_b|h2_gates[1] ; Stuck at GND              ; deadtime_gen:u_dt_b_legA|n_reg         ;
-;                                      ; due to stuck port data_in ;                                        ;
-; CPLD_pwm_phase:u_phase_a|h2_gates[1] ; Stuck at GND              ; deadtime_gen:u_dt_a_legA|n_reg         ;
-;                                      ; due to stuck port data_in ;                                        ;
-+--------------------------------------+---------------------------+----------------------------------------+
-
-
 +------------------------------------------------------+
 ; General Register Statistics                          ;
 +----------------------------------------------+-------+
 ; Statistic                                    ; Value ;
 +----------------------------------------------+-------+
-; Total registers                              ; 305   ;
-; Number of registers using Synchronous Clear  ; 200   ;
+; Total registers                              ; 119   ;
+; Number of registers using Synchronous Clear  ; 32    ;
 ; Number of registers using Synchronous Load   ; 0     ;
-; Number of registers using Asynchronous Clear ; 305   ;
+; Number of registers using Asynchronous Clear ; 119   ;
 ; Number of registers using Asynchronous Load  ; 0     ;
-; Number of registers using Clock Enable       ; 216   ;
+; Number of registers using Clock Enable       ; 48    ;
 ; Number of registers using Preset             ; 0     ;
 +----------------------------------------------+-------+
 
@@ -395,35 +371,23 @@ Note: For table entries with two numbers listed, the numbers in parentheses indi
 +----------------------------------------+---------+
 
 
-+-------------------------------------------------------------------------------------------------------------------------------------------------------------+
-; Multiplexer Restructuring Statistics (Restructuring Performed)                                                                                              ;
-+--------------------+-----------+---------------+----------------------+------------------------+------------+-----------------------------------------------+
-; Multiplexer Inputs ; Bus Width ; Baseline Area ; Area if Restructured ; Saving if Restructured ; Registered ; Example Multiplexer Output                    ;
-+--------------------+-----------+---------------+----------------------+------------------------+------------+-----------------------------------------------+
-; 3:1                ; 16 bits   ; 32 LEs        ; 16 LEs               ; 16 LEs                 ; Yes        ; |CPLD_pwm|pwm_capture:u_pwm_cap|high_cnt[13]  ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1a_legA|cnt_p[6] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1a_legA|cnt_n[7] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1a_legB|cnt_p[1] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1a_legB|cnt_n[6] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1b_legA|cnt_p[0] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1b_legA|cnt_n[5] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1b_legB|cnt_p[6] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1b_legB|cnt_n[3] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1c_legA|cnt_p[3] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1c_legA|cnt_n[3] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1c_legB|cnt_p[6] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_h1c_legB|cnt_n[6] ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_a_legA|cnt_p[1]   ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_a_legB|cnt_p[6]   ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_a_legB|cnt_n[2]   ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_b_legA|cnt_p[3]   ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_b_legB|cnt_p[3]   ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_b_legB|cnt_n[2]   ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_c_legA|cnt_p[2]   ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_c_legB|cnt_p[6]   ;
-; 3:1                ; 8 bits    ; 16 LEs        ; 8 LEs                ; 8 LEs                  ; Yes        ; |CPLD_pwm|deadtime_gen:u_dt_c_legB|cnt_n[1]   ;
-; 4:1                ; 12 bits   ; 24 LEs        ; 24 LEs               ; 0 LEs                  ; Yes        ; |CPLD_pwm|CPLD_pwm_carrier:u_carrier|count[0] ;
-+--------------------+-----------+---------------+----------------------+------------------------+------------+-----------------------------------------------+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Multiplexer Restructuring Statistics (Restructuring Performed)                                                                                               ;
++--------------------+-----------+---------------+----------------------+------------------------+------------+------------------------------------------------+
+; Multiplexer Inputs ; Bus Width ; Baseline Area ; Area if Restructured ; Saving if Restructured ; Registered ; Example Multiplexer Output                     ;
++--------------------+-----------+---------------+----------------------+------------------------+------------+------------------------------------------------+
+; 3:1                ; 16 bits   ; 32 LEs        ; 16 LEs               ; 16 LEs                 ; Yes        ; |CPLD_pwm|pwm_capture:u_pwm_cap|high_cnt[2]    ;
+; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; Yes        ; |CPLD_pwm|CPLD_pwm_phase:u_phase_a|h2_gates[3] ;
+; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; Yes        ; |CPLD_pwm|CPLD_pwm_phase:u_phase_a|h2_gates[0] ;
+; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; Yes        ; |CPLD_pwm|CPLD_pwm_phase:u_phase_b|h2_gates[2] ;
+; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; Yes        ; |CPLD_pwm|CPLD_pwm_phase:u_phase_b|h2_gates[1] ;
+; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; Yes        ; |CPLD_pwm|CPLD_pwm_phase:u_phase_c|h2_gates[2] ;
+; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; Yes        ; |CPLD_pwm|CPLD_pwm_phase:u_phase_c|h2_gates[1] ;
+; 4:1                ; 12 bits   ; 24 LEs        ; 24 LEs               ; 0 LEs                  ; Yes        ; |CPLD_pwm|CPLD_pwm_carrier:u_carrier|count[4]  ;
+; 3:1                ; 16 bits   ; 32 LEs        ; 32 LEs               ; 0 LEs                  ; No         ; |CPLD_pwm|CPLD_pwm_phase:u_phase_a|mod_int     ;
+; 3:1                ; 16 bits   ; 32 LEs        ; 32 LEs               ; 0 LEs                  ; No         ; |CPLD_pwm|CPLD_pwm_phase:u_phase_b|mod_int     ;
+; 3:1                ; 16 bits   ; 32 LEs        ; 32 LEs               ; 0 LEs                  ; No         ; |CPLD_pwm|CPLD_pwm_phase:u_phase_c|mod_int     ;
++--------------------+-----------+---------------+----------------------+------------------------+------------+------------------------------------------------+
 
 
 +--------------------------------------------------+
@@ -1040,123 +1004,108 @@ Note: In order to hide this table in the UI and the text report file, please set
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
 
-+-------------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1a_legA ;
-+----------------+-------+------------------------------------------------+
-; Parameter Name ; Value ; Type                                           ;
-+----------------+-------+------------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                                 ;
-+----------------+-------+------------------------------------------------+
++------------------------------------------------------------------------------------------+
+; Parameter Settings for Inferred Entity Instance: CPLD_pwm_phase:u_phase_a|lpm_mult:Mult0 ;
++------------------------------------------------+--------------+--------------------------+
+; Parameter Name                                 ; Value        ; Type                     ;
++------------------------------------------------+--------------+--------------------------+
+; AUTO_CARRY_CHAINS                              ; ON           ; AUTO_CARRY               ;
+; IGNORE_CARRY_BUFFERS                           ; OFF          ; IGNORE_CARRY             ;
+; AUTO_CASCADE_CHAINS                            ; ON           ; AUTO_CASCADE             ;
+; IGNORE_CASCADE_BUFFERS                         ; OFF          ; IGNORE_CASCADE           ;
+; LPM_WIDTHA                                     ; 17           ; Untyped                  ;
+; LPM_WIDTHB                                     ; 13           ; Untyped                  ;
+; LPM_WIDTHP                                     ; 30           ; Untyped                  ;
+; LPM_WIDTHR                                     ; 30           ; Untyped                  ;
+; LPM_WIDTHS                                     ; 1            ; Untyped                  ;
+; LPM_REPRESENTATION                             ; SIGNED       ; Untyped                  ;
+; LPM_PIPELINE                                   ; 0            ; Untyped                  ;
+; LATENCY                                        ; 0            ; Untyped                  ;
+; INPUT_A_IS_CONSTANT                            ; NO           ; Untyped                  ;
+; INPUT_B_IS_CONSTANT                            ; YES          ; Untyped                  ;
+; USE_EAB                                        ; OFF          ; Untyped                  ;
+; MAXIMIZE_SPEED                                 ; 5            ; Untyped                  ;
+; DEVICE_FAMILY                                  ; Cyclone IV E ; Untyped                  ;
+; CARRY_CHAIN                                    ; MANUAL       ; Untyped                  ;
+; APEX20K_TECHNOLOGY_MAPPER                      ; LUT          ; TECH_MAPPER_APEX20K      ;
+; DEDICATED_MULTIPLIER_CIRCUITRY                 ; AUTO         ; Untyped                  ;
+; DEDICATED_MULTIPLIER_MIN_INPUT_WIDTH_FOR_AUTO  ; 0            ; Untyped                  ;
+; DEDICATED_MULTIPLIER_MIN_OUTPUT_WIDTH_FOR_AUTO ; 0            ; Untyped                  ;
+; CBXI_PARAMETER                                 ; mult_j9t     ; Untyped                  ;
+; INPUT_A_FIXED_VALUE                            ; Bx           ; Untyped                  ;
+; INPUT_B_FIXED_VALUE                            ; Bx           ; Untyped                  ;
+; USE_AHDL_IMPLEMENTATION                        ; OFF          ; Untyped                  ;
++------------------------------------------------+--------------+--------------------------+
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
 
-+-------------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1a_legB ;
-+----------------+-------+------------------------------------------------+
-; Parameter Name ; Value ; Type                                           ;
-+----------------+-------+------------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                                 ;
-+----------------+-------+------------------------------------------------+
++------------------------------------------------------------------------------------------+
+; Parameter Settings for Inferred Entity Instance: CPLD_pwm_phase:u_phase_b|lpm_mult:Mult0 ;
++------------------------------------------------+--------------+--------------------------+
+; Parameter Name                                 ; Value        ; Type                     ;
++------------------------------------------------+--------------+--------------------------+
+; AUTO_CARRY_CHAINS                              ; ON           ; AUTO_CARRY               ;
+; IGNORE_CARRY_BUFFERS                           ; OFF          ; IGNORE_CARRY             ;
+; AUTO_CASCADE_CHAINS                            ; ON           ; AUTO_CASCADE             ;
+; IGNORE_CASCADE_BUFFERS                         ; OFF          ; IGNORE_CASCADE           ;
+; LPM_WIDTHA                                     ; 17           ; Untyped                  ;
+; LPM_WIDTHB                                     ; 13           ; Untyped                  ;
+; LPM_WIDTHP                                     ; 30           ; Untyped                  ;
+; LPM_WIDTHR                                     ; 30           ; Untyped                  ;
+; LPM_WIDTHS                                     ; 1            ; Untyped                  ;
+; LPM_REPRESENTATION                             ; SIGNED       ; Untyped                  ;
+; LPM_PIPELINE                                   ; 0            ; Untyped                  ;
+; LATENCY                                        ; 0            ; Untyped                  ;
+; INPUT_A_IS_CONSTANT                            ; NO           ; Untyped                  ;
+; INPUT_B_IS_CONSTANT                            ; YES          ; Untyped                  ;
+; USE_EAB                                        ; OFF          ; Untyped                  ;
+; MAXIMIZE_SPEED                                 ; 5            ; Untyped                  ;
+; DEVICE_FAMILY                                  ; Cyclone IV E ; Untyped                  ;
+; CARRY_CHAIN                                    ; MANUAL       ; Untyped                  ;
+; APEX20K_TECHNOLOGY_MAPPER                      ; LUT          ; TECH_MAPPER_APEX20K      ;
+; DEDICATED_MULTIPLIER_CIRCUITRY                 ; AUTO         ; Untyped                  ;
+; DEDICATED_MULTIPLIER_MIN_INPUT_WIDTH_FOR_AUTO  ; 0            ; Untyped                  ;
+; DEDICATED_MULTIPLIER_MIN_OUTPUT_WIDTH_FOR_AUTO ; 0            ; Untyped                  ;
+; CBXI_PARAMETER                                 ; mult_j9t     ; Untyped                  ;
+; INPUT_A_FIXED_VALUE                            ; Bx           ; Untyped                  ;
+; INPUT_B_FIXED_VALUE                            ; Bx           ; Untyped                  ;
+; USE_AHDL_IMPLEMENTATION                        ; OFF          ; Untyped                  ;
++------------------------------------------------+--------------+--------------------------+
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
 
-+-------------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1b_legA ;
-+----------------+-------+------------------------------------------------+
-; Parameter Name ; Value ; Type                                           ;
-+----------------+-------+------------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                                 ;
-+----------------+-------+------------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-------------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1b_legB ;
-+----------------+-------+------------------------------------------------+
-; Parameter Name ; Value ; Type                                           ;
-+----------------+-------+------------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                                 ;
-+----------------+-------+------------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-------------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1c_legA ;
-+----------------+-------+------------------------------------------------+
-; Parameter Name ; Value ; Type                                           ;
-+----------------+-------+------------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                                 ;
-+----------------+-------+------------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-------------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_h1c_legB ;
-+----------------+-------+------------------------------------------------+
-; Parameter Name ; Value ; Type                                           ;
-+----------------+-------+------------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                                 ;
-+----------------+-------+------------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-----------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_a_legA ;
-+----------------+-------+----------------------------------------------+
-; Parameter Name ; Value ; Type                                         ;
-+----------------+-------+----------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                               ;
-+----------------+-------+----------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-----------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_a_legB ;
-+----------------+-------+----------------------------------------------+
-; Parameter Name ; Value ; Type                                         ;
-+----------------+-------+----------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                               ;
-+----------------+-------+----------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-----------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_b_legA ;
-+----------------+-------+----------------------------------------------+
-; Parameter Name ; Value ; Type                                         ;
-+----------------+-------+----------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                               ;
-+----------------+-------+----------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-----------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_b_legB ;
-+----------------+-------+----------------------------------------------+
-; Parameter Name ; Value ; Type                                         ;
-+----------------+-------+----------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                               ;
-+----------------+-------+----------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-----------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_c_legA ;
-+----------------+-------+----------------------------------------------+
-; Parameter Name ; Value ; Type                                         ;
-+----------------+-------+----------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                               ;
-+----------------+-------+----------------------------------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+-----------------------------------------------------------------------+
-; Parameter Settings for User Entity Instance: deadtime_gen:u_dt_c_legB ;
-+----------------+-------+----------------------------------------------+
-; Parameter Name ; Value ; Type                                         ;
-+----------------+-------+----------------------------------------------+
-; dt_cycles      ; 150   ; Signed Integer                               ;
-+----------------+-------+----------------------------------------------+
++------------------------------------------------------------------------------------------+
+; Parameter Settings for Inferred Entity Instance: CPLD_pwm_phase:u_phase_c|lpm_mult:Mult0 ;
++------------------------------------------------+--------------+--------------------------+
+; Parameter Name                                 ; Value        ; Type                     ;
++------------------------------------------------+--------------+--------------------------+
+; AUTO_CARRY_CHAINS                              ; ON           ; AUTO_CARRY               ;
+; IGNORE_CARRY_BUFFERS                           ; OFF          ; IGNORE_CARRY             ;
+; AUTO_CASCADE_CHAINS                            ; ON           ; AUTO_CASCADE             ;
+; IGNORE_CASCADE_BUFFERS                         ; OFF          ; IGNORE_CASCADE           ;
+; LPM_WIDTHA                                     ; 17           ; Untyped                  ;
+; LPM_WIDTHB                                     ; 13           ; Untyped                  ;
+; LPM_WIDTHP                                     ; 30           ; Untyped                  ;
+; LPM_WIDTHR                                     ; 30           ; Untyped                  ;
+; LPM_WIDTHS                                     ; 1            ; Untyped                  ;
+; LPM_REPRESENTATION                             ; SIGNED       ; Untyped                  ;
+; LPM_PIPELINE                                   ; 0            ; Untyped                  ;
+; LATENCY                                        ; 0            ; Untyped                  ;
+; INPUT_A_IS_CONSTANT                            ; NO           ; Untyped                  ;
+; INPUT_B_IS_CONSTANT                            ; YES          ; Untyped                  ;
+; USE_EAB                                        ; OFF          ; Untyped                  ;
+; MAXIMIZE_SPEED                                 ; 5            ; Untyped                  ;
+; DEVICE_FAMILY                                  ; Cyclone IV E ; Untyped                  ;
+; CARRY_CHAIN                                    ; MANUAL       ; Untyped                  ;
+; APEX20K_TECHNOLOGY_MAPPER                      ; LUT          ; TECH_MAPPER_APEX20K      ;
+; DEDICATED_MULTIPLIER_CIRCUITRY                 ; AUTO         ; Untyped                  ;
+; DEDICATED_MULTIPLIER_MIN_INPUT_WIDTH_FOR_AUTO  ; 0            ; Untyped                  ;
+; DEDICATED_MULTIPLIER_MIN_OUTPUT_WIDTH_FOR_AUTO ; 0            ; Untyped                  ;
+; CBXI_PARAMETER                                 ; mult_j9t     ; Untyped                  ;
+; INPUT_A_FIXED_VALUE                            ; Bx           ; Untyped                  ;
+; INPUT_B_FIXED_VALUE                            ; Bx           ; Untyped                  ;
+; USE_AHDL_IMPLEMENTATION                        ; OFF          ; Untyped                  ;
++------------------------------------------------+--------------+--------------------------+
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
 
@@ -1175,6 +1124,48 @@ Note: In order to hide this table in the UI and the text report file, please set
 ;     -- VCO_MULTIPLY_BY        ; 0                                             ;
 ;     -- VCO_DIVIDE_BY          ; 0                                             ;
 +-------------------------------+-----------------------------------------------+
+
+
++---------------------------------------------------------------------------------+
+; lpm_mult Parameter Settings by Entity Instance                                  ;
++---------------------------------------+-----------------------------------------+
+; Name                                  ; Value                                   ;
++---------------------------------------+-----------------------------------------+
+; Number of entity instances            ; 3                                       ;
+; Entity Instance                       ; CPLD_pwm_phase:u_phase_a|lpm_mult:Mult0 ;
+;     -- LPM_WIDTHA                     ; 17                                      ;
+;     -- LPM_WIDTHB                     ; 13                                      ;
+;     -- LPM_WIDTHP                     ; 30                                      ;
+;     -- LPM_REPRESENTATION             ; SIGNED                                  ;
+;     -- INPUT_A_IS_CONSTANT            ; NO                                      ;
+;     -- INPUT_B_IS_CONSTANT            ; YES                                     ;
+;     -- USE_EAB                        ; OFF                                     ;
+;     -- DEDICATED_MULTIPLIER_CIRCUITRY ; AUTO                                    ;
+;     -- INPUT_A_FIXED_VALUE            ; Bx                                      ;
+;     -- INPUT_B_FIXED_VALUE            ; Bx                                      ;
+; Entity Instance                       ; CPLD_pwm_phase:u_phase_b|lpm_mult:Mult0 ;
+;     -- LPM_WIDTHA                     ; 17                                      ;
+;     -- LPM_WIDTHB                     ; 13                                      ;
+;     -- LPM_WIDTHP                     ; 30                                      ;
+;     -- LPM_REPRESENTATION             ; SIGNED                                  ;
+;     -- INPUT_A_IS_CONSTANT            ; NO                                      ;
+;     -- INPUT_B_IS_CONSTANT            ; YES                                     ;
+;     -- USE_EAB                        ; OFF                                     ;
+;     -- DEDICATED_MULTIPLIER_CIRCUITRY ; AUTO                                    ;
+;     -- INPUT_A_FIXED_VALUE            ; Bx                                      ;
+;     -- INPUT_B_FIXED_VALUE            ; Bx                                      ;
+; Entity Instance                       ; CPLD_pwm_phase:u_phase_c|lpm_mult:Mult0 ;
+;     -- LPM_WIDTHA                     ; 17                                      ;
+;     -- LPM_WIDTHB                     ; 13                                      ;
+;     -- LPM_WIDTHP                     ; 30                                      ;
+;     -- LPM_REPRESENTATION             ; SIGNED                                  ;
+;     -- INPUT_A_IS_CONSTANT            ; NO                                      ;
+;     -- INPUT_B_IS_CONSTANT            ; YES                                     ;
+;     -- USE_EAB                        ; OFF                                     ;
+;     -- DEDICATED_MULTIPLIER_CIRCUITRY ; AUTO                                    ;
+;     -- INPUT_A_FIXED_VALUE            ; Bx                                      ;
+;     -- INPUT_B_FIXED_VALUE            ; Bx                                      ;
++---------------------------------------+-----------------------------------------+
 
 
 +-------------------------------------------------------------------------------------------------------------------+
@@ -1201,7 +1192,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 Info: *******************************************************************
 Info: Running Quartus II 64-Bit Analysis & Synthesis
     Info: Version 13.0.1 Build 232 06/12/2013 Service Pack 1 SJ Web Edition
-    Info: Processing started: Fri Aug 07 15:02:23 2026
+    Info: Processing started: Fri Aug 07 11:23:35 2026
 Info: Command: quartus_map --read_settings_files=on --write_settings_files=off CPLD_pwm -c CPLD_pwm
 Warning (20028): Parallel compilation is not licensed and has been disabled
 Info (12021): Found 2 design units, including 1 entities, in source file cpld_pwm.vhd
@@ -1216,20 +1207,20 @@ Warning (10335): Unrecognized synthesis attribute "async_reg" at pwm_capture.vhd
 Info (12021): Found 2 design units, including 1 entities, in source file pwm_capture.vhd
     Info (12022): Found design unit 1: pwm_capture-rtl
     Info (12023): Found entity 1: pwm_capture
+Info (12021): Found 2 design units, including 1 entities, in source file pll_20m_to_150m.vhd
+    Info (12022): Found design unit 1: pll_20m_to_150m-SYN
+    Info (12023): Found entity 1: pll_20m_to_150m
 Info (12021): Found 2 design units, including 1 entities, in source file cpld_pwm_carrier.vhd
     Info (12022): Found design unit 1: CPLD_pwm_carrier-rtl
     Info (12023): Found entity 1: CPLD_pwm_carrier
 Info (12021): Found 2 design units, including 1 entities, in source file cpld_pwm_phase.vhd
     Info (12022): Found design unit 1: CPLD_pwm_phase-rtl
     Info (12023): Found entity 1: CPLD_pwm_phase
-Info (12021): Found 2 design units, including 1 entities, in source file deadtime_gen.vhd
-    Info (12022): Found design unit 1: deadtime_gen-rtl
-    Info (12023): Found entity 1: deadtime_gen
 Info (12021): Found 2 design units, including 1 entities, in source file pll_50m_to_150m.vhd
     Info (12022): Found design unit 1: pll_50m_to_150m-SYN
     Info (12023): Found entity 1: pll_50m_to_150m
 Info (12127): Elaborating entity "CPLD_pwm" for the top level hierarchy
-Warning (10036): Verilog HDL or VHDL warning at CPLD_pwm.vhd(94): object "carrier" assigned a value but never read
+Warning (10036): Verilog HDL or VHDL warning at CPLD_pwm.vhd(88): object "carrier" assigned a value but never read
 Info (12129): Elaborating entity "pll_50m_to_150m" using architecture "A:syn" for hierarchy "pll_50m_to_150m:u_pll"
 Info (12128): Elaborating entity "altpll" for hierarchy "pll_50m_to_150m:u_pll|altpll:altpll_component"
 Info (12130): Elaborated megafunction instantiation "pll_50m_to_150m:u_pll|altpll:altpll_component"
@@ -1293,22 +1284,32 @@ Info (12021): Found 1 design units, including 1 entities, in source file db/pll_
     Info (12023): Found entity 1: pll_50m_to_150m_altpll
 Info (12128): Elaborating entity "pll_50m_to_150m_altpll" for hierarchy "pll_50m_to_150m:u_pll|altpll:altpll_component|pll_50m_to_150m_altpll:auto_generated"
 Info (12129): Elaborating entity "sync_2ff" using architecture "A:rtl" for hierarchy "sync_2ff:u_sync_a_h1_0"
-Info (12129): Elaborating entity "deadtime_gen" using architecture "A:rtl" for hierarchy "deadtime_gen:u_dt_h1a_legA"
 Info (12129): Elaborating entity "CPLD_pwm_carrier" using architecture "A:rtl" for hierarchy "CPLD_pwm_carrier:u_carrier"
 Info (12129): Elaborating entity "CPLD_pwm_phase" using architecture "A:rtl" for hierarchy "CPLD_pwm_phase:u_phase_a"
-Warning (10037): Verilog HDL or VHDL warning at CPLD_pwm_phase.vhd(106): conditional expression evaluates to a constant
 Info (12129): Elaborating entity "pwm_capture" using architecture "A:rtl" for hierarchy "pwm_capture:u_pwm_cap"
+Info (278001): Inferred 3 megafunctions from design logic
+    Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "CPLD_pwm_phase:u_phase_a|Mult0"
+    Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "CPLD_pwm_phase:u_phase_b|Mult0"
+    Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "CPLD_pwm_phase:u_phase_c|Mult0"
+Info (12130): Elaborated megafunction instantiation "CPLD_pwm_phase:u_phase_a|lpm_mult:Mult0"
+Info (12133): Instantiated megafunction "CPLD_pwm_phase:u_phase_a|lpm_mult:Mult0" with the following parameter:
+    Info (12134): Parameter "LPM_WIDTHA" = "17"
+    Info (12134): Parameter "LPM_WIDTHB" = "13"
+    Info (12134): Parameter "LPM_WIDTHP" = "30"
+    Info (12134): Parameter "LPM_WIDTHR" = "30"
+    Info (12134): Parameter "LPM_WIDTHS" = "1"
+    Info (12134): Parameter "LPM_REPRESENTATION" = "SIGNED"
+    Info (12134): Parameter "INPUT_A_IS_CONSTANT" = "NO"
+    Info (12134): Parameter "INPUT_B_IS_CONSTANT" = "YES"
+    Info (12134): Parameter "MAXIMIZE_SPEED" = "5"
+Info (12021): Found 1 design units, including 1 entities, in source file db/mult_j9t.tdf
+    Info (12023): Found entity 1: mult_j9t
 Info (13000): Registers with preset signals will power-up high
 Info (13003): DEV_CLRn pin will set, and not reset, register with preset signal due to NOT Gate Push-Back
-Warning (13024): Output pins are stuck at VCC or GND
-    Warning (13410): Pin "gates_out[13]" is stuck at GND
-    Warning (13410): Pin "gates_out[17]" is stuck at GND
-    Warning (13410): Pin "gates_out[21]" is stuck at GND
 Info (286030): Timing-Driven Synthesis is running
-Info (17049): 24 registers lost all their fanouts during netlist optimizations.
 Info (16010): Generating hard_block partition "hard_block:auto_generated_inst"
     Info (16011): Adding 1 node(s), including 0 DDIO, 1 PLL, 0 transceiver and 0 LCELL
-Warning (21074): Design contains 60 input pin(s) that do not drive logic
+Warning (21074): Design contains 12 input pin(s) that do not drive logic
     Warning (15610): No output dependent on input pin "gates_in[12]"
     Warning (15610): No output dependent on input pin "gates_in[13]"
     Warning (15610): No output dependent on input pin "gates_in[14]"
@@ -1321,62 +1322,15 @@ Warning (21074): Design contains 60 input pin(s) that do not drive logic
     Warning (15610): No output dependent on input pin "gates_in[21]"
     Warning (15610): No output dependent on input pin "gates_in[22]"
     Warning (15610): No output dependent on input pin "gates_in[23]"
-    Warning (15610): No output dependent on input pin "mod_a[0]"
-    Warning (15610): No output dependent on input pin "mod_a[1]"
-    Warning (15610): No output dependent on input pin "mod_a[2]"
-    Warning (15610): No output dependent on input pin "mod_a[3]"
-    Warning (15610): No output dependent on input pin "mod_a[4]"
-    Warning (15610): No output dependent on input pin "mod_a[5]"
-    Warning (15610): No output dependent on input pin "mod_a[6]"
-    Warning (15610): No output dependent on input pin "mod_a[7]"
-    Warning (15610): No output dependent on input pin "mod_a[8]"
-    Warning (15610): No output dependent on input pin "mod_a[9]"
-    Warning (15610): No output dependent on input pin "mod_a[10]"
-    Warning (15610): No output dependent on input pin "mod_a[11]"
-    Warning (15610): No output dependent on input pin "mod_a[12]"
-    Warning (15610): No output dependent on input pin "mod_a[13]"
-    Warning (15610): No output dependent on input pin "mod_a[14]"
-    Warning (15610): No output dependent on input pin "mod_a[15]"
-    Warning (15610): No output dependent on input pin "mod_b[0]"
-    Warning (15610): No output dependent on input pin "mod_b[1]"
-    Warning (15610): No output dependent on input pin "mod_b[2]"
-    Warning (15610): No output dependent on input pin "mod_b[3]"
-    Warning (15610): No output dependent on input pin "mod_b[4]"
-    Warning (15610): No output dependent on input pin "mod_b[5]"
-    Warning (15610): No output dependent on input pin "mod_b[6]"
-    Warning (15610): No output dependent on input pin "mod_b[7]"
-    Warning (15610): No output dependent on input pin "mod_b[8]"
-    Warning (15610): No output dependent on input pin "mod_b[9]"
-    Warning (15610): No output dependent on input pin "mod_b[10]"
-    Warning (15610): No output dependent on input pin "mod_b[11]"
-    Warning (15610): No output dependent on input pin "mod_b[12]"
-    Warning (15610): No output dependent on input pin "mod_b[13]"
-    Warning (15610): No output dependent on input pin "mod_b[14]"
-    Warning (15610): No output dependent on input pin "mod_b[15]"
-    Warning (15610): No output dependent on input pin "mod_c[0]"
-    Warning (15610): No output dependent on input pin "mod_c[1]"
-    Warning (15610): No output dependent on input pin "mod_c[2]"
-    Warning (15610): No output dependent on input pin "mod_c[3]"
-    Warning (15610): No output dependent on input pin "mod_c[4]"
-    Warning (15610): No output dependent on input pin "mod_c[5]"
-    Warning (15610): No output dependent on input pin "mod_c[6]"
-    Warning (15610): No output dependent on input pin "mod_c[7]"
-    Warning (15610): No output dependent on input pin "mod_c[8]"
-    Warning (15610): No output dependent on input pin "mod_c[9]"
-    Warning (15610): No output dependent on input pin "mod_c[10]"
-    Warning (15610): No output dependent on input pin "mod_c[11]"
-    Warning (15610): No output dependent on input pin "mod_c[12]"
-    Warning (15610): No output dependent on input pin "mod_c[13]"
-    Warning (15610): No output dependent on input pin "mod_c[14]"
-    Warning (15610): No output dependent on input pin "mod_c[15]"
-Info (21057): Implemented 598 device resources after synthesis - the final resource count might be different
+Info (21057): Implemented 586 device resources after synthesis - the final resource count might be different
     Info (21058): Implemented 75 input pins
     Info (21059): Implemented 58 output pins
-    Info (21061): Implemented 464 logic cells
+    Info (21061): Implemented 446 logic cells
     Info (21065): Implemented 1 PLLs
-Info: Quartus II 64-Bit Analysis & Synthesis was successful. 0 errors, 71 warnings
-    Info: Peak virtual memory: 4630 megabytes
-    Info: Processing ended: Fri Aug 07 15:02:25 2026
+    Info (21062): Implemented 6 DSP elements
+Info: Quartus II 64-Bit Analysis & Synthesis was successful. 0 errors, 18 warnings
+    Info: Peak virtual memory: 4629 megabytes
+    Info: Processing ended: Fri Aug 07 11:23:37 2026
     Info: Elapsed time: 00:00:02
     Info: Total CPU time (on all processors): 00:00:02
 
