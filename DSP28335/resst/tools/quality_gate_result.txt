@@ -1,0 +1,47 @@
+﻿
+=== Stage 1: Host Tests ===
+  PASS: test_sci_rx_queue
+  PASS: test_uart_frame
+  PASS: test_spi_request
+  PASS: test_spi_bridge
+  [PASS] Host Tests (4 suites)
+
+=== Stage 2: Static Boundary Checks ===
+  Checking direct register access outside drivers/ and bsp/ ...
+  [PASS] Register access boundary (app/services/control/algorithm)
+         No direct Regs. access outside drivers/ and bsp/
+  Checking platform_profile.h definition guards ...
+  [PASS] platform_profile.h compile guards
+  Checking legacy code in active build paths ...
+  [PASS] Legacy code in active paths
+  Checking DSP2833x_Device.h includes outside drivers/ and bsp/ ...
+  [PASS] DSP2833x_Device.h isolation (drivers/bsp only)
+
+=== Stage 3: RAM Debug Build (Prototype_RAM_Debug) ===
+  Building Build: Prototype_RAM_Debug ...
+  [PASS] Build: Prototype_RAM_Debug
+         Output: E:\repos\DSP28335\F28335_RTControl_Platform\Debug\gate_build/F28335_RTControl_Platform.out, Map: E:\repos\DSP28335\F28335_RTControl_Platform\Debug\gate_build/F28335_RTControl_Platform.map
+  Building Build: Industrial_Flash_Release ...
+  [PASS] Build: Industrial_Flash_Release
+         Output: E:\repos\DSP28335\F28335_RTControl_Platform\Flash_Release\gate_build/F28335_RTControl_Platform.out, Map: E:\repos\DSP28335\F28335_RTControl_Platform\Flash_Release\gate_build/F28335_RTControl_Platform.map
+
+=== Stage 4: Source File Checks ===
+  [PASS] Source file sanity check
+
+=== Quality Gate Summary ===
+
+  PASS: 8  SKIP: 0  WARN: 0  FAIL: 0
+
+  [PASS] platform_profile.h compile guards
+  [PASS] Build: Industrial_Flash_Release
+           Output: E:\repos\DSP28335\F28335_RTControl_Platform\Flash_Release\gate_build/F28335_RTControl_Platform.out, Map: E:\repos\DSP28335\F28335_RTControl_Platform\Flash_Release\gate_build/F28335_RTControl_Platform.map
+  [PASS] Legacy code in active paths
+  [PASS] Register access boundary (app/services/control/algorithm)
+           No direct Regs. access outside drivers/ and bsp/
+  [PASS] Host Tests (4 suites)
+  [PASS] Build: Prototype_RAM_Debug
+           Output: E:\repos\DSP28335\F28335_RTControl_Platform\Debug\gate_build/F28335_RTControl_Platform.out, Map: E:\repos\DSP28335\F28335_RTControl_Platform\Debug\gate_build/F28335_RTControl_Platform.map
+  [PASS] Source file sanity check
+  [PASS] DSP2833x_Device.h isolation (drivers/bsp only)
+
+QUALITY GATE: PASSED
