@@ -1,0 +1,21 @@
+# Quartus生成的数据库和增量编译缓存
+db/
+incremental_db/
+debug_bsdl/
+
+# ModelSim临时工作库和运行记录
+work/
+sim_work/
+modelsim.ini
+transcript
+
+# Quartus临时信息
+PLLJ_PLLSPE_INFO.txt
+*.qws
+
+# 仅版本化最终可烧录SOF，不提交其余编译报告和中间文件
+output_files/*
+!output_files/CPLD_cyc.sof
+
+# 排障期间保存的故障版本，不属于当前正式版本
+CPLD_pwm_phase.filter_backup.vhd
