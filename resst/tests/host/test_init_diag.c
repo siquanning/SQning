@@ -5,10 +5,15 @@ static int _host_test_placeholder_init_diag;
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#define PLATFORM_PROFILE_PROTOTYPE
 #include "firmware/platform_profile.h"
 #include "firmware/app/state_machine.h"
 #include "firmware/app/param_manager.h"
+
+/* Host stub: production implementation drives the external hardware gate. */
+void DrvGpio_WriteFaultGate(uint16_t enable)
+{
+    (void)enable;
+}
 
 static int g_failures = 0;
 
@@ -35,7 +40,7 @@ static int g_failures = 0;
  *
  * StateMachine_Service(diag_flags) transitions INIT→STANDBY when
  * (diag_flags & 0x80000000UL) == 0 — i.e. no self-test failure.
- * DIAG_FLAG_LOGICAL_RUN_NO_HW (0x00000001) does NOT block this.
+ * DIAG_FLAG_PWM_ADC_HW_UNCONFIRMED (0x00000001) does NOT block this.
  * ================================================================== */
 static void test_init_to_standby_no_fault(void)
 {
@@ -53,13 +58,13 @@ static void test_init_to_standby_no_fault(void)
     StateMachine_Service(&sm, 300UL, 0UL);
     ASSERT_EQ(sm.state, SYSTEM_STATE_STANDBY, "T1.3: INIT → STANDBY (MSB clear)");
 
-    /* Verify diag_flags with LOGICAL_RUN bit does not block transition */
+    /* Verify diag_flags with PWM_ADC_HW_UNCONFIRMED bit does not block transition */
     memset(&sm, 0, sizeof(sm));
     StateMachine_Init(&sm, 100UL);
-    StateMachine_Service(&sm, 200UL, 0x00000001UL); /* LOGICAL_RUN set */
-    ASSERT_EQ(sm.state, SYSTEM_STATE_INIT, "T1.4: BOOT→INIT (with LOGICAL_RUN flag)");
+    StateMachine_Service(&sm, 200UL, 0x00000001UL); /* HW_UNCONFIRMED set */
+    ASSERT_EQ(sm.state, SYSTEM_STATE_INIT, "T1.4: BOOT→INIT (with HW_UNCONFIRMED flag)");
     StateMachine_Service(&sm, 300UL, 0x00000001UL);
-    ASSERT_EQ(sm.state, SYSTEM_STATE_STANDBY, "T1.5: INIT→STANDBY (LOGICAL_RUN does not block)");
+    ASSERT_EQ(sm.state, SYSTEM_STATE_STANDBY, "T1.5: INIT→STANDBY (HW_UNCONFIRMED does not block)");
 }
 
 /* ==================================================================
@@ -151,7 +156,7 @@ static void test_service_pending_commit(void)
     ParamManager pm;
     ControlParams new_params;
 
-    Param_Init(&pm, 1250U, 480U);
+    Param_Init(&pm, 1250U);
 
     /* No commit requested → returns OK */
     ASSERT_EQ(Param_ServicePendingCommit(&pm), PARAM_COMMIT_OK,
@@ -160,7 +165,7 @@ static void test_service_pending_commit(void)
     /* Prepare valid params and request commit */
     memcpy(&new_params, &pm.active, sizeof(ControlParams));
     new_params.version = 3U;
-    new_params.max_duty_permill = 300U;
+    new_params.m_permill[0] = 300;
 
     Param_SubmitPending(&pm, &new_params);
     Param_RequestCommit(&pm);
@@ -169,11 +174,11 @@ static void test_service_pending_commit(void)
     ASSERT_EQ(Param_ServicePendingCommit(&pm), PARAM_COMMIT_OK,
               "T5.2: valid commit → OK");
     ASSERT_EQ(pm.commit_count, 1UL, "T5.3: commit_count=1");
-    ASSERT_EQ(pm.active.max_duty_permill, 300U, "T5.4: active updated");
+    ASSERT_EQ(pm.active.m_permill[0], 300U, "T5.4: active updated");
 
     /* Submit invalid params */
     new_params.version = 4U;
-    new_params.max_duty_permill = 0U;  /* Invalid */
+    new_params.m_permill[0] = 981;  /* Invalid */
     Param_SubmitPending(&pm, &new_params);
     Param_RequestCommit(&pm);
 
@@ -181,8 +186,8 @@ static void test_service_pending_commit(void)
     ASSERT_EQ(Param_ServicePendingCommit(&pm), PARAM_COMMIT_REJECTED,
               "T5.5: invalid commit → REJECTED");
     ASSERT_EQ(pm.reject_count, 1UL, "T5.6: reject_count=1");
-    ASSERT_EQ(pm.last_reject_reason, PARAM_REJECT_DUTY_RANGE,
-              "T5.7: reject reason=DUTY_RANGE");
+    ASSERT_EQ(pm.last_reject_reason, PARAM_REJECT_M_RANGE,
+              "T5.7: reject reason=M_RANGE");
 }
 
 /* ==================================================================
@@ -194,7 +199,7 @@ static void test_param_get_diag(void)
     uint32_t commits, rejects;
     uint16_t reason;
 
-    Param_Init(&pm, 1250U, 480U);
+    Param_Init(&pm, 1250U);
 
     Param_GetDiagSnapshot(&pm, &commits, &rejects, &reason);
     ASSERT_EQ(commits, 0UL, "T6.1: commits=0");

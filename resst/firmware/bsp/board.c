@@ -26,6 +26,15 @@ void Board_Init(void)
      */
     const SysClockConfig clk = { 7U, 3U, 0x0001U, 0x0002U };
 
+    /*
+     * 最早安全动作：在时钟、通信、ADC和ePWM初始化之前，先把所有可能
+     * 接通功率路径的普通GPIO主动配置为LOW。禁止依赖复位后的输入/上拉
+     * 默认态，以免GPIO30或GPIO22/23在较长初始化窗口内出现误使能。
+     */
+    DrvGpio_InitFaultGate();          /* GPIO30 LOW：CPLD总门极封锁 */
+    DrvGpio_InitGridSwitch();         /* GPIO22 LOW：输入开关断开 */
+    DrvGpio_InitPrechargeBypass();    /* GPIO23 LOW：旁路开关断开 */
+
 #ifdef FLASH
     {
         extern uint16_t RamfuncsLoadStart;
@@ -76,7 +85,7 @@ void Board_Init(void)
      *  6. Write CMPA = TBPRD/2 (50% duty) — shadow load at CTR=ZERO
      *
      * All PWM outputs remain forced LOW after init.
-     * Call PWM_Enable() to release outputs; PWM_Disable() to block.
+     * Call PWM_ReleaseOutput() to release outputs; PWM_BlockOutput() to block.
      *==================================================================*/
 
     /* Step 1: Halt all ePWM time-base clocks (safety gate) */
@@ -148,10 +157,11 @@ void Board_Init(void)
         }
     }
 
-    /* Step 7: CPLD control signals — all LOW (safe: gates blocked) */
-    DrvGpio_InitFaultGate();
+    /* Step 7: remaining CPLD/control signals — initialize LOW */
     DrvGpio_InitCpldLed();
     DrvGpio_InitUniPolarity();
+    DrvGpio_InitRunButton();   /* GPIO21 高有效输入 (CPLD 启停按钮) */
+    DrvGpio_InitRunState();    /* GPIO20 输出 LOW (高有效 LED 熄灭) */
 
     DrvInterrupt_EnableGlobal();
     DrvTimer0_Start();
@@ -172,6 +182,16 @@ void PWM_BlockOutput(void)
 
 #if BOARD_PWM_ADC_HW_CONFIRMED == 1U
     DrvGpio_WriteFaultGate(0U);   /* FAULT_GATE=0 FIRST — CPLD blocks gates */
+
+    /* Loop 1: 先关闭全部模块的 OST interrupt —
+     * 保证任何软件 OST 产生前, 所有 OST interrupt 都已关闭,
+     * 软件封锁才不会自触发 TZ ISR (误锁 FAULT)。 */
+    for (i = 0U; i < BOARD_EPWM_MODULE_COUNT; i++)
+    {
+        DrvEpwm_DisableOstInt(pwm_modules[i]);
+    }
+
+    /* Loop 2: 再对全部模块软件强制 OST 跳闸 → 输出封锁 */
     for (i = 0U; i < BOARD_EPWM_MODULE_COUNT; i++)
     {
         DrvEpwm_ForceTrip(pwm_modules[i]);  /* TZ OST force → outputs LOW */
@@ -184,17 +204,69 @@ void PWM_ReleaseOutput(void)
     uint32_t i;
 
 #if BOARD_PWM_ADC_HW_CONFIRMED == 1U
+    /*
+     * 每模块: Clear OST → Clear INT → Re-arm OST interrupt
+     * (DrvEpwm_ClearOstTrip 内部顺序), 全部模块完成后才 GPIO30=1。
+     * 调用方保证此时 TZ1/TZ2 实时输入正常 (PWM_AreTripInputsClear)。
+     *
+     * 关键区覆盖 re-arm 与 GPIO30=1: 若真实 TZ 故障在本段窗口内发生,
+     * TZ ISR 被推迟到 GPIO30=1 之后才执行, 其内部 System_EnterFault
+     * 立即拉低 GPIO30 → 不会出现 "FAULT 已建立但 GPIO30 又被重新拉高
+     * (CPLD 门极误使能)" 的窗口。TZ 中断仅延迟数微秒, 不丢失。
+     */
+    DINT;
     for (i = 0U; i < BOARD_EPWM_MODULE_COUNT; i++)
     {
-        DrvEpwm_ClearOstTrip(pwm_modules[i]);  /* Clear TZ latch */
+        DrvEpwm_ClearOstTrip(pwm_modules[i]);  /* Clear TZ latch + re-arm */
     }
     DrvGpio_WriteFaultGate(1U);   /* FAULT_GATE=1 LAST — CPLD enables gates */
+    EINT;
 #endif
 }
 
-void PWM_Disable(void)
+uint16_t PWM_ReleaseSelectedPhase(uint16_t phase)
 {
-    PWM_BlockOutput();
+#if BOARD_PWM_ADC_HW_CONFIRMED == 1U
+    uint32_t i;
+    uint32_t first_module;
+
+    if ((phase < 1U) || (phase > BOARD_PHASE_COUNT)) return 0U;
+    first_module = ((uint32_t)phase - 1U) * 2U + 1U;
+
+    /* 调用前全局PWM仍由PWM_BlockOutput保持OST，且TZ输入已由上层确认。 */
+    DINT;
+    for (i = 0U; i < BOARD_EPWM_MODULE_COUNT; i++)
+    {
+        if ((pwm_modules[i] == first_module) ||
+            (pwm_modules[i] == (first_module + 1U))) {
+            DrvEpwm_ClearOstTrip(pwm_modules[i]);
+        } else {
+            DrvEpwm_DisableOstInt(pwm_modules[i]);
+            DrvEpwm_ForceTrip(pwm_modules[i]);
+        }
+    }
+    DrvGpio_WriteFaultGate(1U); /* 非测试相OST已确认后，最后打开CPLD总门 */
+    EINT;
+    return 1U;
+#else
+    (void)phase;
+    return 0U;
+#endif
+}
+
+uint16_t PWM_ReleaseThreePhase(void)
+{
+#if BOARD_PWM_ADC_HW_CONFIRMED == 1U
+    uint32_t i;
+    DINT;
+    for (i = 0U; i < BOARD_EPWM_MODULE_COUNT; i++)
+        DrvEpwm_ClearOstTrip(pwm_modules[i]);
+    DrvGpio_WriteFaultGate(1U);
+    EINT;
+    return 1U;
+#else
+    return 0U;
+#endif
 }
 
 uint16_t PWM_AreTripInputsClear(void)

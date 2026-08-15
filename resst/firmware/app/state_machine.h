@@ -52,12 +52,13 @@ typedef struct
     uint32_t     fault_tick;
     uint32_t     state_entry_tick;
     uint32_t     state_duration_ticks;
-    uint32_t     logical_run;       /* 1 = in logical RUN (HW_CONFIRMED=0) */
     uint32_t     pwm_disable_requested;
 } StateMachine;
 
 /* ---- Diagnostic flags ---- */
-#define DIAG_FLAG_LOGICAL_RUN_NO_HW  0x00000001U
+/* 构建期硬件确认闸关闭 (BOARD_PWM_ADC_HW_CONFIRMED==0) 时置位 —
+ * 仅记录 PWM/ADC 硬件未确认, 不表达任何运行时 RUN 状态 */
+#define DIAG_FLAG_PWM_ADC_HW_UNCONFIRMED  0x00000001U
 
 /* ---- API ---- */
 
@@ -101,6 +102,9 @@ int StateMachine_RequestStandby(StateMachine *sm, uint32_t now);
 
 /* Convenience query: returns 1 if state == RUN. */
 int StateMachine_IsRun(const StateMachine *sm);
+
+/* Convenience query: returns 1 if state == STANDBY. */
+int StateMachine_IsStandby(const StateMachine *sm);
 
 /* Convenience query: returns 1 if state == FAULT. */
 int StateMachine_IsFault(const StateMachine *sm);

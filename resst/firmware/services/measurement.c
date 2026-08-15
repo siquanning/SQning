@@ -11,7 +11,7 @@
  *
  * Conversion formulas (see board_config.h for full analog signal chain):
  *
- *   Vdc: V_primary = raw × (VREF/MAX_COUNT)
+ *   Vdc: V_primary = max(raw - offset, 0) × (VREF/MAX_COUNT)
  *                  × (CT2_PRI_V/CT2_SEC_V)
  *                  × (CT1_PRI_V/CT1_SEC_V) / ANALOG_GAIN
  *
@@ -32,12 +32,46 @@
 /* Global measurement snapshot — 1 kHz refresh, CCS watchable. */
 MeasurementSample g_measurement;
 
+/* 各通道独立ADC零偏运行值，单位ADC count；可在CCS Expressions现场修改。 */
+volatile uint16_t g_vdc1_offset_counts;
+volatile uint16_t g_vdc2_offset_counts;
+volatile uint16_t g_vdc3_offset_counts;
+volatile uint16_t g_vdc4_offset_counts;
+volatile uint16_t g_vdc5_offset_counts;
+volatile uint16_t g_vdc6_offset_counts;
+volatile uint16_t g_vac_va_offset_counts;
+volatile uint16_t g_vac_vb_offset_counts;
+volatile uint16_t g_vac_vc_offset_counts;
+volatile uint16_t g_iac_ia_offset_counts;
+volatile uint16_t g_iac_ib_offset_counts;
+volatile uint16_t g_iac_ic_offset_counts;
+
+void Measurement_Init(void)
+{
+    /*
+     * 这里只加载人工确认的默认零偏，不做自动校零。
+     * 在不能保证输入确实为0时，自动采样会把真实信号误当成偏置。
+     */
+    g_vdc1_offset_counts = BOARD_VDC1_OFFSET_COUNTS_DEFAULT;
+    g_vdc2_offset_counts = BOARD_VDC2_OFFSET_COUNTS_DEFAULT;
+    g_vdc3_offset_counts = BOARD_VDC3_OFFSET_COUNTS_DEFAULT;
+    g_vdc4_offset_counts = BOARD_VDC4_OFFSET_COUNTS_DEFAULT;
+    g_vdc5_offset_counts = BOARD_VDC5_OFFSET_COUNTS_DEFAULT;
+    g_vdc6_offset_counts = BOARD_VDC6_OFFSET_COUNTS_DEFAULT;
+    g_vac_va_offset_counts = BOARD_VAC_VA_OFFSET_COUNTS_DEFAULT;
+    g_vac_vb_offset_counts = BOARD_VAC_VB_OFFSET_COUNTS_DEFAULT;
+    g_vac_vc_offset_counts = BOARD_VAC_VC_OFFSET_COUNTS_DEFAULT;
+    g_iac_ia_offset_counts = BOARD_IAC_IA_OFFSET_COUNTS_DEFAULT;
+    g_iac_ib_offset_counts = BOARD_IAC_IB_OFFSET_COUNTS_DEFAULT;
+    g_iac_ic_offset_counts = BOARD_IAC_IC_OFFSET_COUNTS_DEFAULT;
+}
+
 /*
  * Derived gain factors — computed from board_config.h hardware-chain macros.
  *
  * Theoretical check values at current parameters (not hard-coded, for
  * compile-time verification only):
- *   VDC_GAIN ≈ 0.0007326 V/count
+ *   VDC_GAIN ≈ 0.73260 V/count；corrected_raw≈546时约400V
  *   VAC_GAIN ≈ 0.08774 V/count (× delta)
  *   IAC_GAIN ≈ 0.0029304 A/count (× delta)
  */
@@ -69,9 +103,11 @@ MeasurementSample g_measurement;
  * context (1 kHz foreground or 20 kHz ISR).
  * ==================================================================== */
 
-float Measurement_ConvertVdc(uint16_t raw)
+float Measurement_ConvertVdc(uint16_t raw, uint16_t offset)
 {
-    return (float)raw * MEAS_VDC_SCALE;
+    /* Vdc为单极性量；raw低于offset时饱和为0，避免产生虚假负母线电压。 */
+    uint16_t corrected = (raw > offset) ? (uint16_t)(raw - offset) : 0U;
+    return (float)corrected * MEAS_VDC_SCALE;
 }
 
 float Measurement_ConvertVac(uint16_t raw, uint16_t offset, float polarity)
@@ -99,27 +135,27 @@ void Measurement_Update(MeasurementSample *out)
     if (out == ((MeasurementSample *)0))
         return;
 
-    /* Vdc — unsigned, no offset */
-    out->vdc_v[0] = Measurement_ConvertVdc(g_vdc_raw[0]);
-    out->vdc_v[1] = Measurement_ConvertVdc(g_vdc_raw[1]);
-    out->vdc_v[2] = Measurement_ConvertVdc(g_vdc_raw[2]);
-    out->vdc_v[3] = Measurement_ConvertVdc(g_vdc_raw[3]);
-    out->vdc_v[4] = Measurement_ConvertVdc(g_vdc_raw[4]);
-    out->vdc_v[5] = Measurement_ConvertVdc(g_vdc_raw[5]);
+    /* Vdc：每路使用独立运行offset，按max(raw-offset,0)换算。 */
+    out->vdc_v[0] = Measurement_ConvertVdc(g_vdc_raw[0], g_vdc1_offset_counts);
+    out->vdc_v[1] = Measurement_ConvertVdc(g_vdc_raw[1], g_vdc2_offset_counts);
+    out->vdc_v[2] = Measurement_ConvertVdc(g_vdc_raw[2], g_vdc3_offset_counts);
+    out->vdc_v[3] = Measurement_ConvertVdc(g_vdc_raw[3], g_vdc4_offset_counts);
+    out->vdc_v[4] = Measurement_ConvertVdc(g_vdc_raw[4], g_vdc5_offset_counts);
+    out->vdc_v[5] = Measurement_ConvertVdc(g_vdc_raw[5], g_vdc6_offset_counts);
 
     /* Vac — bipolar, offset-corrected, instantaneous (not RMS) */
     out->vac_v[0] = Measurement_ConvertVac(g_vac_raw[0],
-                    BOARD_VAC_VA_OFFSET_COUNTS, BOARD_VAC_VA_POLARITY);
+                    g_vac_va_offset_counts, BOARD_VAC_VA_POLARITY);
     out->vac_v[1] = Measurement_ConvertVac(g_vac_raw[1],
-                    BOARD_VAC_VB_OFFSET_COUNTS, BOARD_VAC_VB_POLARITY);
+                    g_vac_vb_offset_counts, BOARD_VAC_VB_POLARITY);
     out->vac_v[2] = Measurement_ConvertVac(g_vac_raw[2],
-                    BOARD_VAC_VC_OFFSET_COUNTS, BOARD_VAC_VC_POLARITY);
+                    g_vac_vc_offset_counts, BOARD_VAC_VC_POLARITY);
 
     /* Iac — bipolar, offset-corrected, instantaneous (not RMS) */
     out->iac_a[0] = Measurement_ConvertIac(g_iac_raw[0],
-                    BOARD_IAC_IA_OFFSET_COUNTS, BOARD_IAC_IA_POLARITY);
+                    g_iac_ia_offset_counts, BOARD_IAC_IA_POLARITY);
     out->iac_a[1] = Measurement_ConvertIac(g_iac_raw[1],
-                    BOARD_IAC_IB_OFFSET_COUNTS, BOARD_IAC_IB_POLARITY);
+                    g_iac_ib_offset_counts, BOARD_IAC_IB_POLARITY);
     out->iac_a[2] = Measurement_ConvertIac(g_iac_raw[2],
-                    BOARD_IAC_IC_OFFSET_COUNTS, BOARD_IAC_IC_POLARITY);
+                    g_iac_ic_offset_counts, BOARD_IAC_IC_POLARITY);
 }

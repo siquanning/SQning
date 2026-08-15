@@ -14,10 +14,10 @@ extern "C" {
  * Sequence:
  *   Board_Init → Diagnostics_Init → AppContext_Init → ISR wiring
  *   → Indicator_Init → Scheduler_Init → StateMachine BOOT→INIT→STANDBY
- *   → StateMachine_RequestRun
  *
- * On return the system is in RUN (or logical RUN when HW_CONFIRMED=0)
- * and the main loop can be entered.
+ * On return the system is in STANDBY (no auto RUN). GPIO21 保持型按钮的
+ * 消抖稳定电平即运行请求: 上电 restart_inhibit=1, 必须先观察到稳定 0,
+ * 之后 0→1 才由 RunSupervisor 请求 RUN 并释放 PWM。
  */
 void App_Init(AppContext *app);
 
@@ -26,8 +26,8 @@ void App_Init(AppContext *app);
  *
  * Background rate groups:
  *   Foreground: drain SCI RX queue, service SpiBridge, service Indicator
- *   1ms:        parameter commit service, PWM disable consumption, PWM release/block
- *   10ms:       state machine service
+ *   1ms:        parameter commit service, PWM disable consumption (FAULT 快速路径)
+ *   10ms:       RunSupervisor 启停裁决 + state machine service
  *   100ms:      diagnostics snapshot, telemetry, fault detection
  *
  * Never returns.
@@ -42,13 +42,13 @@ void App_ServiceForeground(AppContext *app, uint32_t now);
 
 /*
  * 1ms background: parameter commit + PWM disable consumption
- * + state-driven PWM release/block.
+ * (FAULT 快速路径: PWM_BlockOutput + GPIO20 灭)。
  * Public for host-test visibility.
  */
 void App_Service1ms(AppContext *app, uint32_t now);
 
 /*
- * 10ms background: state machine service.
+ * 10ms background: RunSupervisor 启停裁决 + state machine service.
  * Public for host-test visibility.
  */
 void App_Service10ms(AppContext *app, uint32_t now);

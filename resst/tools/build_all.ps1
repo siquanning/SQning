@@ -1,7 +1,7 @@
 # Build all 4 configurations for F28335_RTControl_Platform
 $ErrorActionPreference = "Stop"
 
-$PROJ = "E:\repos\DSP28335\F28335_RTControl_Platform"
+$PROJ = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $CC = "E:\ti\ccs2051\ccs\tools\compiler\ti-cgt-c2000_25.11.0.LTS\bin\cl2000"
 $CG_INC = "E:\ti\ccs2051\ccs\tools\compiler\ti-cgt-c2000_25.11.0.LTS\include"
 $CG_LIB = "E:\ti\ccs2051\ccs\tools\compiler\ti-cgt-c2000_25.11.0.LTS\lib"
@@ -29,11 +29,17 @@ $SRC_FILES = @(
     "$PROJ\firmware\app\isr.c",
     "$PROJ\firmware\app\main.c",
     "$PROJ\firmware\app\param_manager.c",
+    "$PROJ\firmware\app\run_control.c",
+    "$PROJ\firmware\app\run_supervisor.c",
     "$PROJ\firmware\app\scheduler.c",
     "$PROJ\firmware\app\sci_rx_queue.c",
     "$PROJ\firmware\app\state_machine.c",
     "$PROJ\firmware\app\telemetry.c",
     "$PROJ\firmware\control\control_faststep.c",
+    "$PROJ\firmware\control\control_closedloop.c",
+    "$PROJ\firmware\control\control_global.c",
+    "$PROJ\firmware\control\control_openloop.c",
+    "$PROJ\firmware\control\control_pll.c",
     "$PROJ\firmware\control\safe_openloop.c",
     "$PROJ\firmware\bsp\board.c",
     "$PROJ\firmware\drivers\drv_adc.c",
@@ -44,7 +50,11 @@ $SRC_FILES = @(
     "$PROJ\firmware\drivers\drv_spi.c",
     "$PROJ\firmware\drivers\drv_sysctrl.c",
     "$PROJ\firmware\drivers\drv_timer.c",
+    "$PROJ\firmware\services\cpld_spi.c",
     "$PROJ\firmware\services\indicator.c",
+    "$PROJ\firmware\services\justfloat.c",
+    "$PROJ\firmware\services\measurement.c",
+    "$PROJ\firmware\services\modbus_vdc.c",
     "$PROJ\firmware\services\spi_bridge.c",
     "$PROJ\firmware\services\spi_request.c",
     "$PROJ\firmware\services\uart_frame.c"
@@ -72,7 +82,7 @@ function Build-One {
 
         $cmd = $cmdArgs -join " "
         Write-Host "  Compiling: $rel"
-        $result = cmd /c $cmd 2>&1
+        $result = cmd /c "$cmd 2>&1"
         if ($LASTEXITCODE -ne 0) {
             Write-Host "  ERROR: $result"
             exit 1
@@ -100,7 +110,7 @@ function Build-One {
 
     $linkCmd = $linkArgs -join " "
     Write-Host "  Linking: $($Name).out"
-    $result = cmd /c $linkCmd 2>&1
+    $result = cmd /c "$linkCmd 2>&1"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  LINK ERROR: $result"
         exit 1

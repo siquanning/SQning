@@ -34,7 +34,6 @@ void StateMachine_Init(StateMachine *sm, uint32_t now)
     sm->fault_tick           = 0UL;
     sm->state_entry_tick     = now;
     sm->state_duration_ticks = 0UL;
-    sm->logical_run          = 0UL;
     sm->pwm_disable_requested = 0UL;
 }
 
@@ -148,7 +147,6 @@ int StateMachine_RequestRun(StateMachine *sm, uint32_t now)
 
     sm->state = SYSTEM_STATE_RUN;
     sm->state_entry_tick = now;
-    sm->logical_run = 1UL;
     return 1;
 }
 
@@ -159,7 +157,6 @@ int StateMachine_RequestStandby(StateMachine *sm, uint32_t now)
 
     sm->state = SYSTEM_STATE_STANDBY;
     sm->state_entry_tick = now;
-    sm->logical_run = 0UL;
     return 1;
 }
 
@@ -167,6 +164,12 @@ int StateMachine_IsRun(const StateMachine *sm)
 {
     if (sm == ((StateMachine *)0)) return 0;
     return (sm->state == SYSTEM_STATE_RUN) ? 1 : 0;
+}
+
+int StateMachine_IsStandby(const StateMachine *sm)
+{
+    if (sm == ((StateMachine *)0)) return 0;
+    return (sm->state == SYSTEM_STATE_STANDBY) ? 1 : 0;
 }
 
 int StateMachine_IsFault(const StateMachine *sm)

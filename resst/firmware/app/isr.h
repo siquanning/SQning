@@ -18,7 +18,7 @@ __interrupt void App_Timer0Isr(void);
 __interrupt void App_ScicRxIsr(void);
 __interrupt void App_AdcIsr(void);
 __interrupt void App_Epwm1Isr(void);
-__interrupt void App_Epwm1TzIsr(void);
+__interrupt void App_EpwmTzIsr(void);
 
 void App_IsrSetQueue(SciRxQueue *queue);
 void App_IsrSetControl(ControlContext *control);

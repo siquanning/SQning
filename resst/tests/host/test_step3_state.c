@@ -5,9 +5,14 @@ static int _host_test_placeholder_step3_state;
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#define PLATFORM_PROFILE_PROTOTYPE
 #include "firmware/platform_profile.h"
 #include "firmware/app/state_machine.h"
+
+/* Host stub: production implementation drives the external hardware gate. */
+void DrvGpio_WriteFaultGate(uint16_t enable)
+{
+    (void)enable;
+}
 
 static int g_failures = 0;
 

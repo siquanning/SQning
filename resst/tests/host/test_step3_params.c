@@ -5,7 +5,6 @@ static int _host_test_placeholder_step3_params;
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#define PLATFORM_PROFILE_PROTOTYPE
 #include "firmware/platform_profile.h"
 #include "firmware/app/param_manager.h"
 
@@ -35,10 +34,10 @@ static int g_failures = 0;
 static void test_param_init(void)
 {
     ParamManager pm;
-    Param_Init(&pm, 1250U, 480U);
+    Param_Init(&pm, 1250U);
 
     ASSERT_EQ(pm.active.version, 1U, "T1.1: active.version=1");
-    ASSERT_EQ(pm.active.max_duty_permill, 480U, "T1.2: max_duty=480");
+    ASSERT_EQ(pm.active.m_permill[0], 0U, "T1.2: m[0]=0");
     ASSERT_EQ(pm.active.tbprd, 1250U, "T1.3: tbprd=1250");
     ASSERT_EQ(pm.active.adc_safe_min, 1U, "T1.4: adc_safe_min=1");
     ASSERT_EQ(pm.active.adc_safe_max, 4094U, "T1.5: adc_safe_max=4094");
@@ -59,7 +58,7 @@ static void test_validate_version(void)
 
     memset(&active, 0, sizeof(active));
     active.version = 5U;
-    active.max_duty_permill = 480U;
+    active.m_permill[0] = 0;
     active.control_mode = 0U;
     active.tbprd = 1250U;
     active.adc_safe_min = 1U;
@@ -92,7 +91,7 @@ static void test_validate_ranges(void)
 
     memset(&active, 0, sizeof(active));
     active.version = 1U;
-    active.max_duty_permill = 480U;
+    active.m_permill[0] = 0;
     active.control_mode = 0U;
     active.tbprd = 1250U;
     active.adc_safe_min = 1U;
@@ -102,15 +101,15 @@ static void test_validate_ranges(void)
     p = active;
     p.version = 2U;
 
-    /* Duty = 0 → reject */
-    p.max_duty_permill = 0U;
-    ASSERT_EQ(Param_Validate(&p, &active), PARAM_REJECT_DUTY_RANGE,
-              "T3.1: duty=0 → REJECT");
+    /* Modulation below minimum → reject */
+    p.m_permill[0] = -981;
+    ASSERT_EQ(Param_Validate(&p, &active), PARAM_REJECT_M_RANGE,
+              "T3.1: m=-981 → REJECT");
 
-    /* Duty = 1001 → reject */
-    p.max_duty_permill = 1001U;
-    ASSERT_EQ(Param_Validate(&p, &active), PARAM_REJECT_DUTY_RANGE,
-              "T3.2: duty=1001 → REJECT");
+    /* Modulation above maximum → reject */
+    p.m_permill[0] = 981;
+    ASSERT_EQ(Param_Validate(&p, &active), PARAM_REJECT_M_RANGE,
+              "T3.2: m=981 → REJECT");
 
     p = active; p.version = 3U;
 
@@ -157,21 +156,21 @@ static void test_commit_flow(void)
     ParamManager pm;
     ControlParams new_params;
 
-    Param_Init(&pm, 1250U, 480U);
+    Param_Init(&pm, 1250U);
 
     /* Prepare new params with higher version */
     memcpy(&new_params, &pm.active, sizeof(ControlParams));
     new_params.version = 3U;
-    new_params.max_duty_permill = 300U;
+    new_params.m_permill[0] = 300;
     new_params.adc_safe_min = 50U;
     new_params.adc_safe_max = 4000U;
 
     /* Submit to pending */
     Param_SubmitPending(&pm, &new_params);
-    ASSERT_EQ(pm.pending.max_duty_permill, 300U, "T4.1: pending.max_duty=300");
+    ASSERT_EQ(pm.pending.m_permill[0], 300U, "T4.1: pending.m[0]=300");
 
     /* Active should be unchanged */
-    ASSERT_EQ(pm.active.max_duty_permill, 480U, "T4.2: active.max_duty still 480");
+    ASSERT_EQ(pm.active.m_permill[0], 0U, "T4.2: active.m[0] still 0");
 
     /* Request commit */
     Param_RequestCommit(&pm);
@@ -181,7 +180,7 @@ static void test_commit_flow(void)
     ASSERT_TRUE(Param_CheckPendingCommit(&pm) == 1, "T4.4: commit success");
 
     /* Active updated */
-    ASSERT_EQ(pm.active.max_duty_permill, 300U, "T4.5: active.max_duty=300");
+    ASSERT_EQ(pm.active.m_permill[0], 300U, "T4.5: active.m[0]=300");
     ASSERT_EQ(pm.active.version, 3U, "T4.6: active.version=3");
     ASSERT_EQ(pm.commit_count, 1UL, "T4.7: commit_count=1");
     ASSERT_EQ(pm.reject_count, 0UL, "T4.8: reject_count=0");
@@ -195,21 +194,21 @@ static void test_commit_reject(void)
     ParamManager pm;
     ControlParams bad;
 
-    Param_Init(&pm, 1250U, 480U);
+    Param_Init(&pm, 1250U);
 
     /* Submit invalid params */
     memcpy(&bad, &pm.active, sizeof(ControlParams));
     bad.version = 3U;
-    bad.max_duty_permill = 0U;  /* Invalid */
+    bad.m_permill[0] = 981;  /* Invalid */
 
     Param_SubmitPending(&pm, &bad);
     Param_RequestCommit(&pm);
 
     ASSERT_TRUE(Param_CheckPendingCommit(&pm) == 0, "T5.1: commit rejected");
     ASSERT_EQ(pm.reject_count, 1UL, "T5.2: reject_count=1");
-    ASSERT_EQ(pm.last_reject_reason, PARAM_REJECT_DUTY_RANGE, "T5.3: reject reason = DUTY_RANGE");
+    ASSERT_EQ(pm.last_reject_reason, PARAM_REJECT_M_RANGE, "T5.3: reject reason = M_RANGE");
     ASSERT_EQ(pm.commit_count, 0UL, "T5.4: commit_count still 0");
-    ASSERT_EQ(pm.active.max_duty_permill, 480U, "T5.5: active unchanged");
+    ASSERT_EQ(pm.active.m_permill[0], 0U, "T5.5: active unchanged");
 }
 
 /* ==================================================================
@@ -220,13 +219,13 @@ static void test_read_active(void)
     ParamManager pm;
     ControlParams out;
 
-    Param_Init(&pm, 1250U, 480U);
+    Param_Init(&pm, 1250U);
 
     /* Modify active params */
     ControlParams new_params;
     memcpy(&new_params, &pm.active, sizeof(ControlParams));
     new_params.version = 3U;
-    new_params.max_duty_permill = 350U;
+    new_params.m_permill[0] = 350;
     Param_SubmitPending(&pm, &new_params);
     Param_RequestCommit(&pm);
     Param_CheckPendingCommit(&pm);
@@ -234,7 +233,7 @@ static void test_read_active(void)
     /* Read active — should get new values */
     memset(&out, 0xFF, sizeof(out));
     Param_ReadActive(&pm, &out);
-    ASSERT_EQ(out.max_duty_permill, 350U, "T6.1: ReadActive → new duty");
+    ASSERT_EQ(out.m_permill[0], 350U, "T6.1: ReadActive → new m[0]");
     ASSERT_EQ(out.version, 3U, "T6.2: ReadActive → new version");
 }
 

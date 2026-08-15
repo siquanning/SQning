@@ -1,3 +1,4 @@
+#include <math.h>
 #include "firmware/drivers/drv_timer.h"
 #include "firmware/drivers/drv_sci.h"
 #include "firmware/drivers/drv_adc.h"
@@ -7,8 +8,41 @@
 #include "firmware/bsp/board_config.h"
 #include "firmware/control/control_faststep.h"
 #include "firmware/control/control_openloop.h"
+#include "firmware/control/control_pll.h"
+#include "firmware/control/control_global.h"
+#include "firmware/control/control_closedloop.h"
+#include "firmware/services/measurement.h"
 #include "firmware/app/isr.h"
+#include "firmware/app/run_supervisor.h"
 #include "firmware/app/diagnostics.h"
+
+/* ---- PLL 软切换 float 辅助 ---- */
+#define PLL_SW_TWO_PI      6.283185307f
+#define PLL_SW_PI          3.141592654f
+#define PLL_SW_PI_HALF     1.570796327f
+#define PLL_SW_TWO_PI_3    2.094395102f
+#define PLL_SW_RAD2DEG     57.29577951f
+
+/*
+ * 固定时间复杂度 wrap (无 while 循环)。
+ * 输入有界性保证: wrap_pi 的 |x| < 3π (φ_pll∈[π/2,5π/2) 与 φ_lut∈[0,2π)
+ * 之差最大 2.5π), wrap_2pi 的 x ∈ (−2π, 4π) —
+ * 由相位差在端点 (α=0/α=1) 每拍 rebase 到 ±π 保证,
+ * 输入不会无界累积整圈, 单次条件修正即可归位。
+ */
+static float isr_wrap_pi(float x)
+{
+    if (x >  PLL_SW_PI) x -= PLL_SW_TWO_PI;
+    if (x < -PLL_SW_PI) x += PLL_SW_TWO_PI;
+    return x;
+}
+
+static float isr_wrap_2pi(float x)
+{
+    if (x >= PLL_SW_TWO_PI) x -= PLL_SW_TWO_PI;
+    if (x < 0.0f)           x += PLL_SW_TWO_PI;
+    return x;
+}
 
 static SciRxQueue    *g_pSciRxQueue   = ((SciRxQueue *)0);
 static ControlContext *g_pControl      = ((ControlContext *)0);
@@ -177,13 +211,128 @@ __interrupt void App_Epwm1Isr(void)
     diag->fast_isr_count++;
 
     /*
-     * 50 Hz 3-phase sine reference — 1200-point LUT, 20000/400=50 Hz.
-     * Generate new mabc FIRST, then compute modulation + write shadows,
-     * then write UNI polarity from the NEW mabc immediately.
-     * GPIO writes settle before the next CTR=ZERO shadow load,
-     * so the CPLD sees stable polarity when PWM updates.
+     * PLL 始终运行: 从 ADC raw 换算三相电网电压 → SRF-PLL → 更新 g_pll。
+     * 锁定后前台判决置 g_pll_switch_req=1, 下方切换块经 alpha 淡化
+     * 将调制参考相位从开环 LUT 平滑切换至 PLL 同步相位。
      */
-    OpenLoop_GenerateSine(mabc);
+    {
+        float va = Measurement_ConvertVac(g_vac_raw[0],
+                        g_vac_va_offset_counts, BOARD_VAC_VA_POLARITY);
+        float vb = Measurement_ConvertVac(g_vac_raw[1],
+                        g_vac_vb_offset_counts, BOARD_VAC_VB_POLARITY);
+        float vc = Measurement_ConvertVac(g_vac_raw[2],
+                        g_vac_vc_offset_counts, BOARD_VAC_VC_POLARITY);
+        PLL_Run(&g_pll, va, vb, vc, BOARD_CONTROL_TS);
+    }
+
+    /*
+     * 50 Hz 调制参考 — 开环 LUT 与 PLL 同步的相位交叉淡化切换。
+     *
+     * 相位约定: φLUT = 2π·idx/1200 (idx=0 → A 相正过零)
+     *           φPLL = θ + π/2     (θ=0 → A 相正峰值)
+     * 输出统一为 M·sin(φout), φout = φLUT + α·Δ。
+     * Δ 为连续相位差: 端点每拍 rebase 到 ±π, 淡化期间增量式
+     * unwrap (跨 ±π 不跳变)。
+     * LUT 每拍都运行, phase_index 保持热更新 → 回退时相位连续。
+     */
+    {
+        static float s_alpha = 0.0f;             /* 0=纯开环, 1=纯PLL */
+        static float s_err_unwrapped = 0.0f;     /* 相位差 [rad], 端点 rebase 到 ±π, 仅淡化期间增长 */
+        const float fade_step = BOARD_CONTROL_TS
+                              / (BOARD_PLL_FADE_MS * 0.001f);
+        float phi_lut, phi_pll, phi_out;
+        float e_cur, diff;
+        uint16_t idx;
+
+        idx = OpenLoop_GetPhaseIndex();
+        OpenLoop_GenerateSine(mabc);
+
+        /*
+         * 相位差跟踪:
+         * 端点 (α=0 纯开环 / α=1 纯PLL) 每拍 rebase 到最短等价相位差
+         * (±π 内), 防止长期小频差下整圈无界累积 (也保证 wrap 输入有界);
+         * 淡化期间 (0<α<1) 增量式 unwrap, 跨 ±π branch 不跳变。
+         * α 用本拍斜坡更新前的值判断: 端点拍 rebase, 进入淡化拍起 unwrap,
+         * 边界两拍相位差仅差一拍拍频漂移 (≤0.1°), 输出连续。
+         */
+        phi_lut = (float)idx * PLL_SW_TWO_PI / (float)OPENLOOP_LUT_SIZE;
+        phi_pll = g_pll.theta + PLL_SW_PI_HALF;
+        e_cur   = isr_wrap_pi(phi_pll - phi_lut);
+
+        if ((s_alpha <= 0.0f) || (s_alpha >= 1.0f)) {
+            s_err_unwrapped = e_cur;
+        } else {
+            diff = isr_wrap_pi(e_cur - isr_wrap_pi(s_err_unwrapped));
+            s_err_unwrapped += diff;
+        }
+
+        /* α 双向斜坡 (req 由前台 10ms 锁定判决维护) */
+        if (g_pll_switch_req != 0U) {
+            if (s_alpha < 1.0f) {
+                s_alpha += fade_step;
+                if (s_alpha > 1.0f) s_alpha = 1.0f;
+            }
+        } else {
+            if (s_alpha > 0.0f) {
+                s_alpha -= fade_step;
+                if (s_alpha < 0.0f) s_alpha = 0.0f;
+            }
+        }
+        g_switch_alpha = s_alpha;
+
+        /* α>0 时 float 路径覆盖 mabc (α=0 保持纯 int LUT 输出) */
+        phi_out = phi_lut;
+        if (s_alpha > 0.0f) {
+            phi_out = isr_wrap_2pi(phi_lut + s_alpha * s_err_unwrapped);
+            mabc[0] = (int16_t)((float)BOARD_PLL_SW_MOD_PERMILL
+                      * sinf(phi_out));
+            mabc[1] = (int16_t)((float)BOARD_PLL_SW_MOD_PERMILL
+                      * sinf(phi_out - PLL_SW_TWO_PI_3));
+            mabc[2] = (int16_t)((float)BOARD_PLL_SW_MOD_PERMILL
+                      * sinf(phi_out + PLL_SW_TWO_PI_3));
+        }
+
+        g_switch_phase_err_deg =
+            isr_wrap_pi(phi_pll - phi_out) * PLL_SW_RAD2DEG;
+    }
+
+    {
+        static const float vac_polarity[3] = {
+            BOARD_VAC_VA_POLARITY, BOARD_VAC_VB_POLARITY, BOARD_VAC_VC_POLARITY};
+        static const float iac_polarity[3] = {
+            BOARD_IAC_IA_POLARITY, BOARD_IAC_IB_POLARITY, BOARD_IAC_IC_POLARITY};
+        const uint16_t vac_offset[3] = {g_vac_va_offset_counts,
+            g_vac_vb_offset_counts, g_vac_vc_offset_counts};
+        const uint16_t iac_offset[3] = {g_iac_ia_offset_counts,
+            g_iac_ib_offset_counts, g_iac_ic_offset_counts};
+        const uint16_t vdc_offset[6] = {g_vdc1_offset_counts, g_vdc2_offset_counts,
+            g_vdc3_offset_counts, g_vdc4_offset_counts,
+            g_vdc5_offset_counts, g_vdc6_offset_counts};
+        float vac[3], iac[3], vdc[6];
+        uint16_t enable, valid, i;
+        uint16_t mode = ClosedLoop_GetActiveRunMode();
+        for (i = 0U; i < 3U; i++) {
+            vac[i] = Measurement_ConvertVac(g_vac_raw[i], vac_offset[i], vac_polarity[i]);
+            iac[i] = Measurement_ConvertIac(g_iac_raw[i], iac_offset[i], iac_polarity[i]);
+        }
+        for (i = 0U; i < 6U; i++)
+            vdc[i] = Measurement_ConvertVdc(g_vdc_raw[i], vdc_offset[i]);
+        enable = ((g_pStateMachine != ((StateMachine *)0)) &&
+                  StateMachine_IsRun(g_pStateMachine) &&
+                  (ClosedLoop_IsValidRunMode(mode) != 0U) &&
+                  (g_pll_switch_req != 0U) &&
+                  (g_switch_alpha >= g_pll_ready_alpha_min)) ? 1U : 0U;
+        valid = ClosedLoop_FastStepAll(enable, vac, iac, g_pll.theta,
+                                       vdc, BOARD_CONTROL_TS, mabc);
+        if ((valid == 0U) && (g_pStateMachine != ((StateMachine *)0)) &&
+            StateMachine_IsRun(g_pStateMachine)) {
+            PWM_BlockOutput();
+            ClosedLoop_ClearActiveConfig();
+            System_EnterFault(g_pStateMachine, FAULT_SW_CONTROL_INVALID,
+                              Timebase_Now());
+            mabc[0] = 0; mabc[1] = 0; mabc[2] = 0;
+        }
+    }
 
     /* Mirror to ControlContext for diagnostics / telemetry visibility */
     if (g_pControl != ((ControlContext *)0))
@@ -250,34 +399,27 @@ __interrupt void App_Epwm1Isr(void)
 }
 
 /*
- * EPWM1 Trip Zone ISR — hardware TZ1/TZ2 fault.
+ * A/B/C共用Trip Zone ISR — ePWM1/ePWM3/ePWM5任一代表模块的TZ中断。
  *
  * Safety contract:
- *   1. OST latch is NEVER cleared here — it keeps ePWM outputs forced LOW
- *      in hardware until a controlled PWM_ReleaseOutput() recovery.
- *   2. TZEINT.OST is disabled to prevent ISR re-entry (TZFLG.INT is
- *      combinatorial: OST & TZEINT.OST — with OST still latched, we
- *      must block the enable side or the ISR storms).
- *   3. GPIO30 is pulled LOW via System_EnterFault → CPLD blocks all gates.
+ *   1. PWM_BlockOutput先拉低GPIO30，再关闭全部OST中断并强制六路OST。
+ *   2. OST锁存绝不在ISR中清除，保持到受控的下一次启动。
+ *   3. System_EnterFault锁存统一FAULT_HW_TZ_TRIP；后台沿原流程断GPIO23/22。
  *
  * TZEINT.OST is re-armed by DrvEpwm_ClearOstTrip() during recovery.
  */
-__interrupt void App_Epwm1TzIsr(void)
+__interrupt void App_EpwmTzIsr(void)
 {
-    uint16_t tzflg = DrvEpwm_GetTripStatus(BOARD_EPWM_MODULE);
-
-    if (tzflg != 0U)
+    /*
+     * 能进入此ISR本身就表示某个已使能代表模块产生TZ中断。非测试相的
+     * TZEINT.OST保持关闭，因此不会由软件维持的OST锁存误触发这里。
+     */
+    PWM_BlockOutput();
+    ClosedLoop_ClearActiveConfig();
+    if (g_pStateMachine != ((StateMachine *)0))
     {
-        uint32_t i;
-        for (i = 0U; i < BOARD_EPWM_MODULE_COUNT; i++)
-        {
-            DrvEpwm_DisableOstInt(i + 1U);
-        }
-        if (g_pStateMachine != ((StateMachine *)0))
-        {
-            System_EnterFault(g_pStateMachine,
-                              FAULT_HW_TZ_TRIP, Timebase_Now());
-        }
+        System_EnterFault(g_pStateMachine,
+                          FAULT_HW_TZ_TRIP, Timebase_Now());
     }
 
     DrvInterrupt_AckGroup2();

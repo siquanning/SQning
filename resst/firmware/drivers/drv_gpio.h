@@ -36,6 +36,49 @@ void DrvGpio_InitCpldLed(void);
  */
 void DrvGpio_ToggleCpldLed(void);
 
+/* ---- Run/Stop button + run state indicator (Port A, GPIO21/20) ---- */
+
+/*
+ * Initialise GPIO21 as digital input (EQEP1B mux off).
+ * Internal pull-up enabled — released reads HIGH, pressed-to-GND reads LOW.
+ * Call once from Board_Init() after DrvSysCtrl_Init().
+ */
+void DrvGpio_InitRunButton(void);
+
+/*
+ * Read GPIO21 raw input level: 1 = pin high, 0 = pin low.
+ * Caller compares against BOARD_RUN_BTN_ACTIVE_LEVEL.
+ */
+uint16_t DrvGpio_ReadRunButton(void);
+
+/*
+ * Initialise GPIO20 as push-pull output LOW (active-high LED off).
+ * The API accepts logical run state and applies the LED polarity internally.
+ * Call once from Board_Init() after DrvSysCtrl_Init().
+ */
+void DrvGpio_InitRunState(void);
+
+/*
+ * Write GPIO20 run indication (GPASET/GPACLEAR, no EALLOW required).
+ *   level = 0 → GPIO LOW,  LED OFF
+ *   level = 1 → GPIO HIGH, LED ON
+ */
+void DrvGpio_WriteRunState(uint16_t level);
+
+/* ---- Grid input switch + precharge bypass (Port A, GPIO22/23) ---- */
+
+/* GPIO22：三相输入总开关，同时控制S1/S2/S3；初始化为LOW，三个开关均断开。 */
+void DrvGpio_InitGridSwitch(void);
+
+/* GPIO22写接口：0=S1/S2/S3全断，1=S1/S2/S3全合。 */
+void DrvGpio_WriteGridSwitch(uint16_t on);
+
+/* GPIO23：预充电阻旁路总开关，同时控制S4/S5/S6；初始化为LOW，电阻未旁路。 */
+void DrvGpio_InitPrechargeBypass(void);
+
+/* GPIO23写接口：0=旁路开关全断，预充电阻串入；1=旁路开关全合。 */
+void DrvGpio_WritePrechargeBypass(uint16_t on);
+
 /* ---- PWM_ENABLE / FAULT_GATE (Port A, GPIO30) ---- */
 
 /*

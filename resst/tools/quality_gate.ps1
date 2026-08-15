@@ -57,7 +57,9 @@ if (-not $msvcAvailable) {
         @{Name="step3_state"; Src="test_step3_state.c"; Deps="firmware\app\state_machine.c"; Defs="/DPLATFORM_PROFILE_PROTOTYPE"},
         @{Name="step3_params"; Src="test_step3_params.c"; Deps="firmware\app\param_manager.c"; Defs="/DPLATFORM_PROFILE_PROTOTYPE"},
         @{Name="step3_telemetry"; Src="test_step3_telemetry.c"; Deps="firmware\app\telemetry.c"; Defs=""},
-        @{Name="init_diag"; Src="test_init_diag.c"; Deps="firmware\app\state_machine.c firmware\app\param_manager.c"; Defs="/DPLATFORM_PROFILE_PROTOTYPE"}
+        @{Name="init_diag"; Src="test_init_diag.c"; Deps="firmware\app\state_machine.c firmware\app\param_manager.c"; Defs="/DPLATFORM_PROFILE_PROTOTYPE"},
+        @{Name="pll"; Src="test_pll.c"; Deps="firmware\control\control_pll.c"; Defs=""},
+        @{Name="run_control"; Src="test_run_control.c"; Deps="firmware\app\run_control.c"; Defs="/utf-8"}
     )
 
     foreach ($spec in $testSpecs) {
@@ -85,7 +87,7 @@ if (-not $msvcAvailable) {
     }
 
     if ($allPassed) {
-        Report-Result "Host Tests (8 suites)" "PASS"
+        Report-Result "Host Tests ($($testSpecs.Count) suites)" "PASS"
     } else {
         Report-Result "Host Tests" "FAIL" "One or more test suites failed"
     }
@@ -219,12 +221,16 @@ if (-not (Test-Path $CompilerPath)) {
             "$ProjRoot\firmware\app\isr.c",
             "$ProjRoot\firmware\app\main.c",
             "$ProjRoot\firmware\app\param_manager.c",
+            "$ProjRoot\firmware\app\run_control.c",
             "$ProjRoot\firmware\app\scheduler.c",
             "$ProjRoot\firmware\app\sci_rx_queue.c",
             "$ProjRoot\firmware\app\state_machine.c",
             "$ProjRoot\firmware\app\telemetry.c",
             "$ProjRoot\firmware\bsp\board.c",
             "$ProjRoot\firmware\control\control_faststep.c",
+            "$ProjRoot\firmware\control\control_global.c",
+            "$ProjRoot\firmware\control\control_openloop.c",
+            "$ProjRoot\firmware\control\control_pll.c",
             "$ProjRoot\firmware\control\safe_openloop.c",
             "$ProjRoot\firmware\drivers\drv_adc.c",
             "$ProjRoot\firmware\drivers\drv_epwm.c",
@@ -234,7 +240,11 @@ if (-not (Test-Path $CompilerPath)) {
             "$ProjRoot\firmware\drivers\drv_spi.c",
             "$ProjRoot\firmware\drivers\drv_sysctrl.c",
             "$ProjRoot\firmware\drivers\drv_timer.c",
+            "$ProjRoot\firmware\services\cpld_spi.c",
             "$ProjRoot\firmware\services\indicator.c",
+            "$ProjRoot\firmware\services\justfloat.c",
+            "$ProjRoot\firmware\services\measurement.c",
+            "$ProjRoot\firmware\services\modbus_vdc.c",
             "$ProjRoot\firmware\services\spi_bridge.c",
             "$ProjRoot\firmware\services\spi_request.c",
             "$ProjRoot\firmware\services\uart_frame.c"

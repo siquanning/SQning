@@ -63,16 +63,27 @@ void DrvInterrupt_EnableEpwm1(void)
     IER |= M_INT3;
 }
 
-void DrvInterrupt_BindEpwm1Tz(void (*handler)(void))
+void DrvInterrupt_BindEpwmTz(uint32_t module, void (*handler)(void))
 {
     EALLOW;
-    PieVectTable.EPWM1_TZINT = handler;
+    if (module == 1U) PieVectTable.EPWM1_TZINT = handler;
+    else if (module == 2U) PieVectTable.EPWM2_TZINT = handler;
+    else if (module == 3U) PieVectTable.EPWM3_TZINT = handler;
+    else if (module == 4U) PieVectTable.EPWM4_TZINT = handler;
+    else if (module == 5U) PieVectTable.EPWM5_TZINT = handler;
+    else if (module == 6U) PieVectTable.EPWM6_TZINT = handler;
     EDIS;
 }
 
-void DrvInterrupt_EnableEpwm1Tz(void)
+void DrvInterrupt_EnableEpwmTz(uint32_t module)
 {
-    PieCtrlRegs.PIEIER2.bit.INTx1 = 1;   /* EPWM1_TZ = PIE Group 2, INT1 */
+    if (module == 1U) PieCtrlRegs.PIEIER2.bit.INTx1 = 1U;
+    else if (module == 2U) PieCtrlRegs.PIEIER2.bit.INTx2 = 1U;
+    else if (module == 3U) PieCtrlRegs.PIEIER2.bit.INTx3 = 1U;
+    else if (module == 4U) PieCtrlRegs.PIEIER2.bit.INTx4 = 1U;
+    else if (module == 5U) PieCtrlRegs.PIEIER2.bit.INTx5 = 1U;
+    else if (module == 6U) PieCtrlRegs.PIEIER2.bit.INTx6 = 1U;
+    else return;
     IER |= M_INT2;
 }
 

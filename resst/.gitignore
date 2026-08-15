@@ -4,6 +4,11 @@ Debug/
 # CCS Flash Release build artifacts
 Flash_Release/
 
+# Additional generated build/report scratch directories
+Industrial_RAM/
+output/
+tmp/
+
 # CCS IDE cache
 .clangd/
 

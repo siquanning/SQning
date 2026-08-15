@@ -122,6 +122,96 @@ void DrvGpio_ToggleCpldLed(void)
         GpioDataRegs.GPASET.bit.GPIO26 = 1U;
 }
 
+/* ---- Run/Stop button + run state indicator (Port A, GPIO21/20) ---- */
+
+void DrvGpio_InitRunButton(void)
+{
+    EALLOW;
+
+    /* GPIO21 → 启停按钮输入 (EQEP1B mux off) */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO21 = 0U;
+    GpioCtrlRegs.GPADIR.bit.GPIO21  = 0U;
+
+    /* CPLD 推挽驱动: 松开=LOW，按下=HIGH；关闭 DSP 内部上拉 */
+    GpioCtrlRegs.GPAPUD.bit.GPIO21  = 1U;
+
+    EDIS;
+}
+
+uint16_t DrvGpio_ReadRunButton(void)
+{
+    return (GpioDataRegs.GPADAT.bit.GPIO21 != 0U) ? 1U : 0U;
+}
+
+void DrvGpio_InitRunState(void)
+{
+    EALLOW;
+
+    /* GPIO20 → 运行状态 LED，高有效 (EQEP1A mux off) */
+    GpioCtrlRegs.GPAMUX2.bit.GPIO20 = 0U;
+    GpioCtrlRegs.GPADIR.bit.GPIO20  = 1U;
+
+    /* Disable internal pull-up on push-pull output */
+    GpioCtrlRegs.GPAPUD.bit.GPIO20  = 1U;
+
+    /* Power-up safe: LOW = LED OFF = 未运行 */
+    GpioDataRegs.GPACLEAR.bit.GPIO20 = 1U;
+
+    EDIS;
+}
+
+void DrvGpio_WriteRunState(uint16_t level)
+{
+    if (level != 0U)
+        GpioDataRegs.GPASET.bit.GPIO20 = 1U;    /* RUN: LED ON */
+    else
+        GpioDataRegs.GPACLEAR.bit.GPIO20 = 1U;  /* STOP: LED OFF */
+}
+
+/* ---- Grid input switch + precharge bypass (Port A, GPIO22/23) ---- */
+
+void DrvGpio_InitGridSwitch(void)
+{
+    EALLOW;
+
+    /* GPIO22：先预置LOW再切为输出，避免配置方向时误合S1/S2/S3。 */
+    GpioDataRegs.GPACLEAR.bit.GPIO22 = 1U;
+    GpioCtrlRegs.GPAMUX2.bit.GPIO22 = 0U;
+    GpioCtrlRegs.GPADIR.bit.GPIO22  = 1U;
+    GpioCtrlRegs.GPAPUD.bit.GPIO22  = 1U;
+
+    EDIS;
+}
+
+void DrvGpio_WriteGridSwitch(uint16_t on)
+{
+    if (on != 0U)
+        GpioDataRegs.GPASET.bit.GPIO22 = 1U;
+    else
+        GpioDataRegs.GPACLEAR.bit.GPIO22 = 1U;
+}
+
+void DrvGpio_InitPrechargeBypass(void)
+{
+    EALLOW;
+
+    /* GPIO23：先预置LOW再切为输出，避免配置方向时误旁路预充电阻。 */
+    GpioDataRegs.GPACLEAR.bit.GPIO23 = 1U;
+    GpioCtrlRegs.GPAMUX2.bit.GPIO23 = 0U;
+    GpioCtrlRegs.GPADIR.bit.GPIO23  = 1U;
+    GpioCtrlRegs.GPAPUD.bit.GPIO23  = 1U;
+
+    EDIS;
+}
+
+void DrvGpio_WritePrechargeBypass(uint16_t on)
+{
+    if (on != 0U)
+        GpioDataRegs.GPASET.bit.GPIO23 = 1U;
+    else
+        GpioDataRegs.GPACLEAR.bit.GPIO23 = 1U;
+}
+
 /* ---- PWM_ENABLE / FAULT_GATE (Port A, GPIO30) ---- */
 
 void DrvGpio_InitFaultGate(void)

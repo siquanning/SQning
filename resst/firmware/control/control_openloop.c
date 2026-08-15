@@ -59,3 +59,8 @@ void OpenLoop_GenerateSine(int16_t mabc[3])
     if (phase_index >= OPENLOOP_LUT_SIZE)
         phase_index -= OPENLOOP_LUT_SIZE;
 }
+
+uint16_t OpenLoop_GetPhaseIndex(void)
+{
+    return phase_index;
+}

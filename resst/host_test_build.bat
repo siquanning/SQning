@@ -30,6 +30,18 @@ if %ERRORLEVEL% EQU 0 (
     exit /b 1
 )
 
+REM === Run Control test ===
+set "EXE_PATH=%BUILD_DIR%\test_run_control.exe"
+cl.exe /nologo /W3 /wd4100 /utf-8 /Fo%BUILD_DIR%\ /Fe%EXE_PATH% tests\host\test_run_control.c firmware\app\run_control.c /I.
+if %ERRORLEVEL% EQU 0 (
+    echo.
+    echo ===== Running Run Control tests =====
+    "%EXE_PATH%"
+) else (
+    echo RUN CONTROL BUILD FAILED
+    exit /b 1
+)
+
 REM === Step 2 Safety Shadow Mapping test ===
 set "EXE_PATH=%BUILD_DIR%\test_step2_safety.exe"
 cl.exe /nologo /W3 /wd4100 /Fo%BUILD_DIR%\ /Fe%EXE_PATH% tests\host\test_step2_safety.c /I.

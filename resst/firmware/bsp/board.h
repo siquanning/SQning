@@ -27,12 +27,11 @@ void PWM_BlockOutput(void);
  */
 void PWM_ReleaseOutput(void);
 
-/*
- * Disable PWM outputs immediately (safe state) — convenience wrapper.
- * Equivalent to PWM_BlockOutput(). Kept for compatibility with the
- * state-machine ConsumePwmDisableRequest path.
- */
-void PWM_Disable(void);
+/* 仅释放选中测试相的两路ePWM，其余四路继续保持独立OST封锁。 */
+uint16_t PWM_ReleaseSelectedPhase(uint16_t phase);
+
+/* 清除ePWM1~6的OST并重新武装保护，最后才拉高GPIO30。 */
+uint16_t PWM_ReleaseThreePhase(void);
 
 /*
  * Check whether hardware trip inputs TZ1 (GPIO12) and TZ2 (GPIO13)

@@ -77,7 +77,7 @@ SECTIONS
    .stack           : > RAMM1,     PAGE = 1
    .bss             : > RAML4,     PAGE = 1
    .data            : > RAML4,     PAGE = 1
-   .const           : > RAML5,     PAGE = 1
+   .const           : > FLASHB,    PAGE = 0
    .sysmem          : > RAMM1,     PAGE = 1
 
    /* ---- Semantic sections ---- */

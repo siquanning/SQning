@@ -29,6 +29,12 @@
 /* ---- PWM_ENABLE / FAULT_GATE to CPLD (Port A, GPIO30) ---- */
 #define BOARD_PIN_FAULT_GATE     30U    /* GPIO30 → CPLD G8: 1=RUN, 0=ALL GATES LOW */
 
+/* ---- Run/Stop button input + run state indicator (Port A) ---- */
+#define BOARD_PIN_RUN_BTN       21U    /* GPIO21 — 启停按钮输入 (高有效, CPLD 驱动) */
+#define BOARD_PIN_RUN_STATE     20U    /* GPIO20 — 运行状态 LED (高有效) */
+#define BOARD_PIN_GRID_SWITCH   22U    /* GPIO22 — S1/S2/S3 三相输入开关 (高有效) */
+#define BOARD_PIN_PRECHARGE_BYPASS 23U /* GPIO23 — S4/S5/S6 预充旁路开关 (高有效) */
+
 /* ---- CPLD LED heartbeat (Port A, GPIO26) ---- */
 #define BOARD_PIN_CPLD_LED      26U    /* GPIO26 → CPLD GPIOK4 / PIN_111 → LED */
 

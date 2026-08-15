@@ -21,22 +21,44 @@ typedef struct {
 extern MeasurementSample g_measurement;
 
 /*
+ * 每个采样通道独立的ADC零偏运行变量，单位均为ADC count。
+ * 可在CCS Expressions在线修改；DSP复位后由Measurement_Init()重新加载
+ * board_config.h中的对应*_OFFSET_COUNTS_DEFAULT。
+ * 零偏只用于修正零输入码值，禁止用来补偿CT1/CT2/Gain等比例误差。
+ */
+extern volatile uint16_t g_vdc1_offset_counts;
+extern volatile uint16_t g_vdc2_offset_counts;
+extern volatile uint16_t g_vdc3_offset_counts;
+extern volatile uint16_t g_vdc4_offset_counts;
+extern volatile uint16_t g_vdc5_offset_counts;
+extern volatile uint16_t g_vdc6_offset_counts;
+extern volatile uint16_t g_vac_va_offset_counts;
+extern volatile uint16_t g_vac_vb_offset_counts;
+extern volatile uint16_t g_vac_vc_offset_counts;
+extern volatile uint16_t g_iac_ia_offset_counts;
+extern volatile uint16_t g_iac_ib_offset_counts;
+extern volatile uint16_t g_iac_ic_offset_counts;
+
+/* 上电加载各通道DEFAULT零偏；不执行自动零偏测量。 */
+void Measurement_Init(void);
+
+/*
  * 可复用的单通道换算函数 — 纯函数、无状态。
  * 后续 20 kHz 快速控制路径可直接调用，无需经过 Measurement_Update()。
  */
 
-/* Vdc: V_primary = raw × VREF/MAX_COUNT × CT2_PRI/CT2_SEC × CT1_PRI/CT1_SEC / GAIN */
-float Measurement_ConvertVdc(uint16_t raw);
+/* Vdc: V_primary = max(raw-offset,0) × VREF/MAX_COUNT × CT2比例 × CT1比例 / GAIN。 */
+float Measurement_ConvertVdc(uint16_t raw, uint16_t offset);
 
 /*
- * Vac: delta = (int32_t)raw - offset
+ * Vac: delta = (int32_t)raw - offset，每相使用独立offset运行变量
  *      V_primary = polarity × delta × VREF/MAX_COUNT / (TIA×GAIN)
  *                × CT2_PRI_V/CT2_SEC_A × CT1_PRI_V/CT1_SEC_V
  */
 float Measurement_ConvertVac(uint16_t raw, uint16_t offset, float polarity);
 
 /*
- * Iac: delta = (int32_t)raw - offset
+ * Iac: delta = (int32_t)raw - offset，每相使用独立offset运行变量
  *      I_primary = polarity × delta × VREF/MAX_COUNT / (TIA×GAIN)
  *                × CT2_PRI_A/CT2_SEC_A × CT1_PRI_A/CT1_SEC_A
  */

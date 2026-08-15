@@ -9,7 +9,7 @@ extern "C" {
 
 #define OPENLOOP_LUT_SIZE   1200U
 #define OPENLOOP_LUT_STEP   3U
-#define OPEN_LOOP_M_PERMILL_A 500
+#define OPEN_LOOP_M_PERMILL_A 200
 #define OPEN_LOOP_M_PERMILL_B 200
 #define OPEN_LOOP_M_PERMILL_C 200
 
@@ -29,6 +29,13 @@ void OpenLoop_InitSine(void);
  * ~15 integer ops, no float, no division in ISR path.
  */
 void OpenLoop_GenerateSine(int16_t mabc[3]);
+
+/*
+ * Return current LUT phase index [0, 1200). Read-only.
+ * Called from App_Epwm1Isr BEFORE OpenLoop_GenerateSine
+ * (which advances the index by 3 after filling mabc).
+ */
+uint16_t OpenLoop_GetPhaseIndex(void);
 
 #ifdef __cplusplus
 }

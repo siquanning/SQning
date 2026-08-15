@@ -1,3 +1,4 @@
+#include "DSP2833x_Device.h"
 #include "firmware/app/app.h"
 #include "firmware/bsp/board.h"
 #include "firmware/bsp/board_config.h"
@@ -9,11 +10,17 @@
 #include "firmware/services/indicator.h"
 #include "firmware/services/cpld_spi.h"
 #include "firmware/services/modbus_vdc.h"
+#include "firmware/services/justfloat.h"
 #include "firmware/services/measurement.h"
 #include "firmware/app/isr.h"
 #include "firmware/app/scheduler.h"
+#include "firmware/app/run_control.h"
+#include "firmware/app/run_supervisor.h"
 #include "firmware/app/diagnostics.h"
 #include "firmware/control/control_openloop.h"
+#include "firmware/control/control_pll.h"
+#include "firmware/control/control_global.h"
+#include "firmware/control/control_closedloop.h"
 
 /*
  * Internal Scheduler — owned exclusively by the App layer.
@@ -21,26 +28,8 @@
  * Sole reader of miss counters: App_Service100ms (via Scheduler_GetDiagnostics).
  */
 static Scheduler g_sched;
-static uint16_t s_pwm_released = 0U;  /* 0 = blocked, 1 = released to CPLD */
-
-/*
- * CanReleasePwm — verify all preconditions for releasing PWM to CPLD.
- *
- * Returns 1 only when:
- *   - State machine is in RUN
- *   - No software fault is latched
- *   - TZ1/TZ2 hardware trip inputs are in the safe (non-fault) state
- */
-static uint16_t CanReleasePwm(const AppContext *app)
-{
-    if (!StateMachine_IsRun(&app->state_machine))
-        return 0U;
-    if (StateMachine_IsFault(&app->state_machine))
-        return 0U;
-    if (!PWM_AreTripInputsClear())
-        return 0U;
-    return 1U;
-}
+static RunControl g_run_ctrl;         /* GPIO21 消抖稳定电平 (纯逻辑) */
+static RunSupervisor g_run_sup;       /* 启停裁决: 抑制锁存 + PWM/LED 控制 */
 
 /* ===================================================================
  * App_Init
@@ -51,6 +40,10 @@ void App_Init(AppContext *app)
     uint32_t init_diag_flags = 0UL;
 
     Board_Init();
+    Measurement_Init();                /* 加载12路独立ADC offset默认值 */
+    RunControl_Init(&g_run_ctrl);      /* stable=0 (STOP 请求) */
+    RunSupervisor_Init(&g_run_sup);    /* restart_inhibit=1: 上电必须先看到 GPIO21=0 */
+
     Diagnostics_Init();
 
     AppContext_Init(app);
@@ -64,13 +57,23 @@ void App_Init(AppContext *app)
 
     /* ---- 20 kHz EPWM1 Fast ISR: 50 Hz 3-phase clamped-unipolar ---- */
     OpenLoop_InitSine();             /* 1200-point Q15 LUT + phase=0 */
+    PLL_Init(&g_pll);               /* PLL 状态清零, theta=0, freq=50Hz */
+    ClosedLoop_Init();              /* 单相双闭环状态清零，等待RUN前锁存A/B/C */
 
     DrvInterrupt_BindEpwm1(&App_Epwm1Isr);
     DrvInterrupt_EnableEpwm1();                       /* PIE group 3 */
     DrvEpwm_EnablePeriodInt(BOARD_EPWM_MODULE);       /* ePWM INTEN=1 */
 
-    DrvInterrupt_BindEpwm1Tz(&App_Epwm1TzIsr);
-    DrvInterrupt_EnableEpwm1Tz();                     /* PIE group 2 */
+    /*
+     * 每相两个ePWM共用相同TZ1/TZ2源；只给每相代表模块进入PIE，避免同一次
+     * 共享Trip产生两个待处理中断。三相均绑定同一个全局安全入口。
+     */
+    DrvInterrupt_BindEpwmTz(1U, &App_EpwmTzIsr);     /* A: ePWM1/2 */
+    DrvInterrupt_BindEpwmTz(3U, &App_EpwmTzIsr);     /* B: ePWM3/4 */
+    DrvInterrupt_BindEpwmTz(5U, &App_EpwmTzIsr);     /* C: ePWM5/6 */
+    DrvInterrupt_EnableEpwmTz(1U);
+    DrvInterrupt_EnableEpwmTz(3U);
+    DrvInterrupt_EnableEpwmTz(5U);                   /* PIE group 2 */
 
     PWM_BlockOutput();        /* TZ safety block — outputs stay LOW */
     PWM_StartTimebase();      /* TBCLKSYNC=1 → counters run → ISR fires */
@@ -92,12 +95,12 @@ void App_Init(AppContext *app)
     StateMachine_Init(&app->state_machine, now);
 
 #if BOARD_PWM_ADC_HW_CONFIRMED == 0U
-    init_diag_flags |= DIAG_FLAG_LOGICAL_RUN_NO_HW;
+    init_diag_flags |= DIAG_FLAG_PWM_ADC_HW_UNCONFIRMED;
 #endif
     /*
      * INIT → STANDBY transition:
      * diag_flags with MSB (0x80000000) clear means no self-test failure detected.
-     * The DIAG_FLAG_LOGICAL_RUN_NO_HW bit (0x00000001) does NOT block this transition —
+     * The DIAG_FLAG_PWM_ADC_HW_UNCONFIRMED bit (0x00000001) does NOT block this transition —
      * it only records that PWM/ADC hardware has not been confirmed.
      *
      * Call StateMachine_Service twice: first call BOOT→INIT, second call INIT→STANDBY.
@@ -105,8 +108,12 @@ void App_Init(AppContext *app)
     StateMachine_Service(&app->state_machine, now, init_diag_flags);  /* BOOT → INIT */
     StateMachine_Service(&app->state_machine, now, init_diag_flags);  /* INIT → STANDBY */
 
-    /* Request RUN — enters logical RUN (PWM stays disabled when HW_CONFIRMED=0) */
-    StateMachine_RequestRun(&app->state_machine, now);
+    /*
+     * 上电保持 STANDBY — 不自动进入 RUN。
+     * restart_inhibit=1 (RunSupervisor_Init): 必须先观察到 GPIO21 稳定为 0,
+     * 之后 0→1 才由 RunSupervisor 请求 RUN 并释放 PWM。
+     * PWM 上电即被 TZ 封锁, 保持到首次明确启动动作。
+     */
 }
 
 /* ===================================================================
@@ -114,7 +121,11 @@ void App_Init(AppContext *app)
  * =================================================================== */
 void App_ServiceForeground(AppContext *app, uint32_t now)
 {
+#if BOARD_DEBUG_JUSTFLOAT_ENABLE
+    (void)app;                        /* Modbus 停用 — JustFloat 观察 PLL */
+#else
     ModbusVdc_Poll(&app->sci_rx_queue, now);
+#endif
     Indicator_Service(now);
 }
 
@@ -123,8 +134,6 @@ void App_ServiceForeground(AppContext *app, uint32_t now)
  * =================================================================== */
 void App_Service1ms(AppContext *app, uint32_t now)
 {
-    (void)now;
-
     /*
      * Parameter commit: ParamManager internally checks commit_requested,
      * validates, commits, and updates diagnostics. App layer never
@@ -139,41 +148,34 @@ void App_Service1ms(AppContext *app, uint32_t now)
      */
     Measurement_Update(&g_measurement);
 
+    ClosedLoop_SlowStepAll(
+        (StateMachine_IsRun(&app->state_machine) &&
+         (g_pll_switch_req != 0U) &&
+         (g_switch_alpha >= g_pll_ready_alpha_min)) ? 1U : 0U,
+        0.001f);
+
+    /* 1ms precharge voltage/timeout service; never runs in the 20kHz ISR. */
+    RunSupervisor_Service1ms(&g_run_sup, &app->state_machine, now);
+
     /*
      * PWM disable: atomically consume the ISR/fault-path request flag.
      * The Consume function disables interrupts around the read-and-clear
      * on C2000 to prevent losing a concurrent System_EnterFault request.
+     *
+     * 统一走 PWM_BlockOutput (完整安全封锁入口: GPIO30 先拉低 + 全模块 TZ OST)。
+     * FAULT 可在 ISR 触发, 此处保证 ≤1ms 内 PWM 封锁 + GPIO20 LED 熄灭。
+     * 正常 STOP 不经过此路径 — 由 10ms RunSupervisor 同拍直接封锁。
      */
     if (StateMachine_ConsumePwmDisableRequest(&app->state_machine))
     {
-        PWM_Disable();
-        s_pwm_released = 0U;
+        PWM_BlockOutput();
+        DrvGpio_WriteRunState(0U);
     }
 
-    /*
-     * State-driven PWM release / block.
-     *
-     * CanReleasePwm gates on: RUN state, no fault latched,
-     * TZ1/TZ2 inputs not asserted.  A false→true edge releases PWM;
-     * a true→false edge blocks it.  s_pwm_released ensures each
-     * transition fires exactly once.
-     */
-    if (CanReleasePwm(app))
-    {
-        if (s_pwm_released == 0U)
-        {
-            PWM_ReleaseOutput();
-            s_pwm_released = 1U;
-        }
-    }
-    else
-    {
-        if (s_pwm_released != 0U)
-        {
-            PWM_BlockOutput();
-            s_pwm_released = 0U;
-        }
-    }
+#if BOARD_DEBUG_JUSTFLOAT_ENABLE
+    /* 安全/控制任务全部完成后再发送，250Hz JustFloat不得延迟本拍PWM封锁。 */
+    JustFloat_Service();
+#endif
 }
 
 /* ===================================================================
@@ -183,8 +185,86 @@ void App_Service10ms(AppContext *app, uint32_t now)
 {
     uint32_t diag_flags = 0UL;
 
+    /* ---- 启停: GPIO21 保持型按钮, 消抖稳定电平 = 用户运行请求 ----
+     * 稳定 1 = RUN 请求 (仅 STANDBY 且 TZ1/TZ2 正常时生效)
+     * 稳定 0 = STOP 请求 (RUN 中同拍直接封锁 PWM + LED 灭 + 回 STANDBY)
+     * FAULT / 重启抑制期间无论电平如何都保持封锁, 详见 RunSupervisor。
+     */
+    {
+        uint16_t active = (DrvGpio_ReadRunButton() == BOARD_RUN_BTN_ACTIVE_LEVEL)
+                        ? 1U : 0U;
+
+        RunControl_Sample(&g_run_ctrl, active);
+        RunSupervisor_Service(&g_run_sup, &app->state_machine,
+                              RunControl_GetStableLevel(&g_run_ctrl), now);
+    }
+
+    /* ---- PLL 锁定判决 → 软切换请求 ----
+     * 锁定: 连续 LOCK_TICKS 拍全部满足 → req=1 (α 淡入 PLL)
+     * 失锁: 连续 UNLOCK_TICKS 拍任一不满足 → req=0 (α 淡出回开环)
+     * 迟滞不对称: 锁上要慢(防抖), 撤出要快。
+     */
+    {
+        static uint16_t s_lock_ctr   = 0U;
+        static uint16_t s_unlock_ctr = 0U;
+        PLL_State p;
+        uint16_t ok;
+
+        DINT;
+        p = g_pll;
+        EINT;
+
+        ok = (p.vmag > BOARD_PLL_LOCK_VMAG_MIN_V)
+          && (p.freq >= BOARD_PLL_LOCK_FREQ_MIN_HZ)
+          && (p.freq <= BOARD_PLL_LOCK_FREQ_MAX_HZ)
+          && (p.vq > -(BOARD_PLL_LOCK_VQ_RATIO * p.vmag))
+          && (p.vq <   BOARD_PLL_LOCK_VQ_RATIO * p.vmag)
+          && (p.vd >   BOARD_PLL_LOCK_VD_RATIO * p.vmag)
+          ? 1U : 0U;
+
+        if (ok != 0U) {
+            s_unlock_ctr = 0U;
+            if (s_lock_ctr < BOARD_PLL_LOCK_TICKS) s_lock_ctr++;
+            if (s_lock_ctr >= BOARD_PLL_LOCK_TICKS) g_pll_switch_req = 1U;
+        } else {
+            s_lock_ctr = 0U;
+            if (s_unlock_ctr < BOARD_PLL_UNLOCK_TICKS) s_unlock_ctr++;
+            if (s_unlock_ctr >= BOARD_PLL_UNLOCK_TICKS) {
+                /* 先完成硬件封锁，再撤销软件闭环许可，消除m=0过渡窗口。 */
+                if ((g_pll_switch_req != 0U) &&
+                    StateMachine_IsRun(&app->state_machine)) {
+                    PWM_BlockOutput();
+                    ClosedLoop_ClearActiveConfig();
+                    System_EnterFault(&app->state_machine,
+                                      FAULT_HW_PLL_LOCK_LOST, now);
+                    DrvGpio_WriteRunState(0U);
+                }
+                g_pll_switch_req = 0U;
+            }
+        }
+    }
+
+    /*
+     * PLL失锁消抖确认后，m=0不足以表示硬件关闭：立即复用全局OST入口，
+     * 并锁存PLL失锁FAULT。非法活动相同样不得维持任何PWM释放。
+     */
+    if (StateMachine_IsRun(&app->state_machine) &&
+        ((g_pll_switch_req == 0U) ||
+         (ClosedLoop_IsValidRunMode(ClosedLoop_GetActiveRunMode()) == 0U) ||
+         ((ClosedLoop_GetActiveRunMode() == CTRL_RUN_MODE_SINGLE_PHASE) &&
+          (ClosedLoop_IsValidTestPhase(ClosedLoop_GetActivePhase()) == 0U)))) {
+        PWM_BlockOutput();
+        ClosedLoop_ClearActiveConfig();
+        System_EnterFault(&app->state_machine,
+                          (g_pll_switch_req == 0U)
+                          ? FAULT_HW_PLL_LOCK_LOST
+                          : FAULT_SW_CONTROL_INVALID,
+                          now);
+        DrvGpio_WriteRunState(0U);
+    }
+
 #if BOARD_PWM_ADC_HW_CONFIRMED == 0U
-    diag_flags |= DIAG_FLAG_LOGICAL_RUN_NO_HW;
+    diag_flags |= DIAG_FLAG_PWM_ADC_HW_UNCONFIRMED;
 #endif
 
     StateMachine_Service(&app->state_machine, now, diag_flags);
@@ -249,7 +329,7 @@ void App_Service100ms(AppContext *app, Scheduler *sched, uint32_t now)
 
     /* ---- diag_flags ---- */
 #if BOARD_PWM_ADC_HW_CONFIRMED == 0U
-    diag_flags |= DIAG_FLAG_LOGICAL_RUN_NO_HW;
+    diag_flags |= DIAG_FLAG_PWM_ADC_HW_UNCONFIRMED;
 #endif
     Diagnostics_WriteDiagFlags(diag, diag_flags);
 

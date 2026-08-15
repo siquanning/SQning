@@ -8,13 +8,14 @@
 
 void DrvSci_Init(const DrvSciConfig *config)
 {
+    uint32_t divisor;
     uint32_t brr;
 
     /*
      * SCI-C:
      *   TX = GPIO63 / SCITXDC
      *   RX = GPIO62 / SCIRXDC
-     * Baud = 9600, 8N1
+     * Baud由board_config配置，当前230400，格式8N1。
      */
     EALLOW;
 
@@ -36,7 +37,11 @@ void DrvSci_Init(const DrvSciConfig *config)
 
     ScicRegs.SCICTL1.all = 0x0000;
 
-    brr = (config->lspclk_hz / (config->baud_rate * 8UL)) - 1UL;
+    /* 四舍五入选择最接近的SCI分频，避免整数截断造成额外波特率误差。 */
+    divisor = (config->lspclk_hz + config->baud_rate * 4UL)
+            / (config->baud_rate * 8UL);
+    if (divisor < 1UL) divisor = 1UL;
+    brr = divisor - 1UL;
     ScicRegs.SCIHBAUD = (uint16_t)((brr >> 8) & 0xFFU);
     ScicRegs.SCILBAUD = (uint16_t)(brr & 0xFFU);
 

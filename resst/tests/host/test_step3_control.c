@@ -131,7 +131,9 @@ static void test_control_valid(void)
     ControlOutput output;
 
     memset(&ctx, 0, sizeof(ctx));
-    ctx.max_duty_permill     = 480U;
+    ctx.m_permill[0]         = 200;
+    ctx.m_permill[1]         = -200;
+    ctx.m_permill[2]         = 0;
     ctx.control_mode         = 0U;
     ctx.tbprd                = 1250U;
     ctx.adc_safe_min         = 1U;
@@ -151,9 +153,13 @@ static void test_control_valid(void)
     ASSERT_EQ(output.fault_code, 0U, "T4.3: no fault code");
     ASSERT_EQ(ctx.step_count, 1U, "T4.4: step_count incremented");
 
-    /* Output compare values should be non-zero for mid-scale input */
-    ASSERT_TRUE(output.cmpa > 0U, "T4.5: cmpa > 0 for mid-scale");
-    ASSERT_TRUE(output.cmpb > 0U, "T4.6: cmpb > 0 for mid-scale");
+    /* Three-phase clamped-unipolar mapping */
+    ASSERT_EQ(output.force_a[0], 1U, "T4.5: positive m clamps left high");
+    ASSERT_EQ(output.cmpb[0], 1000U, "T4.6: positive m chops right at 80%");
+    ASSERT_EQ(output.cmpa[1], 1000U, "T4.7: negative m chops left at 80%");
+    ASSERT_EQ(output.force_b[1], 1U, "T4.8: negative m clamps right high");
+    ASSERT_EQ(output.force_a[2], 1U, "T4.9: zero m clamps left high");
+    ASSERT_EQ(output.force_b[2], 1U, "T4.10: zero m clamps right high");
 }
 
 /* ==================================================================
@@ -166,7 +172,6 @@ static void test_control_fault_input_range(void)
     ControlOutput output;
 
     memset(&ctx, 0, sizeof(ctx));
-    ctx.max_duty_permill     = 480U;
     ctx.tbprd                = 1250U;
     ctx.adc_safe_min         = 100U;
     ctx.adc_safe_max         = 4000U;
@@ -183,7 +188,7 @@ static void test_control_fault_input_range(void)
     ASSERT_EQ(output.fault_code, 1U, "T5.3: fault_code=CONTROL_FAULT_INPUT_RANGE");
 
     /* Output compare should be 0 (safe) */
-    ASSERT_EQ(output.cmpa, 0U, "T5.4: invalid → cmpa=0");
+    ASSERT_EQ(output.cmpa[0], 0U, "T5.4: invalid → cmpa[0]=0");
 }
 
 /* ==================================================================
@@ -215,7 +220,6 @@ static void test_control_step_count(void)
     uint16_t i;
 
     memset(&ctx, 0, sizeof(ctx));
-    ctx.max_duty_permill     = 480U;
     ctx.tbprd                = 1250U;
     ctx.adc_safe_min         = 1U;
     ctx.adc_safe_max         = 4094U;
@@ -246,7 +250,6 @@ static void test_control_stuck_adc(void)
     uint16_t i;
 
     memset(&ctx, 0, sizeof(ctx));
-    ctx.max_duty_permill     = 480U;
     ctx.tbprd                = 1250U;
     ctx.adc_safe_min         = 1U;
     ctx.adc_safe_max         = 4094U;
