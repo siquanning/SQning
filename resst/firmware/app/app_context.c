@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #include "firmware/app/app_context.h"
 #include "firmware/bsp/board_config.h"
 
@@ -29,4 +30,5 @@ void AppContext_Init(AppContext *context)
 
     /* Telemetry double-buffer */
     Telemetry_Init(&context->telemetry);
+    PllHostProtocol_Init(&context->pll_host_protocol);
 }

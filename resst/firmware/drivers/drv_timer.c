@@ -44,7 +44,7 @@ uint32_t Timebase_Now(void)
     return first;
 }
 
-/* ---- Timer2: free-running 32-bit cycle counter (140 MHz) ---- */
+/* ---- Timer2: free-running 32-bit cycle counter (SYSCLKOUT = Profile-derived) ---- */
 
 void DrvTimer2_CycleInit(void)
 {

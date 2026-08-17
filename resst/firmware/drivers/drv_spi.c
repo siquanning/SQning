@@ -69,3 +69,11 @@ int DrvSpi_TryCompleteByte(uint16_t *rx_byte)
     *rx_byte = SpiaRegs.SPIRXBUF & 0x00FFU;
     return 1;
 }
+
+uint16_t DrvSpi_TransferByteBlocking(uint16_t tx_byte)
+{
+    uint16_t rx_byte;
+    while (DrvSpi_StartByte(tx_byte & 0x00FFU) == 0) { }
+    while (DrvSpi_TryCompleteByte(&rx_byte) == 0) { }
+    return rx_byte;
+}

@@ -1,5 +1,8 @@
+/* Created by Siquanning */
 #ifndef CONTROL_PLL_H
 #define CONTROL_PLL_H
+
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,6 +24,21 @@ typedef struct {
     float vq;          /* q 轴电压 [V] */
     float vmag;        /* αβ 矢量幅值 [V]，诊断用 */
 } PLL_State;
+
+typedef struct {
+    float kp;
+    float ki;
+    float freq_min_hz;
+    float freq_max_hz;
+    float freq_nom_hz;
+    float vq_lock_ratio;
+    float vq_unlock_ratio;
+} PLL_Params;
+
+void PLL_GetDefaultParams(PLL_Params *params);
+uint16_t PLL_ValidateParams(const PLL_Params *params);
+void PLL_CommitParams(const PLL_Params *params);
+void PLL_ReadActiveParams(PLL_Params *params);
 
 void PLL_Init(PLL_State *pll);
 void PLL_Run(PLL_State *pll, float va, float vb, float vc, float ts);

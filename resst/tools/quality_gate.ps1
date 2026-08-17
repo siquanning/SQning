@@ -58,8 +58,14 @@ if (-not $msvcAvailable) {
         @{Name="step3_params"; Src="test_step3_params.c"; Deps="firmware\app\param_manager.c"; Defs="/DPLATFORM_PROFILE_PROTOTYPE"},
         @{Name="step3_telemetry"; Src="test_step3_telemetry.c"; Deps="firmware\app\telemetry.c"; Defs=""},
         @{Name="init_diag"; Src="test_init_diag.c"; Deps="firmware\app\state_machine.c firmware\app\param_manager.c"; Defs="/DPLATFORM_PROFILE_PROTOTYPE"},
+        @{Name="measurement_offset"; Src="test_measurement_offset.c"; Deps="firmware\services\measurement.c"; Defs="/utf-8 /D__interrupt="},
         @{Name="pll"; Src="test_pll.c"; Deps="firmware\control\control_pll.c"; Defs=""},
-        @{Name="run_control"; Src="test_run_control.c"; Deps="firmware\app\run_control.c"; Defs="/utf-8"}
+        @{Name="pll_host_protocol"; Src="test_pll_host_protocol.c"; Deps="firmware\services\pll_host_protocol.c firmware\control\control_pll.c firmware\app\sci_rx_queue.c"; Defs="/utf-8"},
+        @{Name="run_control"; Src="test_run_control.c"; Deps="firmware\app\run_control.c"; Defs="/utf-8"},
+        @{Name="run_supervisor"; Src="test_run_supervisor.c"; Deps="firmware\app\run_supervisor.c firmware\app\state_machine.c"; Defs="/utf-8 /DPLATFORM_PROFILE_PROTOTYPE"},
+        @{Name="pwm_tz"; Src="test_pwm_tz.c"; Deps="firmware\drivers\drv_epwm.c"; Defs="/utf-8 /Itests\host\fake_ti"},
+        @{Name="closedloop"; Src="test_closedloop.c"; Deps="firmware\control\control_closedloop.c"; Defs="/utf-8"},
+        @{Name="justfloat"; Src="test_justfloat.c"; Deps="firmware\services\justfloat.c"; Defs="/utf-8 /D__interrupt= /Itests\host\fake_ti"}
     )
 
     foreach ($spec in $testSpecs) {
@@ -222,12 +228,14 @@ if (-not (Test-Path $CompilerPath)) {
             "$ProjRoot\firmware\app\main.c",
             "$ProjRoot\firmware\app\param_manager.c",
             "$ProjRoot\firmware\app\run_control.c",
+            "$ProjRoot\firmware\app\run_supervisor.c",
             "$ProjRoot\firmware\app\scheduler.c",
             "$ProjRoot\firmware\app\sci_rx_queue.c",
             "$ProjRoot\firmware\app\state_machine.c",
             "$ProjRoot\firmware\app\telemetry.c",
             "$ProjRoot\firmware\bsp\board.c",
             "$ProjRoot\firmware\control\control_faststep.c",
+            "$ProjRoot\firmware\control\control_closedloop.c",
             "$ProjRoot\firmware\control\control_global.c",
             "$ProjRoot\firmware\control\control_openloop.c",
             "$ProjRoot\firmware\control\control_pll.c",
@@ -244,6 +252,7 @@ if (-not (Test-Path $CompilerPath)) {
             "$ProjRoot\firmware\services\indicator.c",
             "$ProjRoot\firmware\services\justfloat.c",
             "$ProjRoot\firmware\services\measurement.c",
+            "$ProjRoot\firmware\services\pll_host_protocol.c",
             "$ProjRoot\firmware\services\modbus_vdc.c",
             "$ProjRoot\firmware\services\spi_bridge.c",
             "$ProjRoot\firmware\services\spi_request.c",

@@ -1,7 +1,12 @@
-#include "DSP2833x_Device.h"
+/* Created by Siquanning */
 #include "firmware/services/modbus_vdc.h"
 #include "firmware/drivers/drv_sci.h"
 #include "firmware/app/isr.h"
+#include "firmware/drivers/drv_interrupt.h"
+#if BOARD_DEBUG_JUSTFLOAT_ENABLE
+#include "firmware/bsp/board_config.h"
+#include "firmware/services/justfloat.h"
+#endif
 
 /* CRC-16/MODBUS lookup table (polynomial 0xA001) */
 static const uint16_t crc_table[256] = {
@@ -68,7 +73,7 @@ void ModbusVdc_Init(void)
 /* ---- ADC snapshot with interrupt gate ---- */
 static void ModbusVdc_TakeSnapshot(ModbusVdcSnapshot *snap)
 {
-    DINT;
+    DrvInterrupt_DisableGlobal();
     snap->vdc_raw[0] = g_vdc_raw[0];
     snap->vdc_raw[1] = g_vdc_raw[1];
     snap->vdc_raw[2] = g_vdc_raw[2];
@@ -82,7 +87,7 @@ static void ModbusVdc_TakeSnapshot(ModbusVdcSnapshot *snap)
     snap->iac_raw[1] = g_iac_raw[1];
     snap->iac_raw[2] = g_iac_raw[2];
     snap->adc_frame_count = g_adc_frame_count;
-    EINT;
+    DrvInterrupt_RestoreGlobal();
 }
 
 /* ---- Register readout from snapshot ---- */
@@ -129,6 +134,10 @@ static void ModbusVdc_SendReadRegisters(uint16_t start, uint16_t qty)
     resp[len++] = crc & 0xFFU;
     resp[len++] = (crc >> 8) & 0xFFU;
 
+#if BOARD_DEBUG_JUSTFLOAT_ENABLE
+    /* 单一 TX owner 仲裁（防御性；当前 Modbus 与 JustFloat 编译期互斥） */
+    JustFloat_TxYieldForProtocol();
+#endif
     DrvSci_SendBytes(resp, len);
 }
 

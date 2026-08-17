@@ -55,12 +55,14 @@ static void test_write_read_consistent(void)
     Telemetry t;
     TelemetryFastSnapshot out;
     uint16_t adc[2] = { 2048U, 1000U };
+    uint16_t cmpa[3] = { 300U, 0U, 0U };
+    uint16_t cmpb[3] = { 250U, 0U, 0U };
 
     Telemetry_Init(&t);
 
     /* Write a snapshot */
     Telemetry_WriteFastSnapshot(&t, 3U, adc,
-                                300U, 250U,   /* cmpa, cmpb */
+                                cmpa, cmpb,
                                 1U,            /* output_valid */
                                 0U,            /* trip_flags */
                                 0U,            /* fault_code */
@@ -72,8 +74,8 @@ static void test_write_read_consistent(void)
     ASSERT_EQ(out.state, 3U, "T2.2: state=3 (RUN)");
     ASSERT_EQ(out.adc_raw[0], 2048U, "T2.3: adc_raw[0]");
     ASSERT_EQ(out.adc_raw[1], 1000U, "T2.4: adc_raw[1]");
-    ASSERT_EQ(out.cmpa, 300U, "T2.5: cmpa");
-    ASSERT_EQ(out.cmpb, 250U, "T2.6: cmpb");
+    ASSERT_EQ(out.cmpa[0], 300U, "T2.5: cmpa");
+    ASSERT_EQ(out.cmpb[0], 250U, "T2.6: cmpb");
     ASSERT_EQ(out.output_valid, 1U, "T2.7: output_valid");
     ASSERT_EQ(out.trip_flags, 0U, "T2.8: trip_flags=0");
     ASSERT_EQ(out.fault_code, 0U, "T2.9: fault_code=0");
@@ -90,6 +92,8 @@ static void test_version_increment(void)
     Telemetry t;
     TelemetryFastSnapshot out;
     uint16_t adc[2] = { 100U, 200U };
+    uint16_t cmpa[3] = { 100U, 0U, 0U };
+    uint16_t cmpb[3] = { 200U, 0U, 0U };
     uint16_t i;
 
     Telemetry_Init(&t);
@@ -97,7 +101,7 @@ static void test_version_increment(void)
     for (i = 0U; i < 5U; i++)
     {
         Telemetry_WriteFastSnapshot(&t, 3U, adc,
-                                    100U, 200U, 1U, 0U, 0U, (uint16_t)i);
+                                    cmpa, cmpb, 1U, 0U, 0U, (uint16_t)i);
     }
 
     ASSERT_TRUE(Telemetry_ReadSnapshot(&t, &out) == 1, "T3.1: read after 5 writes");
@@ -113,14 +117,16 @@ static void test_overrun_detection(void)
     Telemetry t;
     TelemetryFastSnapshot out;
     uint16_t adc[2] = { 500U, 600U };
+    uint16_t cmpa[3] = { 100U, 0U, 0U };
+    uint16_t cmpb[3] = { 200U, 0U, 0U };
 
     Telemetry_Init(&t);
 
     /* Write 3x to buffer 0 (active_idx stays 0 while read_idx stays 0) */
-    Telemetry_WriteFastSnapshot(&t, 3U, adc, 100U, 200U, 1U, 0U, 0U, 1U);
+    Telemetry_WriteFastSnapshot(&t, 3U, adc, cmpa, cmpb, 1U, 0U, 0U, 1U);
     ASSERT_EQ(t.overrun_count, 1UL, "T4.1: overrun on first write (read_idx==active_idx)");
 
-    Telemetry_WriteFastSnapshot(&t, 3U, adc, 100U, 200U, 1U, 0U, 0U, 2U);
+    Telemetry_WriteFastSnapshot(&t, 3U, adc, cmpa, cmpb, 1U, 0U, 0U, 2U);
     ASSERT_EQ(t.overrun_count, 2UL, "T4.2: overrun_count=2");
 
     /* Read should get the latest buffer contents */
@@ -136,6 +142,8 @@ static void test_multiple_snapshots(void)
     TelemetryFastSnapshot out1, out2;
     uint16_t adc1[2] = { 100U, 200U };
     uint16_t adc2[2] = { 300U, 400U };
+    uint16_t cmpa1[3] = { 500U, 0U, 0U }, cmpb1[3] = { 600U, 0U, 0U };
+    uint16_t cmpa2[3] = { 700U, 0U, 0U }, cmpb2[3] = { 800U, 0U, 0U };
     uint16_t i;
 
     Telemetry_Init(&t);
@@ -143,7 +151,7 @@ static void test_multiple_snapshots(void)
     /* Write 10 snapshots to fill buffer with known data */
     for (i = 0U; i < 10U; i++)
     {
-        Telemetry_WriteFastSnapshot(&t, 3U, adc1, 500U, 600U, 1U, 0U, 0U, i);
+        Telemetry_WriteFastSnapshot(&t, 3U, adc1, cmpa1, cmpb1, 1U, 0U, 0U, i);
     }
 
     /* Read a snapshot — should contain latest data */
@@ -152,7 +160,7 @@ static void test_multiple_snapshots(void)
     /* Write more with different data */
     for (i = 0U; i < 5U; i++)
     {
-        Telemetry_WriteFastSnapshot(&t, 4U, adc2, 700U, 800U, 0U, 1U, 10U, i);
+        Telemetry_WriteFastSnapshot(&t, 4U, adc2, cmpa2, cmpb2, 0U, 1U, 10U, i);
     }
 
     /* Read second snapshot — should contain new data */
@@ -168,10 +176,11 @@ static void test_multiple_snapshots(void)
 static void test_null_guards(void)
 {
     uint16_t adc[2] = { 0U, 0U };
+    uint16_t cmp[3] = { 0U, 0U, 0U };
     TelemetryFastSnapshot out;
 
     Telemetry_Init(((Telemetry *)0));
-    Telemetry_WriteFastSnapshot(((Telemetry *)0), 0U, adc, 0U, 0U, 0U, 0U, 0U, 0U);
+    Telemetry_WriteFastSnapshot(((Telemetry *)0), 0U, adc, cmp, cmp, 0U, 0U, 0U, 0U);
     Telemetry_ReadSnapshot(((Telemetry *)0), &out);
     Telemetry_ReadSnapshot(&((Telemetry){0}), ((TelemetryFastSnapshot *)0));
     /* All null-guarded */

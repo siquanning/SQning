@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #ifndef APP_H
 #define APP_H
 
@@ -25,8 +26,8 @@ void App_Init(AppContext *app);
  * App_RunForever — infinite main loop.
  *
  * Background rate groups:
- *   Foreground: drain SCI RX queue, service SpiBridge, service Indicator
- *   1ms:        parameter commit service, PWM disable consumption (FAULT 快速路径)
+ *   Foreground: drain SCI RX queue into PLL host protocol, service Indicator
+ *   1ms:        parameter commits, PWM disable consumption (FAULT 快速路径)
  *   10ms:       RunSupervisor 启停裁决 + state machine service
  *   100ms:      diagnostics snapshot, telemetry, fault detection
  *

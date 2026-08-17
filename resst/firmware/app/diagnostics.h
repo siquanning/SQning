@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #ifndef DIAGNOSTICS_H
 #define DIAGNOSTICS_H
 
@@ -43,7 +44,7 @@ typedef struct
 
 /*
  * Initialise CPU Timer2 as a free-running 32-bit down-counter at SYSCLKOUT
- * (140 MHz, ~30.7 s wraparound) and reset all WCET slots.
+ * (Profile-derived; e.g. 140MHz → ~30.7s wraparound) and reset all WCET slots.
  * Must be called after DrvSysCtrl_Init() so the clock is stable.
  */
 void Diagnostics_Init(void);
@@ -53,7 +54,7 @@ Diagnostics *Diagnostics_Get(void);
 
 /*
  * Read the free-running counter.  Counts down — use (start - stop) for elapsed.
- * At 140 MHz each tick is ~7.14 ns.  Range: ~30.7 seconds before wraparound.
+ * Tick period = 1/SYSCLKOUT (Profile-derived): 100MHz → 10ns, 120MHz → 8.33ns.
  */
 uint32_t Diagnostics_CycleRead(void);
 

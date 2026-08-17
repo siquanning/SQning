@@ -42,6 +42,21 @@ void DrvGpio_Clear(uint16_t pin)
     else if (pin == 68U)  GpioDataRegs.GPCCLEAR.bit.GPIO68 = 1;
 }
 
+void DrvGpio_Toggle(uint16_t pin)
+{
+    if (pin == 67U) {
+        if (GpioDataRegs.GPCDAT.bit.GPIO67 != 0U)
+            GpioDataRegs.GPCCLEAR.bit.GPIO67 = 1U;
+        else
+            GpioDataRegs.GPCSET.bit.GPIO67 = 1U;
+    } else if (pin == 68U) {
+        if (GpioDataRegs.GPCDAT.bit.GPIO68 != 0U)
+            GpioDataRegs.GPCCLEAR.bit.GPIO68 = 1U;
+        else
+            GpioDataRegs.GPCSET.bit.GPIO68 = 1U;
+    }
+}
+
 /* ---- UNI Polarity (Port A, GPIO27–29) ---- */
 
 void DrvGpio_InitUniPolarity(void)
@@ -168,17 +183,17 @@ void DrvGpio_WriteRunState(uint16_t level)
         GpioDataRegs.GPACLEAR.bit.GPIO20 = 1U;  /* STOP: LED OFF */
 }
 
-/* ---- Grid input switch + precharge bypass (Port A, GPIO22/23) ---- */
+/* ---- Grid input switch + precharge bypass (Port B, GPIO42/44) ---- */
 
 void DrvGpio_InitGridSwitch(void)
 {
     EALLOW;
 
-    /* GPIO22：先预置LOW再切为输出，避免配置方向时误合S1/S2/S3。 */
-    GpioDataRegs.GPACLEAR.bit.GPIO22 = 1U;
-    GpioCtrlRegs.GPAMUX2.bit.GPIO22 = 0U;
-    GpioCtrlRegs.GPADIR.bit.GPIO22  = 1U;
-    GpioCtrlRegs.GPAPUD.bit.GPIO22  = 1U;
+    /* GPIO42：先预置LOW再切为输出，避免配置方向时误合S1/S2/S3。 */
+    GpioDataRegs.GPBCLEAR.bit.GPIO42 = 1U;
+    GpioCtrlRegs.GPBMUX1.bit.GPIO42 = 0U;
+    GpioCtrlRegs.GPBDIR.bit.GPIO42  = 1U;
+    GpioCtrlRegs.GPBPUD.bit.GPIO42  = 1U;
 
     EDIS;
 }
@@ -186,20 +201,20 @@ void DrvGpio_InitGridSwitch(void)
 void DrvGpio_WriteGridSwitch(uint16_t on)
 {
     if (on != 0U)
-        GpioDataRegs.GPASET.bit.GPIO22 = 1U;
+        GpioDataRegs.GPBSET.bit.GPIO42 = 1U;
     else
-        GpioDataRegs.GPACLEAR.bit.GPIO22 = 1U;
+        GpioDataRegs.GPBCLEAR.bit.GPIO42 = 1U;
 }
 
 void DrvGpio_InitPrechargeBypass(void)
 {
     EALLOW;
 
-    /* GPIO23：先预置LOW再切为输出，避免配置方向时误旁路预充电阻。 */
-    GpioDataRegs.GPACLEAR.bit.GPIO23 = 1U;
-    GpioCtrlRegs.GPAMUX2.bit.GPIO23 = 0U;
-    GpioCtrlRegs.GPADIR.bit.GPIO23  = 1U;
-    GpioCtrlRegs.GPAPUD.bit.GPIO23  = 1U;
+    /* GPIO44：先预置LOW再切为输出，避免配置方向时误旁路预充电阻。 */
+    GpioDataRegs.GPBCLEAR.bit.GPIO44 = 1U;
+    GpioCtrlRegs.GPBMUX1.bit.GPIO44 = 0U;
+    GpioCtrlRegs.GPBDIR.bit.GPIO44  = 1U;
+    GpioCtrlRegs.GPBPUD.bit.GPIO44  = 1U;
 
     EDIS;
 }
@@ -207,9 +222,9 @@ void DrvGpio_InitPrechargeBypass(void)
 void DrvGpio_WritePrechargeBypass(uint16_t on)
 {
     if (on != 0U)
-        GpioDataRegs.GPASET.bit.GPIO23 = 1U;
+        GpioDataRegs.GPBSET.bit.GPIO44 = 1U;
     else
-        GpioDataRegs.GPACLEAR.bit.GPIO23 = 1U;
+        GpioDataRegs.GPBCLEAR.bit.GPIO44 = 1U;
 }
 
 /* ---- PWM_ENABLE / FAULT_GATE (Port A, GPIO30) ---- */

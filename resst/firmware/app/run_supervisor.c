@@ -1,6 +1,4 @@
-#ifdef __TMS320C28XX__
-#include "DSP2833x_Device.h"
-#endif
+/* Created by Siquanning */
 #include "firmware/app/run_supervisor.h"
 #include "firmware/bsp/board.h"
 #include "firmware/bsp/board_config.h"
@@ -8,6 +6,7 @@
 #include "firmware/services/measurement.h"
 #include "firmware/control/control_global.h"
 #include "firmware/control/control_closedloop.h"
+#include "firmware/drivers/drv_interrupt.h"
 
 #define START_SEQ_TICKS_PER_MS (10UL)
 
@@ -70,23 +69,21 @@ static void StartSeq_OpenPowerPath(RunSupervisor *rs)
     StartSeq_Reset(rs);
 }
 
+#if (BOARD_PLL_RELAY_TEST_ONLY == 0U)
 static uint16_t StartSeq_PllReady(void)
 {
     uint16_t req;
     float alpha;
 
-#ifdef __TMS320C28XX__
-    DINT;
-#endif
+    DrvInterrupt_DisableGlobal();
     req = g_pll_switch_req;
     alpha = g_switch_alpha;
-#ifdef __TMS320C28XX__
-    EINT;
-#endif
+    DrvInterrupt_RestoreGlobal();
 
     /* 既要通过原PLL锁定消抖，也要让LUT到PLL的相位软切换接近完成。 */
     return ((req != 0U) && (alpha >= g_pll_ready_alpha_min)) ? 1U : 0U;
 }
+#endif
 
 static uint32_t StartSeq_ElapsedMs(uint32_t now, uint32_t entry_tick)
 {
@@ -111,12 +108,42 @@ void RunSupervisor_Init(RunSupervisor *rs)
     g_start_seq_fail = 0U;
     g_precharge_vdc_min = 0.0f;
     ClosedLoop_ClearActiveConfig();
+
+    /*
+     * 初始化必须主动断开两组继电器，不能只把软件命令缓存清零。
+     * BSP已在更早阶段预置GPIO42/44为LOW，这里再次写硬件确保应用层
+     * 初始化/软复位后的实际输出与命令状态一致。
+     */
+    StartSeq_WriteBypass(0U);
+    StartSeq_WriteGridSwitch(0U);
 }
 
 void RunSupervisor_Service(RunSupervisor *rs, StateMachine *sm,
                            uint16_t run_request, uint32_t now)
 {
     if ((rs == ((RunSupervisor *)0)) || (sm == ((StateMachine *)0))) return;
+
+#if (BOARD_CLOCK_BRINGUP_ONLY != 0U)
+    /*
+     * Clock Bring-up 模式：禁止进入任何真实功率 RUN 路径。
+     *  - 保持 TZ OST Block + AQCSFRC 安全状态（PWM_BlockOutput）
+     *  - GPIO42/44 强制安全 OFF（不吸合继电器）
+     *  - GPIO30 恒 LOW（Release 被 board.c 阻断）
+     *  - 状态机保持 STANDBY；即使 GPIO21 变化也不进入 RUN
+     *  - 允许时基运行（TBCLKSYNC=1）与 Timer0 中断（诊断/5kHz 测试信号）
+     */
+    PWM_BlockOutput();
+    StartSeq_WriteBypass(0U);      /* GPIO44 OFF */
+    StartSeq_WriteGridSwitch(0U);  /* GPIO42 OFF */
+    ClosedLoop_ClearActiveConfig();
+    DrvGpio_WriteRunState(0U);
+    if (StateMachine_IsRun(sm))
+    {
+        StateMachine_RequestStandby(sm, now);
+    }
+    (void)run_request;
+    return;
+#endif
 
     if (StateMachine_IsFault(sm))
     {
@@ -138,6 +165,23 @@ void RunSupervisor_Service(RunSupervisor *rs, StateMachine *sm,
         }
         return;
     }
+
+#if (BOARD_PLL_RELAY_TEST_ONLY != 0U)
+    /*
+     * PLL/继电器台架测试：无论PLL、TZ和运行模式如何都禁止进入RUN，
+     * 并在处理继电器命令前再次实施完整硬件封锁。GPIO21只控制两组
+     * 继电器同时吸合/释放；主回路接入高压时严禁使用此测试模式吸合。
+     */
+    PWM_BlockOutput();
+    ClosedLoop_ClearActiveConfig();
+    StartSeq_Reset(rs);
+    StateMachine_RequestStandby(sm, now);
+    /* 台架模式下GPIO20临时作为GPIO21/继电器动作指示：按下亮，松开灭。 */
+    DrvGpio_WriteRunState(run_request);
+    StartSeq_WriteGridSwitch(run_request);
+    StartSeq_WriteBypass(run_request);
+    return;
+#else
 
     if (run_request == 0U)
     {
@@ -198,11 +242,21 @@ void RunSupervisor_Service(RunSupervisor *rs, StateMachine *sm,
         g_start_seq_fail = 0U;
         DrvGpio_WriteRunState(0U);
 #else
+        uint16_t active_mode;
         /*
          * 投入GPIO22后由预充电阻和H桥反并联二极管进行不控整流预充。
          * 此阶段PLL继续在20kHz ISR后台锁相，但PWM必须保持封锁。
+         * 与直测模式一致：进入启动序列即锁存相别/模式（RUN期间热改不生效）。
          */
         PWM_BlockOutput();
+        active_mode = ClosedLoop_LatchRunConfig();
+        if (ClosedLoop_IsValidRunMode(active_mode) == 0U) {
+            ClosedLoop_ClearActiveConfig();
+            StartSeq_WriteBypass(0U);
+            StartSeq_WriteGridSwitch(0U);
+            DrvGpio_WriteRunState(0U);
+            return;
+        }
         StartSeq_WriteBypass(0U);
         StartSeq_WriteGridSwitch(1U);
         rs->seq_state = START_SEQ_PRECHARGE;
@@ -250,6 +304,7 @@ void RunSupervisor_Service(RunSupervisor *rs, StateMachine *sm,
             }
         }
     }
+#endif
 }
 
 void RunSupervisor_Service1ms(RunSupervisor *rs, StateMachine *sm, uint32_t now)
@@ -258,6 +313,24 @@ void RunSupervisor_Service1ms(RunSupervisor *rs, StateMachine *sm, uint32_t now)
     uint16_t i;
 
     if ((rs == ((RunSupervisor *)0)) || (sm == ((StateMachine *)0))) return;
+
+#if (BOARD_CLOCK_BRINGUP_ONLY != 0U)
+    /* Clock Bring-up 模式：1ms 路径持续重申封锁，防止任何后台路径释放功率。 */
+    PWM_BlockOutput();
+    StartSeq_WriteBypass(0U);      /* GPIO44 OFF */
+    StartSeq_WriteGridSwitch(0U);  /* GPIO42 OFF */
+    ClosedLoop_ClearActiveConfig();
+    if (StateMachine_IsRun(sm)) StateMachine_RequestStandby(sm, now);
+    return;
+#endif
+
+#if (BOARD_PLL_RELAY_TEST_ONLY != 0U)
+    /* 台架模式持续重申硬件封锁，防止任何后台路径遗留PWM释放状态。 */
+    PWM_BlockOutput();
+    ClosedLoop_ClearActiveConfig();
+    if (StateMachine_IsRun(sm)) StateMachine_RequestStandby(sm, now);
+    /* GPIO20由10ms台架分支跟随GPIO21；1ms任务只持续封锁PWM。 */
+#endif
 
     vdc_min = g_measurement.vdc_v[0];
     for (i = 1U; i < 6U; i++)

@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #include "firmware/bsp/board.h"
 #include "firmware/bsp/board_config.h"
 #include "firmware/bsp/board_pins.h"
@@ -17,23 +18,42 @@
 /* 6-module half-bridge PWM: EPWM1–EPWM6 */
 static const uint32_t pwm_modules[BOARD_EPWM_MODULE_COUNT] = { 1U, 2U, 3U, 4U, 5U, 6U };
 
+/* ==================================================================
+ * 固件内 Clock Profile 身份（只读调试信息）
+ *   - const，不参与控制逻辑，不影响实时行为
+ *   - 仅用于 CCS Expressions / 日志确认当前烧入的固件属于哪个 Profile
+ * ================================================================== */
+const char g_board_clock_profile_name[]  = BOARD_CLOCK_PROFILE_NAME;
+const uint32_t g_board_oscclk_hz         = BOARD_OSCCLK_HZ;
+const uint32_t g_board_sysclk_hz         = BOARD_SYSCLK_HZ;
+const uint32_t g_board_pwm_freq_hz       = BOARD_PWM_FREQ_HZ;
+const uint32_t g_board_control_ts_us     = (uint32_t)(1000000UL / BOARD_PWM_FREQ_HZ);
+const uint32_t g_board_clock_bringup     = BOARD_CLOCK_BRINGUP_ONLY;
+
 void Board_Init(void)
 {
     /*
-     * PLL: 20 MHz × 7 / 1 = 140 MHz SYSCLKOUT
-     * HISPCP=0x0001 → HSPCLK = 70 MHz
-     * LOSPCP=0x0002 → LSPCLK = 35 MHz
+     * PLL 由 board_clock_profile.h 决定（编译期 Profile）：
+     *   TARGET_20MHZ: OSCCLK=20MHz, PLLCR=10, DIVSEL=2 → SYSCLK=100MHz
+     *   DEV_30MHZ:    OSCCLK=30MHz, PLLCR=10, DIVSEL=2 → SYSCLK=150MHz
+     * DIVSEL=2 (/2) 是 PLL 使能时唯一合法高倍频分频（DIVSEL=3 仅 PLL off/bypass）。
+     * HISPCP/LOSPCP=/2 → HSPCLK/LSPCLK = SYSCLK/2。
      */
-    const SysClockConfig clk = { 7U, 3U, 0x0001U, 0x0002U };
+    const SysClockConfig clk = {
+        (uint16_t)BOARD_PLLCR,
+        (uint16_t)BOARD_DIVSEL,
+        0x0001U,   /* HISPCP → /2 */
+        0x0001U    /* LOSPCP → /2 */
+    };
 
     /*
      * 最早安全动作：在时钟、通信、ADC和ePWM初始化之前，先把所有可能
      * 接通功率路径的普通GPIO主动配置为LOW。禁止依赖复位后的输入/上拉
-     * 默认态，以免GPIO30或GPIO22/23在较长初始化窗口内出现误使能。
+     * 默认态，以免GPIO30或GPIO42/44在较长初始化窗口内出现误使能。
      */
     DrvGpio_InitFaultGate();          /* GPIO30 LOW：CPLD总门极封锁 */
-    DrvGpio_InitGridSwitch();         /* GPIO22 LOW：输入开关断开 */
-    DrvGpio_InitPrechargeBypass();    /* GPIO23 LOW：旁路开关断开 */
+    DrvGpio_InitGridSwitch();         /* GPIO42 LOW：输入开关断开 */
+    DrvGpio_InitPrechargeBypass();    /* GPIO44 LOW：旁路开关断开 */
 
 #ifdef FLASH
     {
@@ -94,7 +114,7 @@ void Board_Init(void)
     /* Step 2: Init each ePWM module to safe-disabled state */
     {
         const DrvEpwmConfig epwmCfg = {
-            (uint32_t)(BOARD_SYSCLK_MHZ * 1000000UL),
+            BOARD_EPWM_TBCLK_HZ,       /* TBCLK = SYSCLK（CLKDIV=1, HSPCLKDIV=1） */
             BOARD_PWM_FREQ_HZ,
             BOARD_PWM_COUNT_MODE,
             BOARD_PWM_DB_RED,
@@ -163,6 +183,16 @@ void Board_Init(void)
     DrvGpio_InitRunButton();   /* GPIO21 高有效输入 (CPLD 启停按钮) */
     DrvGpio_InitRunState();    /* GPIO20 输出 LOW (高有效 LED 熄灭) */
 
+#if (BOARD_CLOCK_BRINGUP_ONLY != 0U)
+    /*
+     * Clock Bring-up 测试输出：GPIO67（LED_TX，仅连板载 TX LED）。
+     * Timer0 ISR (100us) 翻转 → 5kHz 方波（周期 200us），作为示波器
+     * 低速时间基准，验证 100us Timer 中断链路。
+     * 该引脚只连 LED，不连功率/继电器/CPLD 安全输入，安全。
+     */
+    DrvGpio_InitOutput(BOARD_PIN_LED_TX, 0U);   /* GPIO67 输出 LOW */
+#endif
+
     DrvInterrupt_EnableGlobal();
     DrvTimer0_Start();
 }
@@ -226,7 +256,14 @@ void PWM_ReleaseOutput(void)
 
 uint16_t PWM_ReleaseSelectedPhase(uint16_t phase)
 {
-#if BOARD_PWM_ADC_HW_CONFIRMED == 1U
+#if BOARD_CLOCK_BRINGUP_ONLY
+    /*
+     * Clock Bring-up 模式：禁止任何功率释放。
+     * 保留 TZ OST Block + AQCSFRC 安全状态；GPIO30 保持 LOW。
+     */
+    (void)phase;
+    return 0U;
+#elif BOARD_PWM_ADC_HW_CONFIRMED == 1U
     uint32_t i;
     uint32_t first_module;
 
@@ -256,7 +293,13 @@ uint16_t PWM_ReleaseSelectedPhase(uint16_t phase)
 
 uint16_t PWM_ReleaseThreePhase(void)
 {
-#if BOARD_PWM_ADC_HW_CONFIRMED == 1U
+#if BOARD_CLOCK_BRINGUP_ONLY
+    /*
+     * Clock Bring-up 模式：禁止任何功率释放。
+     * 保留 TZ OST Block + AQCSFRC 安全状态；GPIO30 保持 LOW。
+     */
+    return 0U;
+#elif BOARD_PWM_ADC_HW_CONFIRMED == 1U
     uint32_t i;
     DINT;
     for (i = 0U; i < BOARD_EPWM_MODULE_COUNT; i++)

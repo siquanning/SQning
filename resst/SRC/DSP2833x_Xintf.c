@@ -235,11 +235,11 @@ void InitXintf16Gpio()
      GpioCtrlRegs.GPBMUX1.bit.GPIO37 = 3;  // XZCS7
      GpioCtrlRegs.GPAMUX2.bit.GPIO28 = 3;  // XZCS6
 
-     GpioCtrlRegs.GPBMUX2.bit.GPIO54 = 0;//½«GPIO54ÅäÖÃ³ÉÍ¨ÓÃI/O¿Ú
+     GpioCtrlRegs.GPBMUX2.bit.GPIO54 = 0;//ï¿½ï¿½GPIO54ï¿½ï¿½ï¿½Ã³ï¿½Í¨ï¿½ï¿½I/Oï¿½ï¿½
 	 GpioCtrlRegs.GPBMUX2.bit.GPIO55 = 0;
 	 GpioCtrlRegs.GPBMUX2.bit.GPIO56 = 0;
 	 GpioCtrlRegs.GPBMUX2.bit.GPIO57 = 0;
-	 GpioCtrlRegs.GPBDIR.bit.GPIO54 = 0;//½«GPIO54ÅäÖÃ³ÉÊäÈë¿Ú
+	 GpioCtrlRegs.GPBDIR.bit.GPIO54 = 0;//ï¿½ï¿½GPIO54ï¿½ï¿½ï¿½Ã³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 GpioCtrlRegs.GPBDIR.bit.GPIO55 = 0;
 	 GpioCtrlRegs.GPBDIR.bit.GPIO56 = 0;
 	 GpioCtrlRegs.GPBDIR.bit.GPIO57 = 0;
@@ -248,17 +248,17 @@ void InitXintf16Gpio()
 	 GpioCtrlRegs.GPBQSEL2.bit.GPIO56= 0;
 	 GpioCtrlRegs.GPBQSEL2.bit.GPIO57= 0;
 
-     GpioIntRegs.GPIOXINT3SEL.bit.GPIOSEL = 54;//GPIO54ÅäÖÃ³ÉÍâ²¿ÖÐ¶Ï3
+     GpioIntRegs.GPIOXINT3SEL.bit.GPIOSEL = 54;//GPIO54ï¿½ï¿½ï¿½Ã³ï¿½ï¿½â²¿ï¿½Ð¶ï¿½3
 	 GpioIntRegs.GPIOXINT4SEL.bit.GPIOSEL = 55;
 	 GpioIntRegs.GPIOXINT5SEL.bit.GPIOSEL = 56;
 	 GpioIntRegs.GPIOXINT6SEL.bit.GPIOSEL = 57;
 
-	 XIntruptRegs.XINT3CR.bit.POLARITY= 0;//Íâ²¿ÖÐ¶Ï3ÅäÖÃ³ÉÏÂ½µÑØ´¥·¢
+	 XIntruptRegs.XINT3CR.bit.POLARITY= 0;//ï¿½â²¿ï¿½Ð¶ï¿½3ï¿½ï¿½ï¿½Ã³ï¿½ï¿½Â½ï¿½ï¿½Ø´ï¿½ï¿½ï¿½
 	 XIntruptRegs.XINT4CR.bit.POLARITY= 0;
 	 XIntruptRegs.XINT5CR.bit.POLARITY= 0;
 	 XIntruptRegs.XINT6CR.bit.POLARITY= 0;
 
-	 XIntruptRegs.XINT3CR.bit.ENABLE = 1;//Ê¹ÄÜÍâ²¿ÖÐ¶Ï3
+	 XIntruptRegs.XINT3CR.bit.ENABLE = 1;//Ê¹ï¿½ï¿½ï¿½â²¿ï¿½Ð¶ï¿½3
  	 XIntruptRegs.XINT4CR.bit.ENABLE = 1;
 	 XIntruptRegs.XINT5CR.bit.ENABLE = 1;
 	 XIntruptRegs.XINT6CR.bit.ENABLE = 1;

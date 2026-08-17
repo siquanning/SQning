@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #ifndef CONTROL_GLOBAL_H
 #define CONTROL_GLOBAL_H
 
@@ -9,6 +10,8 @@ extern "C" {
 #endif
 
 extern PLL_State g_pll;
+/* PLL本拍实际输入：ADC换算值或台架模拟三相值，供JustFloat观察。 */
+extern volatile float g_pll_input_vabc[3];
 
 /* ---- PLL 软切换全局状态 ----
  * g_pll_switch_req: 前台 10ms 锁定判决写入 (0=回开环, 1=切 PLL)，ISR 只读

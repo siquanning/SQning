@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #include "firmware/control/safe_openloop.h"
 
 SafeOpenLoopResult SafeOpenLoop_MapChannel(uint16_t raw_adc,

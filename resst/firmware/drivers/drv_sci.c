@@ -15,7 +15,10 @@ void DrvSci_Init(const DrvSciConfig *config)
      * SCI-C:
      *   TX = GPIO63 / SCITXDC
      *   RX = GPIO62 / SCIRXDC
-     * Baud由board_config配置，当前230400，格式8N1。
+     * 波特率由 board_clock_profile.h 的 LSPCLK 派生（目标576000）：
+     *   TARGET_20MHZ(LSPCLK=50MHz): BRR=10 → ≈568182 (−1.36%)
+     *   DEV_30MHZ(LSPCLK=60MHz):   BRR=12 → ≈576923 (+0.16%)
+     * 格式 8N1。
      */
     EALLOW;
 
@@ -143,4 +146,26 @@ void DrvSci_SendBytes(const uint16_t *data, uint16_t len)
         }
         ScicRegs.SCITXBUF = data[i] & 0x00FFU;
     }
+}
+
+uint16_t DrvSci_GetTxFifoFree(void)
+{
+    uint16_t used = ScicRegs.SCIFFTX.bit.TXFFST;
+    if (used > 16U) used = 16U;
+    return (uint16_t)(16U - used);
+}
+
+void DrvSci_TxPutByte(uint16_t byte)
+{
+    ScicRegs.SCITXBUF = byte & 0x00FFU;
+}
+
+void DrvSci_TxIntEnable(uint16_t en)
+{
+    ScicRegs.SCIFFTX.bit.TXFFIENA = (en != 0U) ? 1U : 0U;
+}
+
+void DrvSci_ClearTxIntFlag(void)
+{
+    ScicRegs.SCIFFTX.bit.TXFFINTCLR = 1;
 }

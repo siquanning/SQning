@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #ifndef INDICATOR_H
 #define INDICATOR_H
 

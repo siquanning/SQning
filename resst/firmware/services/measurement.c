@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #include "firmware/services/measurement.h"
 #include "firmware/bsp/board_config.h"
 #include "firmware/app/isr.h"
@@ -71,9 +72,9 @@ void Measurement_Init(void)
  *
  * Theoretical check values at current parameters (not hard-coded, for
  * compile-time verification only):
- *   VDC_GAIN ≈ 0.73260 V/count；corrected_raw≈546时约400V
+ *   VDC_GAIN ≈ 0.732601 V/count；corrected_raw=546时约400V（Vdc CT1=1000V:2V）
  *   VAC_GAIN ≈ 0.08774 V/count (× delta)
- *   IAC_GAIN ≈ 0.0029304 A/count (× delta)
+ *   IAC_GAIN ≈ 0.058608 A/count (× delta)  (Iac CT1 = 100A:5A)
  */
 
 /* Vdc scaling: VREF/MAX_COUNT × CT ratios / gain */

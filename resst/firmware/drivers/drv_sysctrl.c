@@ -1,9 +1,10 @@
 #include "DSP2833x_Device.h"
 #include "firmware/drivers/drv_sysctrl.h"
+#include "firmware/bsp/board_clock_profile.h"
 
 /*
  * PLL lock timeout: F28335 PLL typically locks within 1-2 ms.
- * At 140 MHz SYSCLKOUT, 200 000 loop iterations ≈ 14 ms worst case.
+ * Loop iteration cost scales with SYSCLK (Profile-derived).
  * If PLLLOCKS is still not set after the timeout, the crystal or PLL
  * hardware is likely faulty — the caller MUST NOT continue with an
  * unknown system clock and must enter a safe stopped state.
@@ -70,6 +71,7 @@ bool DrvSysCtrl_Init(const SysClockConfig *config)
     SysCtrlRegs.PCLKCR0.bit.SCICENCLK      = 1U;   /* SCI-C       */
     SysCtrlRegs.PCLKCR0.bit.SPIAENCLK      = 1U;   /* SPI-A       */
     SysCtrlRegs.PCLKCR3.bit.CPUTIMER0ENCLK = 1U;   /* CPU Timer0  */
+    SysCtrlRegs.PCLKCR3.bit.CPUTIMER2ENCLK = 1U;   /* CPU Timer2: WCET cycle counter */
     SysCtrlRegs.PCLKCR3.bit.GPIOINENCLK    = 1U;   /* GPIO input  */
     EDIS;
 
@@ -77,14 +79,17 @@ bool DrvSysCtrl_Init(const SysClockConfig *config)
 }
 
 /*
- * Flash wait-state/pipeline configuration for SYSCLKOUT ≤ 150 MHz.
- * (Conservative at 140 MHz — datasheet values for 150 MHz ceiling.)
+ * Flash wait-state/pipeline configuration derived from the Board Clock
+ * Profile (SPRS439Q Table 7-4 — minimum required wait states):
+ *
+ *   SYSCLK ≤ 100 MHz → PAGE=3, RAND=3, OTP=5
+ *   100 < SYSCLK ≤ 120 → PAGE=4, RAND=4, OTP=7   (NOT 6)
+ *   120 < SYSCLK ≤ 150 → PAGE=5, RAND=5, OTP=8
+ *
+ * TARGET_20MHZ (100MHz) → 3/3/5 ; DEV_30MHZ (120MHz) → 4/4/7.
  * CAUTION: This function MUST execute from RAM. The linker places it
  * in the "ramfuncs" section (LOAD in Flash, RUN in RAML03). Calling this
  * from Flash before wait-states are configured produces undefined behavior.
- *
- * Wait-state values per TI datasheet SPRS439N for 150 MHz:
- *   PAGEWAIT = 5, RANDWAIT = 5, OTPWAIT = 8
  */
 #pragma CODE_SECTION(DrvFlash_Init, "ramfuncs")
 void DrvFlash_Init(void)
@@ -94,10 +99,19 @@ void DrvFlash_Init(void)
     /* Enable Flash pipeline mode */
     FlashRegs.FOPT.bit.ENPIPE = 1;
 
-    /* Wait states for ≤150 MHz SYSCLKOUT (conservative at 140 MHz) */
+#if (BOARD_SYSCLK_HZ <= 100000000UL)
+    FlashRegs.FBANKWAIT.bit.PAGEWAIT = 3;
+    FlashRegs.FBANKWAIT.bit.RANDWAIT = 3;
+    FlashRegs.FOTPWAIT.bit.OTPWAIT   = 5;
+#elif (BOARD_SYSCLK_HZ <= 120000000UL)
+    FlashRegs.FBANKWAIT.bit.PAGEWAIT = 4;
+    FlashRegs.FBANKWAIT.bit.RANDWAIT = 4;
+    FlashRegs.FOTPWAIT.bit.OTPWAIT   = 7;
+#else
     FlashRegs.FBANKWAIT.bit.PAGEWAIT = 5;
     FlashRegs.FBANKWAIT.bit.RANDWAIT = 5;
     FlashRegs.FOTPWAIT.bit.OTPWAIT   = 8;
+#endif
 
     /* Standby-to-active and sleep-to-standby delays (TI default) */
     FlashRegs.FSTDBYWAIT.bit.STDBYWAIT   = 0x01FF;

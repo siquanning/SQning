@@ -42,21 +42,21 @@ void EPwm1Setup()
 		    EPwm1Regs.CMPA.half.CMPA=0;
 		    EPwm1Regs.CMPB=0;
 
-		    EPwm1Regs.TBPHS.half.TBPHS=0;                 //Ê±»ùÏàÎ»¼Ä´æÆ÷ÉèÖÃÎª0
-		    EPwm1Regs.TBCTR=0;                            //Ê±»ù¼ÆÊýÆ÷ÇåÁã
-		    EPwm1Regs.TBCTL.bit.CTRMODE=TB_COUNT_UPDOWN;  //Ôö¼õÄ£Ê½
+		    EPwm1Regs.TBPHS.half.TBPHS=0;                 //Ê±ï¿½ï¿½ï¿½ï¿½Î»ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª0
+		    EPwm1Regs.TBCTR=0;                            //Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		    EPwm1Regs.TBCTL.bit.CTRMODE=TB_COUNT_UPDOWN;  //ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 		    EPwm1Regs.TBCTL.bit.PRDLD=TB_SHADOW;
-		    EPwm1Regs.TBCTL.bit.PHSEN=TB_DISABLE;         //½ûÖ¹ÏàÎ»¿ØÖÆ
-		    EPwm1Regs.TBCTL.bit.SYNCOSEL=TB_CTR_ZERO;     //CTR=ZEROÊä³öÍ¬²½ÐÅºÅ
+		    EPwm1Regs.TBCTL.bit.PHSEN=TB_DISABLE;         //ï¿½ï¿½Ö¹ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½
+		    EPwm1Regs.TBCTL.bit.SYNCOSEL=TB_CTR_ZERO;     //CTR=ZEROï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½Åºï¿½
 		    EPwm1Regs.TBCTL.bit.HSPCLKDIV=TB_DIV1;         //TBCLK=SYSCLKOUT
 		    EPwm1Regs.TBCTL.bit.CLKDIV=TB_DIV1;
 
-		    EPwm1Regs.CMPCTL.bit.SHDWAMODE=CC_SHADOW;      //CPUÏòÓ°×Ó¼Ä´æÆ÷Ð´ÈëÖµ
+		    EPwm1Regs.CMPCTL.bit.SHDWAMODE=CC_SHADOW;      //CPUï¿½ï¿½Ó°ï¿½Ó¼Ä´ï¿½ï¿½ï¿½Ð´ï¿½ï¿½Öµ
 		    EPwm1Regs.CMPCTL.bit.SHDWBMODE=CC_SHADOW;
-		    EPwm1Regs.CMPCTL.bit.LOADAMODE=CC_CTR_ZERO;    //CTR=ZEROÊ±×°ÔØ
+		    EPwm1Regs.CMPCTL.bit.LOADAMODE=CC_CTR_ZERO;    //CTR=ZEROÊ±×°ï¿½ï¿½
 		    EPwm1Regs.CMPCTL.bit.LOADBMODE=CC_CTR_ZERO;
 
-		//¶¯×÷
+		//ï¿½ï¿½ï¿½ï¿½
 		    EPwm1Regs.AQCTLA.bit.CAU=AQ_SET;
 		    EPwm1Regs.AQCTLA.bit.CAD=AQ_CLEAR;
 		    // EPwm1Regs.AQCTLB.bit.ZRO=AQ_SET;
@@ -64,15 +64,15 @@ void EPwm1Setup()
 			EPwm1Regs.AQSFRC.all=0;
 			EPwm1Regs.AQCSFRC.all=0;
 
-		//ËÀÇø
+		//ï¿½ï¿½ï¿½ï¿½
 			EPwm1Regs.DBCTL.bit.POLSEL=DB_ACTV_HIC;
 			EPwm1Regs.DBCTL.bit.IN_MODE=DBA_ALL;
 			EPwm1Regs.DBCTL.bit.OUT_MODE= DB_FULL_ENABLE;
 			//EPwm1Regs.DBCTL.all=0xb;
-			EPwm1Regs.DBRED=50;//ÉÏÉýÑÓÊ±
-			EPwm1Regs.DBFED=50;//ÏÂ½µÑÓÊ±
+			EPwm1Regs.DBRED=50;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±
+			EPwm1Regs.DBFED=50;//ï¿½Â½ï¿½ï¿½ï¿½Ê±
 
-		//´íÎóÁª·À
+		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			EPwm1Regs.TZSEL.all=0x0300;
 			EPwm1Regs.TZCTL.bit.TZA=TZ_FORCE_LO;
 			EPwm1Regs.TZCTL.bit.TZB=TZ_FORCE_LO;
@@ -87,8 +87,8 @@ void EPwm1Setup()
 			EPwm1Regs.ETCLR.all=0;
 			EPwm1Regs.ETFRC.all=0;
 
-			//EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;//ÊÂ¼þ´¥·¢Ìõ¼þ
-			//EPwm1Regs.ETSEL.bit.INTEN = 1;//ÖÐ¶ÏÊ¹ÄÜ
+			//EPwm1Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;//ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			//EPwm1Regs.ETSEL.bit.INTEN = 1;//ï¿½Ð¶ï¿½Ê¹ï¿½ï¿½
 			//EPwm1Regs.ETPS.bit.INTPRD = ET_1ST;
 
 			EPwm1Regs.PCCTL.all=0;
@@ -105,21 +105,21 @@ void EPwm2Setup()
 		    EPwm2Regs.CMPA.half.CMPA=0;
 		    EPwm2Regs.CMPB=0;
 
-		    EPwm2Regs.TBPHS.half.TBPHS=0;                 //Ê±»ùÏàÎ»¼Ä´æÆ÷ÉèÖÃÎª0
-		    EPwm2Regs.TBCTR=0;                            //Ê±»ù¼ÆÊýÆ÷ÇåÁã
-		    EPwm2Regs.TBCTL.bit.CTRMODE=TB_COUNT_UPDOWN;  //Ôö¼õÄ£Ê½
+		    EPwm2Regs.TBPHS.half.TBPHS=0;                 //Ê±ï¿½ï¿½ï¿½ï¿½Î»ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª0
+		    EPwm2Regs.TBCTR=0;                            //Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		    EPwm2Regs.TBCTL.bit.CTRMODE=TB_COUNT_UPDOWN;  //ï¿½ï¿½ï¿½ï¿½Ä£Ê½
 		    EPwm2Regs.TBCTL.bit.PRDLD=TB_SHADOW;
-		    EPwm2Regs.TBCTL.bit.PHSEN=TB_DISABLE;         //½ûÖ¹ÏàÎ»¿ØÖÆ
-		    EPwm2Regs.TBCTL.bit.SYNCOSEL=TB_CTR_ZERO;     //CTR=ZEROÊä³öÍ¬²½ÐÅºÅ
+		    EPwm2Regs.TBCTL.bit.PHSEN=TB_DISABLE;         //ï¿½ï¿½Ö¹ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½
+		    EPwm2Regs.TBCTL.bit.SYNCOSEL=TB_CTR_ZERO;     //CTR=ZEROï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½Åºï¿½
 		    EPwm2Regs.TBCTL.bit.HSPCLKDIV=TB_DIV1;         //TBCLK=SYSCLKOUT
 		    EPwm2Regs.TBCTL.bit.CLKDIV=TB_DIV1;
 
-		    EPwm2Regs.CMPCTL.bit.SHDWAMODE=CC_SHADOW;      //CPUÏòÓ°×Ó¼Ä´æÆ÷Ð´ÈëÖµ
+		    EPwm2Regs.CMPCTL.bit.SHDWAMODE=CC_SHADOW;      //CPUï¿½ï¿½Ó°ï¿½Ó¼Ä´ï¿½ï¿½ï¿½Ð´ï¿½ï¿½Öµ
 		    EPwm2Regs.CMPCTL.bit.SHDWBMODE=CC_SHADOW;
-		    EPwm2Regs.CMPCTL.bit.LOADAMODE=CC_CTR_ZERO;    //CTR=ZEROÊ±×°ÔØ
+		    EPwm2Regs.CMPCTL.bit.LOADAMODE=CC_CTR_ZERO;    //CTR=ZEROÊ±×°ï¿½ï¿½
 		    EPwm2Regs.CMPCTL.bit.LOADBMODE=CC_CTR_ZERO;
 
-		//¶¯×÷
+		//ï¿½ï¿½ï¿½ï¿½
 		    EPwm2Regs.AQCTLA.bit.CAU=AQ_SET;
 		    EPwm2Regs.AQCTLA.bit.CAD=AQ_CLEAR;
 		    // EPwm1Regs.AQCTLB.bit.ZRO=AQ_SET;
@@ -127,15 +127,15 @@ void EPwm2Setup()
 			EPwm2Regs.AQSFRC.all=0;
 			EPwm2Regs.AQCSFRC.all=0;
 
-		//ËÀÇø
+		//ï¿½ï¿½ï¿½ï¿½
 			EPwm2Regs.DBCTL.bit.POLSEL=DB_ACTV_HIC;
 			EPwm2Regs.DBCTL.bit.IN_MODE=DBA_ALL;
 			EPwm2Regs.DBCTL.bit.OUT_MODE= DB_FULL_ENABLE;
 			//EPwm1Regs.DBCTL.all=0xb;
-			EPwm2Regs.DBRED=50;//ÉÏÉýÑÓÊ±
-			EPwm2Regs.DBFED=50;//ÏÂ½µÑÓÊ±
+			EPwm2Regs.DBRED=50;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±
+			EPwm2Regs.DBFED=50;//ï¿½Â½ï¿½ï¿½ï¿½Ê±
 
-		//´íÎóÁª·À
+		//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			EPwm2Regs.TZSEL.all=0x0300;
 			EPwm2Regs.TZCTL.bit.TZA=TZ_FORCE_LO;
 			EPwm2Regs.TZCTL.bit.TZB=TZ_FORCE_LO;
@@ -150,8 +150,8 @@ void EPwm2Setup()
 			EPwm1Regs.ETCLR.all=0;
 			EPwm1Regs.ETFRC.all=0;
 
-			//EPwm2Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;//ÊÂ¼þ´¥·¢Ìõ¼þ
-			//EPwm2Regs.ETSEL.bit.INTEN = 1;//ÖÐ¶ÏÊ¹ÄÜ
+			//EPwm2Regs.ETSEL.bit.INTSEL = ET_CTR_ZERO;//ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			//EPwm2Regs.ETSEL.bit.INTEN = 1;//ï¿½Ð¶ï¿½Ê¹ï¿½ï¿½
 			//EPwm2Regs.ETPS.bit.INTPRD = ET_1ST;
 
 			EPwm2Regs.PCCTL.all=0;

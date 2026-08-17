@@ -1,4 +1,4 @@
-#include "DSP2833x_Device.h"
+/* Created by Siquanning */
 #include "firmware/app/app.h"
 #include "firmware/bsp/board.h"
 #include "firmware/bsp/board_config.h"
@@ -12,11 +12,13 @@
 #include "firmware/services/modbus_vdc.h"
 #include "firmware/services/justfloat.h"
 #include "firmware/services/measurement.h"
+#include "firmware/services/pll_host_protocol.h"
 #include "firmware/app/isr.h"
 #include "firmware/app/scheduler.h"
 #include "firmware/app/run_control.h"
 #include "firmware/app/run_supervisor.h"
 #include "firmware/app/diagnostics.h"
+#include "firmware/app/debug_snapshot.h"
 #include "firmware/control/control_openloop.h"
 #include "firmware/control/control_pll.h"
 #include "firmware/control/control_global.h"
@@ -30,6 +32,9 @@
 static Scheduler g_sched;
 static RunControl g_run_ctrl;         /* GPIO21 消抖稳定电平 (纯逻辑) */
 static RunSupervisor g_run_sup;       /* 启停裁决: 抑制锁存 + PWM/LED 控制 */
+
+/* GPIO21 消抖稳定电平观测镜像（DebugSnapshot 读取；纯观测，不参与裁决） */
+volatile uint16_t g_run_request = 0U;
 
 /* ===================================================================
  * App_Init
@@ -74,6 +79,12 @@ void App_Init(AppContext *app)
     DrvInterrupt_EnableEpwmTz(1U);
     DrvInterrupt_EnableEpwmTz(3U);
     DrvInterrupt_EnableEpwmTz(5U);                   /* PIE group 2 */
+
+#if BOARD_DEBUG_JUSTFLOAT_ENABLE
+    /* SCI-C TX FIFO 中断（PIE 8.6）：JustFloat 非阻塞发送续搬剩余字节 */
+    DrvInterrupt_BindScicTx(&JustFloat_ScicTxIsr);
+    DrvInterrupt_EnableScicTx();
+#endif
 
     PWM_BlockOutput();        /* TZ safety block — outputs stay LOW */
     PWM_StartTimebase();      /* TBCLKSYNC=1 → counters run → ISR fires */
@@ -122,7 +133,7 @@ void App_Init(AppContext *app)
 void App_ServiceForeground(AppContext *app, uint32_t now)
 {
 #if BOARD_DEBUG_JUSTFLOAT_ENABLE
-    (void)app;                        /* Modbus 停用 — JustFloat 观察 PLL */
+    PllHostProtocol_Service(&app->pll_host_protocol, &app->sci_rx_queue);
 #else
     ModbusVdc_Poll(&app->sci_rx_queue, now);
 #endif
@@ -140,6 +151,7 @@ void App_Service1ms(AppContext *app, uint32_t now)
      * reads commit_requested or writes commit/reject counters.
      */
     Param_ServicePendingCommit(&app->param_manager);
+    PllHostProtocol_CommitPending(&app->pll_host_protocol);
 
     /*
      * Raw → physical conversion at 1 kHz (debug/CCS path).
@@ -195,8 +207,9 @@ void App_Service10ms(AppContext *app, uint32_t now)
                         ? 1U : 0U;
 
         RunControl_Sample(&g_run_ctrl, active);
+        g_run_request = RunControl_GetStableLevel(&g_run_ctrl);
         RunSupervisor_Service(&g_run_sup, &app->state_machine,
-                              RunControl_GetStableLevel(&g_run_ctrl), now);
+                              g_run_request, now);
     }
 
     /* ---- PLL 锁定判决 → 软切换请求 ----
@@ -208,17 +221,23 @@ void App_Service10ms(AppContext *app, uint32_t now)
         static uint16_t s_lock_ctr   = 0U;
         static uint16_t s_unlock_ctr = 0U;
         PLL_State p;
+        PLL_Params pll_params;
+        float vq_ratio_limit;
         uint16_t ok;
 
-        DINT;
+        DrvInterrupt_DisableGlobal();
         p = g_pll;
-        EINT;
+        DrvInterrupt_RestoreGlobal();
+        PLL_ReadActiveParams(&pll_params);
+        vq_ratio_limit = (g_pll_switch_req != 0U)
+                       ? pll_params.vq_unlock_ratio
+                       : pll_params.vq_lock_ratio;
 
         ok = (p.vmag > BOARD_PLL_LOCK_VMAG_MIN_V)
           && (p.freq >= BOARD_PLL_LOCK_FREQ_MIN_HZ)
           && (p.freq <= BOARD_PLL_LOCK_FREQ_MAX_HZ)
-          && (p.vq > -(BOARD_PLL_LOCK_VQ_RATIO * p.vmag))
-          && (p.vq <   BOARD_PLL_LOCK_VQ_RATIO * p.vmag)
+          && (p.vq > -(vq_ratio_limit * p.vmag))
+          && (p.vq <   vq_ratio_limit * p.vmag)
           && (p.vd >   BOARD_PLL_LOCK_VD_RATIO * p.vmag)
           ? 1U : 0U;
 

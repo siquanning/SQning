@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #ifndef BOARD_CONFIG_H
 #define BOARD_CONFIG_H
 
@@ -11,16 +12,28 @@
  *   4. 关键公式写在对应参数区注释中
  *   5. 注释解释"为什么"，不重复代码
  *   6. 模块间不跨层依赖 (驱动←BSP←Service←Control)
+ *
+ * 时钟策略（双 Board Clock Profile）:
+ *   - 本文件只声明「功能目标」；时钟根参数与所有寄存器值派生
+ *     统一放在 board_clock_profile.h（OSCCLK/PLLCR/DIVSEL → SYSCLK →
+ *     HSPCLK/LSPCLK/TBCLK → TBPRD/DBRED/Timer0/BRR）。
+ *   - 两个 Profile（TARGET_20MHZ / DEV_30MHZ）必须产生相同的
+ *     控制系统真实时间行为（PWM=20kHz, Ts=50us, deadtime=1us,
+ *     Timer0=100us, scheduler=1/10/100ms, SCI=576000, SPI≈1MHz）。
  * ================================================================== */
+
+#include "firmware/bsp/board_clock_profile.h"
 
 /* ================= 通信 / 定时 ================= */
 
-#define BOARD_SYSCLK_MHZ         140U   /* Y1 = 20 MHz, PLL ×7 /1 */
-#define BOARD_LSPCLK_HZ          35000000U  /* SYSCLK=140MHz, LOSPCP=/4 */
-#define BOARD_SCI_BAUD           230400UL
-#define BOARD_SCI_BRR             18U  /* 35MHz/(8×(18+1))=230263，误差约-0.06%（实际BRR由DrvSci_Init计算） */
-#define BOARD_SPIA_BRR             127U
-#define BOARD_TIMER0_PERIOD_US     100U
+/* 时钟根参数与派生值全部来自 board_clock_profile.h（不再在此硬编码）。
+ * 直接使用：BOARD_OSCCLK_HZ / BOARD_PLLCR / BOARD_DIVSEL / BOARD_SYSCLK_HZ /
+ * BOARD_HSPCLK_HZ / BOARD_LSPCLK_HZ / BOARD_EPWM_TBCLK_HZ / BOARD_PWM_TBPRD /
+ * BOARD_PWM_DB_RED / BOARD_PWM_DB_FED / BOARD_TIMER0_PRD / BOARD_SCI_BRR /
+ * BOARD_SPI_BRR / BOARD_FAST_ISR_CYCLE_BUDGET 等。 */
+#define BOARD_SYSCLK_MHZ         (BOARD_SYSCLK_HZ / 1000000UL)
+#define BOARD_SCI_BRR_PROFILE    BOARD_SCI_BRR     /* Profile 派生的 BRR（DrvSci 实际自算，宏仅作记录/检查） */
+#define BOARD_SPIA_BRR           BOARD_SPI_BRR     /* Profile 派生的 SPI BRR */
 
 /* ---- 硬件确认闸 ----
  * 所有 PWM/ADC 外设操作受此闸保护，置 0 可切断全部功率输出路径。
@@ -50,7 +63,7 @@
 #define BOARD_ADC_CONV02            0xCU    /* ADCINB4 → Vdc3 */
 #define BOARD_ADC_CONV03            0xDU    /* ADCINB5 → Vdc4 */
 #define BOARD_ADC_CONV04            0xAU    /* ADCINB2 → Vdc5 */
-#define BOARD_ADC_CONV05            0xBU    /* ADCINB3 → Vdc6 */
+#define BOARD_ADC_CONV05            0xBU    /* ADCI NB3 → Vdc6 */
 #define BOARD_ADC_CONV06            0x9U    /* ADCINB1 → Va */
 #define BOARD_ADC_CONV07            0x8U    /* ADCINB0 → Vb */
 #define BOARD_ADC_CONV08            0x0U    /* ADCINA0 → Vc */
@@ -59,12 +72,14 @@
 #define BOARD_ADC_CONV11            0x5U    /* ADCINA5 → Ic */
 
 /*
- * ADC 时钟 — HSPCLK=70MHz, ADCCLKPS=3 → ADCCLK≈11.67MHz
+ * ADC 时钟 — 由 board_clock_profile.h 派生：
+ *   ADCCLK = HSPCLK / (ADCCLKPS × 2)（CPS=0）
+ *   TARGET_20MHZ(100MHz):  HSPCLK=50MHz, ADCCLKPS=3 → ADCCLK≈8.33MHz
+ *   DEV_30MHZ(120MHz):    HSPCLK=60MHz, ADCCLKPS=3 → ADCCLK=10.00MHz
  * ACQ_PS=7 → 采样窗口 = 8 ADCCLK 周期
+ * 注：BOARD_ADC_ADCCLKPS / BOARD_ADC_CPS / BOARD_ADC_ACQ_PS 定义于
+ *     board_clock_profile.h（两个 Profile 共用相同分频与采样窗配置）。
  */
-#define BOARD_ADC_ACQ_PS            7U
-#define BOARD_ADC_CPS               0U
-#define BOARD_ADC_ADCCLKPS          3U
 
 /*
  * ADC公共硬件标定参数，供所有模拟量换算使用。
@@ -92,25 +107,16 @@
  */
 #define BOARD_EPWM_MODULE           1U
 
-/* ---- 时序 ---- */
-#define BOARD_PWM_FREQ_HZ           20000U
-#define BOARD_CONTROL_TS            (1.0f / (float)BOARD_PWM_FREQ_HZ)
-/* 计数模式: 0=UP, 1=DOWN, 2=UPDOWN (TI TBCTL.CTRMODE) */
-#define BOARD_PWM_COUNT_MODE        2U
-
-/* DSP 死区时间 (ns)，设 0 关闭 DSP 死区 */
-#define BOARD_PWM_DEADTIME_NS       1000U   /* 1.0 µs */
-/* DBRED/DBFED = deadtime_ns × SYSCLK_MHZ / 1000 */
-#define BOARD_PWM_DB_RED  ((BOARD_PWM_DEADTIME_NS * BOARD_SYSCLK_MHZ) / 1000U)
-#define BOARD_PWM_DB_FED  ((BOARD_PWM_DEADTIME_NS * BOARD_SYSCLK_MHZ) / 1000U)
-
+/* ---- 时序 ----
+ * 功能目标与派生值统一由 board_clock_profile.h 提供：
+ *   BOARD_PWM_FREQ_HZ=20000, BOARD_CONTROL_TS=1/20000=50us,
+ *   BOARD_PWM_COUNT_MODE=2(up-down), BOARD_PWM_DEADTIME_NS=1000(1us),
+ *   BOARD_PWM_TBPRD, BOARD_PWM_DB_RED/FED 由 TBCLK 推导。
+ * 两个 Profile 产生完全相同的 PWM=20kHz / deadtime=1us / Ts=50us。
+ */
 #if (BOARD_PWM_DB_RED > 1023U) || (BOARD_PWM_DB_FED > 1023U)
 #error "ePWM dead-band count exceeds 10-bit DBRED/DBFED range (max 1023)"
 #endif
-
-/* TBPRD = TBCLK / (2 × f_pwm),  TBCLK = SYSCLK = 140MHz */
-#define BOARD_PWM_TBPRD  ((BOARD_SYSCLK_MHZ * 1000000UL) \
-                         / (2UL * BOARD_PWM_FREQ_HZ))
 
 /*
  * 初始占空比 — 仅用于 board.c 初始化阶段写入 CMPA，
@@ -138,8 +144,7 @@
  * 统一结构:
  *   Physical quantity → CT1 → CT2 → analog conditioning → ADC
  *
- * 当前低压台架测试中，Iac/Vac CT1均按1:1换算；只有Vdc CT1按
- * 1000V:2V换算。
+ * 当前低压台架测试中，Vdc/Vac/Iac三类CT1均按1:1换算。
  * CT2 / 跨阻 / 增益为实际硬件参数。
  *
  * 换算公式统一从硬件参数推导，禁止手填最终 gain 魔法数字。
@@ -170,11 +175,11 @@
  */
 
 /*
- * 低压台架测试：Iac CT1 按 1:1。
+ * Iac 前级电流互感器 CT1：一次 100A / 二次 5A（100:5）。
  * 单位：A。该参数属于硬件测量标定，禁止通过修改它调整控制门槛。
  */
-#define BOARD_IAC_CT1_PRI_A          1.0f
-#define BOARD_IAC_CT1_SEC_A          1.0f
+#define BOARD_IAC_CT1_PRI_A          100.0f
+#define BOARD_IAC_CT1_SEC_A          5.0f
 
 /* ---- IAC CT2: 控制板载精密电流互感器 ---- */
 #define BOARD_IAC_CT2_PRI_A          5.0f
@@ -193,9 +198,9 @@
  * IAC各通道ADC零偏上电默认值，单位ADC count；现场临时修改
  * g_iac_ix_offset_counts。零偏只修正零输入读数，禁止用来补偿比例误差。
  */
-#define BOARD_IAC_IA_OFFSET_COUNTS_DEFAULT   2048U
-#define BOARD_IAC_IB_OFFSET_COUNTS_DEFAULT   2048U
-#define BOARD_IAC_IC_OFFSET_COUNTS_DEFAULT   2048U
+#define BOARD_IAC_IA_OFFSET_COUNTS_DEFAULT 2065U
+#define BOARD_IAC_IB_OFFSET_COUNTS_DEFAULT 2070U
+#define BOARD_IAC_IC_OFFSET_COUNTS_DEFAULT 2053U
 
 #define BOARD_IAC_IA_POLARITY        (+1.0f)
 #define BOARD_IAC_IB_POLARITY        (+1.0f)
@@ -252,9 +257,9 @@
  * VAC各通道ADC零偏上电默认值，单位ADC count；现场临时修改
  * g_vac_vx_offset_counts。零偏只修正零输入读数，禁止用来补偿比例误差。
  */
-#define BOARD_VAC_VA_OFFSET_COUNTS_DEFAULT   2048U
-#define BOARD_VAC_VB_OFFSET_COUNTS_DEFAULT   2048U
-#define BOARD_VAC_VC_OFFSET_COUNTS_DEFAULT   2048U
+#define BOARD_VAC_VA_OFFSET_COUNTS_DEFAULT 2028U
+#define BOARD_VAC_VB_OFFSET_COUNTS_DEFAULT 2059U
+#define BOARD_VAC_VC_OFFSET_COUNTS_DEFAULT 2059U
 
 #define BOARD_VAC_VA_POLARITY        (+1.0f)
 #define BOARD_VAC_VB_POLARITY        (+1.0f)
@@ -285,14 +290,13 @@
 
 /*
  * Vdc采样一级变换CT1的一次侧额定电压，单位V。
- * 当前实装电压CT按1000V:2V换算。
+ * 当前低压台架测试按1V:1V换算。
  * 该宏属于Measurement硬件标定，禁止用它调整软起动完成门槛。
  */
 #define BOARD_VDC_CT1_PRI_V          1000.0f
-
 /*
  * Vdc采样一级变换CT1的二次侧额定电压，单位V。
- * 当前实装电压CT按1000V:2V换算。
+ * 当前低压台架测试按1V:1V换算。
  */
 #define BOARD_VDC_CT1_SEC_V          2.0f
 
@@ -350,11 +354,34 @@
 /* ================= 启停控制 (Run/Stop) ================= */
 
 /*
- * 低压直测模式：不执行预充与旁路延时，GPIO22/GPIO23同开同关。
- * 启动顺序：相别合法 → GPIO22/23同时闭合 → PLL/TZ就绪 → 释放目标相PWM。
- * 停止顺序：全局OST封锁PWM → GPIO22/23同时断开。
+ * 启动流程选择：
+ * 0 = 常规预充（不控整流软启动）：先合GPIO42（S1~S3，预充电阻串入）经反并联
+ *     二极管不控整流给母线充电，Vdc≥g_precharge_done_v 后合GPIO44（S4~S6旁路
+ *     预充电阻），再等 g_bypass_delay_ms + PLL/TZ 就绪才释放PWM。
+ *     —— 高压（220/450Vac）必须用此模式，避免直接合闸冲击电流。
+ * 1 = 低压直测：跳过预充，GPIO42/44同开同关（仅低压台架验证用，当前）。
  */
 #define BOARD_LOW_VOLTAGE_DIRECT_TEST      1U
+
+/*
+ * PLL/继电器台架测试模式：
+ * 1 = 台架模式：20kHz ISR只运行采样和PLL，不执行双闭环；ePWM恒OST、
+ *     GPIO30恒低、状态机禁止RUN（用于锁相/继电器动作检查）。
+ * 0 = 正常运行：20kHz ISR执行完整采样+PLL+单相dq双闭环，可进入RUN
+ *     （恢复功率闭环测试前必须确认采样标定/TZ/功率方向，见工程报告§10）。
+ */
+#ifndef BOARD_PLL_RELAY_TEST_ONLY
+#define BOARD_PLL_RELAY_TEST_ONLY          1U
+#endif
+
+/* PLL纯软件输入模拟：一个50Hz相位源派生三相，峰值10V，仅限台架模式。 */
+#define BOARD_PLL_INPUT_SIMULATION         0U
+#define BOARD_PLL_SIM_FREQ_HZ             50.0f
+#define BOARD_PLL_SIM_VPEAK_V             10.0f
+
+#if (BOARD_PLL_INPUT_SIMULATION != 0U) && (BOARD_PLL_RELAY_TEST_ONLY == 0U)
+#error "PLL input simulation is only allowed in relay-test bench mode"
+#endif
 
 /*
  * GPIO21 启停按钮由 CPLD 推挽输出驱动。
@@ -435,7 +462,7 @@
  * 零输入噪声明显低于该门槛。PLL误差已按vmag归一化，锁相动态不依赖幅值。
  * 该宏同时用于PLL内部门控和前台200ms锁定判决，禁止分别设置造成语义不一致。
  */
-#define BOARD_PLL_LOCK_VMAG_MIN_V         3.0f
+#define BOARD_PLL_LOCK_VMAG_MIN_V         10.0f
 
 /* ---- 迟滞: 锁上要慢(防抖), 撤出要快 (10ms 调度周期) ---- */
 #define BOARD_PLL_LOCK_DEBOUNCE_MS      200U
@@ -449,6 +476,24 @@
  */
 #define BOARD_PLL_FADE_MS               200U
 
+/* ================= PLL串口在线调参 ================= */
+#define BOARD_PLL_KP_DEFAULT              120.0f
+#define BOARD_PLL_KI_DEFAULT             2000.0f
+#define BOARD_PLL_FREQ_MIN_HZ_DEFAULT      45.0f
+#define BOARD_PLL_FREQ_MAX_HZ_DEFAULT      55.0f
+#define BOARD_PLL_FREQ_NOM_HZ_DEFAULT      50.0f
+#define BOARD_PLL_VQ_LOCK_RATIO_DEFAULT     0.03f
+#define BOARD_PLL_VQ_UNLOCK_RATIO_DEFAULT   0.06f
+
+#define BOARD_PLL_KP_MIN                    0.0f
+#define BOARD_PLL_KP_MAX                  500.0f
+#define BOARD_PLL_KI_MIN                    0.0f
+#define BOARD_PLL_KI_MAX                10000.0f
+#define BOARD_PLL_FREQ_MIN_ALLOWED_HZ      40.0f
+#define BOARD_PLL_FREQ_MAX_ALLOWED_HZ      60.0f
+#define BOARD_PLL_VQ_RATIO_MIN              0.001f
+#define BOARD_PLL_VQ_RATIO_MAX              0.50f
+
 /* ================= 单相/三相独立双闭环共用参数 ================= */
 #define BOARD_VDC_TARGET_V_DEFAULT           (70.0f)    /* 本次100Vrms空载首测的Vdc_avg默认目标，接近单桥两路均分后的自然电压70.7V。 */
 #define BOARD_VDC_RAMP_RATE_VPS_DEFAULT      (10.0f)    /* Vdc参考斜坡速度，单位V/s。 */
@@ -461,16 +506,89 @@
 #define BOARD_RGRID_OHM_DEFAULT               (0.0f)    /* 网侧等效电阻前馈值，单位Ω；0表示暂不补偿。 */
 #define BOARD_POWER_SIGN_DEFAULT              (1.0f)    /* 电流参考方向：+1为当前默认整流方向，-1表示反向。 */
 
+/* ================= 串口在线参数写入上下限 ================= */
+
+/*
+ * 以下上下限只约束 PLL_HOST_PROTOCOL（SCI-C RX 协议）的 SET/GET 参数写入，
+ * 不参与任何控制算法；控制代码读取的仍是 g_xxx 运行期变量。
+ * 越界写入一律拒绝（返回无效帧计数，不修改任何变量）。
+ */
+#define BOARD_VDC_TARGET_MIN_V            (0.0f)
+#define BOARD_VDC_TARGET_MAX_V          (600.0f)
+#define BOARD_I_LIMIT_MIN_A               (0.0f)
+#define BOARD_I_LIMIT_MAX_A             (100.0f)
+#define BOARD_M_LIMIT_MIN                 (0.0f)
+#define BOARD_M_LIMIT_MAX                 (0.98f)   /* 与 control_closedloop.c 的 m 钳位上限一致 */
+#define BOARD_CURRENT_KP_MIN              (0.0f)
+#define BOARD_CURRENT_KP_MAX            (100.0f)
+#define BOARD_CURRENT_KI_MIN              (0.0f)
+#define BOARD_CURRENT_KI_MAX          (100000.0f)
+
 /* ================= 调试输出 ================= */
 
 /*
  * 串口调试通道选择:
- *   1 = JustFloat 协议 (VOFA+ 观察 PLL，Modbus 停用)
+ *   1 = JustFloat 协议 (VOFA+ 观察 PLL/闭环/安全链，Modbus 停用)
  *   0 = Modbus RTU (HR0-11 ADC raw，原模式)
  */
 #define BOARD_DEBUG_JUSTFLOAT_ENABLE   1U
-#define DEBUG_VIEW_PLL                 1U
-#define DEBUG_VIEW_CLOSEDLOOP          2U
-#define BOARD_DEBUG_VIEW_DEFAULT       DEBUG_VIEW_CLOSEDLOOP
+
+/*
+ * 轻量波形模式（仅观测负担裁剪，不删除任何采样/控制代码）:
+ *   1 = JustFloat 固定 6 通道轻量帧（6×float + 帧尾 = 28B/帧）；
+ *       g_jf_lite_mode 可在 Va/Vb/Vc/Ia/Ib/Ic 与 Vdc1..Vdc6 间运行时切换。
+ *       1kHz DebugSnapshot 更新这两组采样值，不再计算/复制 PLL 跟随波、dq、
+ *       CMP、GPIO、线电压等暂时用不到的观测字段。
+ *       12 路 ADC 采样、sequencer、PLL、dq、PWM、安全链全部保持原样。
+ *   0 = 恢复现有完整 VIEW0~10（8×float + 帧尾 = 36B/帧）。
+ */
+#define BOARD_DEBUG_WAVEFORM_LITE      1U
+
+/* 轻量 JustFloat 运行时通道组（只改变观测内容，不改变帧长）。 */
+#define JUSTFLOAT_LITE_MODE_AC         0U   /* Va/Vb/Vc/Ia/Ib/Ic */
+#define JUSTFLOAT_LITE_MODE_VDC        1U   /* Vdc1..Vdc6 */
+#define BOARD_JUSTFLOAT_LITE_MODE_DEFAULT  JUSTFLOAT_LITE_MODE_AC
+
+/*
+ * JustFloat VIEW 编号（固定 8 通道帧，g_jf_view 运行时切换）:
+ *   0 = PLL 跟随: 实测Va/Vb/Vc + PLL生成三相跟随波 + freq + vq
+ *   1 = PLL 内部: Va/Vb/Vc + vd/vq/vmag + freq + lock
+ *   2 = 采样:     当前观测相 Vac raw/corrected + Iac raw/corrected
+ *                 + Vdc1/Vdc2 + Vac offset + Iac offset
+ *   3 = Vdc 总览: Vdc1..Vdc6 + 当前相 VdcAvg + VdcRefRamp
+ *   4 = Vdc 外环: Vdc1/Vdc2/VdcAvg/VdcRefRamp/VdcErr/Iamp/VdcIntegral/IampLim
+ *   5 = dq 内环:  Id_ref/Id/Id_err/Iq_ref/Iq/Iq_err/Vd_ctrl/Vq_ctrl
+ *   6 = PWM/安全: m_final/左桥CMP/右桥CMP/UNI/GPIO30/activePhase/TZ/state
+ *   7 = 启停:     runReq/state/activePhase/pllLock/GPIO30/GPIO42/GPIO44/fault
+ *   8 = 综合:     VdcAvg/Vac/Iac/Id_ref/m_final/freq/state/fault
+ *   9 = QSG 诊断: Iac/Ialpha/Ibeta/theta_phase/Id/Iq/freq/activePhase
+ *   10 = 线电压:  Vab/Vbc/Vca + vmag/freq/vq/activePhase/pllLock
+ */
+#define DEBUG_VIEW_PLL                 0U
+#define DEBUG_VIEW_PLL_INTERNAL        1U
+#define DEBUG_VIEW_ACQ                 2U
+#define DEBUG_VIEW_VDC_OVERVIEW        3U
+#define DEBUG_VIEW_VDC_LOOP            4U
+#define DEBUG_VIEW_DQ_LOOP             5U   /* 原 IAC_LOOP：改为 dq 电流内环 */
+#define DEBUG_VIEW_PWM_SAFETY          6U
+#define DEBUG_VIEW_RUNSTATE            7U
+#define DEBUG_VIEW_OVERVIEW            8U
+#define DEBUG_VIEW_QSG_DIAG            9U
+#define DEBUG_VIEW_LINE_V             10U
+#define DEBUG_VIEW_MAX                10U
+#define BOARD_DEBUG_VIEW_DEFAULT       DEBUG_VIEW_PLL
+#define BOARD_JUSTFLOAT_ENABLE_DEFAULT  1U
+#define BOARD_JUSTFLOAT_PERIOD_MS        1U  /* 1ms任务每拍发送：1kHz，50Hz每周期20点 */
+#define BOARD_DEBUG_SNAPSHOT_RATE_HZ  1000UL /* 纯观测快照与JustFloat同频，避免占满20kHz ISR */
+#define BOARD_DEBUG_SNAPSHOT_DIVIDER  (BOARD_PWM_FREQ_HZ / BOARD_DEBUG_SNAPSHOT_RATE_HZ)
+
+#if (BOARD_JUSTFLOAT_PERIOD_MS < 1U)
+#error "BOARD_JUSTFLOAT_PERIOD_MS must be >= 1"
+#endif
+
+#if (BOARD_DEBUG_SNAPSHOT_RATE_HZ == 0UL) || \
+    ((BOARD_PWM_FREQ_HZ % BOARD_DEBUG_SNAPSHOT_RATE_HZ) != 0UL)
+#error "BOARD_DEBUG_SNAPSHOT_RATE_HZ must divide BOARD_PWM_FREQ_HZ exactly"
+#endif
 
 #endif

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdint.h>
+#include "firmware/bsp/board_config.h"
 #include "firmware/services/measurement.h"
 
 volatile uint16_t g_vdc_raw[6];
@@ -21,7 +22,8 @@ int main(void)
 
     CHECK(g_vdc1_offset_counts == 0U && g_vdc6_offset_counts == 0U,
           "Vdc offset defaults loaded independently");
-    CHECK(g_vac_va_offset_counts == 2048U && g_iac_ic_offset_counts == 2048U,
+    CHECK(g_vac_va_offset_counts == BOARD_VAC_VA_OFFSET_COUNTS_DEFAULT &&
+          g_iac_ic_offset_counts == BOARD_IAC_IC_OFFSET_COUNTS_DEFAULT,
           "Vac/Iac offset defaults loaded");
 
     vdc_one_count = Measurement_ConvertVdc(1U, 0U);
@@ -31,15 +33,15 @@ int main(void)
           "Vdc raw equal offset is zero");
     CHECK(fabsf(Measurement_ConvertVdc(101U, 100U) - vdc_one_count) < 1.0e-7f,
           "Vdc uses max(raw-offset,0) times scale");
-    CHECK(fabsf(vdc_one_count - 0.73260f) < 0.0001f,
-          "Vdc CT1 1000:2 scale is about 0.73260 V/count");
-    CHECK(fabsf(Measurement_ConvertVdc(546U, 0U) - 400.0f) < 0.1f,
+    CHECK(fabsf(vdc_one_count - 0.732601f) < 0.000001f,
+          "Vdc CT1 1000:2 scale is about 0.732601 V/count");
+    CHECK(fabsf(Measurement_ConvertVdc(546U, 0U) - 400.0f) < 0.001f,
           "Vdc CT1 1000:2: corrected raw 546 equals about 400 V");
 
     CHECK(fabsf(Measurement_ConvertVac(2049U, 2048U, 1.0f) - 0.08774f) < 0.0001f,
           "Vac CT1 1:1 scale is about 0.08774 V/count");
-    CHECK(fabsf(Measurement_ConvertIac(2049U, 2048U, 1.0f) - 0.0029304f) < 0.00001f,
-          "Iac CT1 1:1 scale is about 0.0029304 A/count");
+    CHECK(fabsf(Measurement_ConvertIac(2049U, 2048U, 1.0f) - 0.058608f) < 0.00001f,
+          "Iac CT1 100:5 scale is about 0.058608 A/count");
 
     CHECK(Measurement_ConvertVac(2047U, 2048U, 1.0f) < 0.0f,
           "Vac keeps signed raw-offset result");

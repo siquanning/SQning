@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #include "firmware/app/diagnostics.h"
 #include "firmware/drivers/drv_timer.h"
 
@@ -7,7 +8,7 @@ static Diagnostics g_diagnostics;
 void Diagnostics_Init(void)
 {
     /* Delegate Timer2 cycle-counter init to the driver layer.
-     * CPU Timer2: free-running down-counter at SYSCLKOUT (140 MHz).
+     * CPU Timer2: free-running down-counter at SYSCLKOUT (Profile-derived).
      * No interrupt — just a high-resolution time source for WCET. */
     DrvTimer2_CycleInit();
 

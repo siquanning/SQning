@@ -25,6 +25,13 @@ void DrvInterrupt_BindScicRx(void (*handler)(void))
     EDIS;
 }
 
+void DrvInterrupt_BindScicTx(void (*handler)(void))
+{
+    EALLOW;
+    PieVectTable.SCITXINTC = handler;
+    EDIS;
+}
+
 void DrvInterrupt_BindAdcSeq1(void (*handler)(void))
 {
     EALLOW;
@@ -41,6 +48,12 @@ void DrvInterrupt_EnableTimer0(void)
 void DrvInterrupt_EnableScicRx(void)
 {
     PieCtrlRegs.PIEIER8.bit.INTx5 = 1;
+    IER |= M_INT8;
+}
+
+void DrvInterrupt_EnableScicTx(void)
+{
+    PieCtrlRegs.PIEIER8.bit.INTx6 = 1;   /* SCITXINTC = PIE Group 8, INT6 */
     IER |= M_INT8;
 }
 
@@ -111,4 +124,14 @@ void DrvInterrupt_EnableGlobal(void)
 {
     EINT;
     ERTM;
+}
+
+void DrvInterrupt_DisableGlobal(void)
+{
+    DINT;
+}
+
+void DrvInterrupt_RestoreGlobal(void)
+{
+    EINT;
 }

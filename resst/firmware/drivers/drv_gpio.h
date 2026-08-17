@@ -8,6 +8,9 @@ void DrvGpio_InitOutput(uint16_t pin, uint16_t initial_high);
 void DrvGpio_Set(uint16_t pin);
 void DrvGpio_Clear(uint16_t pin);
 
+/* Toggle LED pin (GPIO67/68) level. Atomic read-invert-write on Port C. */
+void DrvGpio_Toggle(uint16_t pin);
+
 /*
  * Initialise GPIO27/28/29 as push-pull outputs, all LOW.
  * Call once from Board_Init() after DrvSysCtrl_Init().
@@ -65,18 +68,18 @@ void DrvGpio_InitRunState(void);
  */
 void DrvGpio_WriteRunState(uint16_t level);
 
-/* ---- Grid input switch + precharge bypass (Port A, GPIO22/23) ---- */
+/* ---- Grid input switch + precharge bypass (Port B, GPIO42/44) ---- */
 
-/* GPIO22：三相输入总开关，同时控制S1/S2/S3；初始化为LOW，三个开关均断开。 */
+/* GPIO42：三相输入总开关，同时控制S1/S2/S3；初始化为LOW，三个开关均断开。 */
 void DrvGpio_InitGridSwitch(void);
 
-/* GPIO22写接口：0=S1/S2/S3全断，1=S1/S2/S3全合。 */
+/* GPIO42写接口：0=S1/S2/S3全断，1=S1/S2/S3全合。 */
 void DrvGpio_WriteGridSwitch(uint16_t on);
 
-/* GPIO23：预充电阻旁路总开关，同时控制S4/S5/S6；初始化为LOW，电阻未旁路。 */
+/* GPIO44：预充电阻旁路总开关，同时控制S4/S5/S6；初始化为LOW，电阻未旁路。 */
 void DrvGpio_InitPrechargeBypass(void);
 
-/* GPIO23写接口：0=旁路开关全断，预充电阻串入；1=旁路开关全合。 */
+/* GPIO44写接口：0=旁路开关全断，预充电阻串入；1=旁路开关全合。 */
 void DrvGpio_WritePrechargeBypass(uint16_t on);
 
 /* ---- PWM_ENABLE / FAULT_GATE (Port A, GPIO30) ---- */

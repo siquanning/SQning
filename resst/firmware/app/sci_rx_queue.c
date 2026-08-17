@@ -1,3 +1,4 @@
+/* Created by Siquanning */
 #include "firmware/app/sci_rx_queue.h"
 
 #pragma DATA_SECTION(g_sci_rx_items, "comm_buffer")

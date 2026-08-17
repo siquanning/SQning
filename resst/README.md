@@ -1,5 +1,7 @@
 # F28335 Real-Time Control Platform
 
+> Created by Siquanning
+
 面向 TMS320F28335 的可复用实时控制固件底座。当前承载的参考应用为 **UART→SPI 桥接**（SCI-A 接收变长帧，经 SPI-A 逐字节转发至 CPLD）。
 
 ## 快速开始

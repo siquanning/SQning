@@ -1,5 +1,6 @@
-#include "DSP2833x_Device.h"
+/* Created by Siquanning */
 #include "firmware/services/cpld_spi.h"
+#include "firmware/drivers/drv_spi.h"
 
 /*
  * Blocking single-byte SPI send.
@@ -7,16 +8,7 @@
  */
 static void CPLD_SendByte(uint16_t byte_val)
 {
-    uint16_t rx_dummy;
-
-    while (SpiaRegs.SPISTS.bit.BUFFULL_FLAG == 1U) { }
-
-    SpiaRegs.SPITXBUF = (uint16_t)(byte_val & 0xFFU) << 8;
-
-    while (SpiaRegs.SPISTS.bit.INT_FLAG == 0U) { }
-
-    rx_dummy = SpiaRegs.SPIRXBUF;
-    (void)rx_dummy;
+    (void)DrvSpi_TransferByteBlocking(byte_val);
 }
 
 void CPLD_Init(void)
