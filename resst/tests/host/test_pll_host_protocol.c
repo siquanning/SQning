@@ -11,6 +11,12 @@ volatile uint16_t g_jf_view   = DEBUG_VIEW_PLL;
 volatile uint16_t g_jf_phase  = 0U;
 volatile uint16_t g_jf_enable = BOARD_JUSTFLOAT_ENABLE_DEFAULT;
 volatile uint16_t g_jf_lite_mode = BOARD_JUSTFLOAT_LITE_MODE_DEFAULT;
+volatile uint32_t g_jf_sent_count = 0UL;
+volatile uint32_t g_jf_drop_count = 0UL;
+volatile uint32_t g_waveform_produced_count = 0UL;
+volatile uint32_t g_waveform_sent_count = 0UL;
+volatile uint32_t g_waveform_queue_overflow_count = 0UL;
+volatile uint16_t g_waveform_queue_max_depth = 0U;
 
 /* 协议扩展所需的桩 */
 static uint16_t g_tx_frame[7];
@@ -152,16 +158,19 @@ static void test_debug_restore_and_error_event(void)
     make_debug(f,0x03U,0U); feed(&p,f,7U); CHECK(g_jf_phase==0U,"JF_PHASE=0 auto");
     make_debug(f,0x03U,3U); feed(&p,f,7U); CHECK(g_jf_phase==3U,"JF_PHASE=3 C accepted");
     make_debug(f,0x03U,4U); feed(&p,f,7U); CHECK(g_jf_phase==3U,"JF_PHASE=4 rejected");
-    /* JF_LITE_MODE: 0=AC 六路, 1=Vdc 六路, 其余拒绝 */
+    /* JF_LITE_MODE: 0=AC, 1=Vdc, 2=当前相双闭环, 其余拒绝 */
     make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_AC);
     feed(&p,f,7U);
     CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_AC,"JF_LITE_MODE=0 AC accepted");
     make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_VDC);
     feed(&p,f,7U);
     CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_VDC,"JF_LITE_MODE=1 Vdc accepted");
-    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_VDC+1U);
+    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_DQ);
     feed(&p,f,7U);
-    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_VDC,"JF_LITE_MODE=2 rejected");
+    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_DQ,"JF_LITE_MODE=2 DQ accepted");
+    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_MAX+1U);
+    feed(&p,f,7U);
+    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_DQ,"JF_LITE_MODE=3 rejected");
 
     make_param(f,0x00U,42.0f); feed(&p,f,7U); PllHostProtocol_CommitPending(&p);
     make_debug(f,0x02U,0U); feed(&p,f,7U); PllHostProtocol_CommitPending(&p);

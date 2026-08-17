@@ -25,7 +25,7 @@
 /* ---- DEBUG 组命令 (uint16 值) ----
  * 0x00 = JF_ENABLE (0/1), 0x01 = JF_VIEW (0..DEBUG_VIEW_MAX), 0x02 = 恢复默认PLL
  * 0x03 = JF_PHASE (0=自动跟随, 1..3=A/B/C)
- * 0x04 = JF_LITE_MODE (0=Vac/Iac 六路, 1=Vdc1..Vdc6) */
+ * 0x04 = JF_LITE_MODE (0=Vac/Iac, 1=Vdc1..Vdc6, 2=当前相双闭环) */
 #define PLL_HOST_DEBUG_JF_PHASE     0x03U
 #define PLL_HOST_DEBUG_JF_LITE_MODE 0x04U
 

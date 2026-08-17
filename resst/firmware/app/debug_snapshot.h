@@ -9,13 +9,13 @@
  *
  * 生产者: App_Epwm1Isr (20kHz) 每个控制周期末尾调用 DebugSnapshot_Update()
  *         （实现于 isr.c，本头文件只定义结构与共享变量）
- * 消费者: JustFloat 1kHz 发送 —— JustFloat_GetChannels() 在 DINT 保护下
- *         拷贝整个快照，保证一帧 8 通道来自同一个控制时刻。
+ * 消费者: Lite 下 JustFloat_OnSnapshot() 在同一 1kHz 分频点入队；
+ *         GetChannels() 仅供前台/测试在 DINT 下拷贝快照。
  *
  * 设计原则:
  *   - 快照只存放「已有计算的结果」或「由已有结果按同一公式派生的观测值」，
  *     不重复维护任何控制状态，不新增控制算法。
- *   - 20kHz ISR 不做 SCI 发送；发送只发生在 1ms 前台任务。
+ *   - 20kHz ISR 不写 SCITXBUF；Lite 只入队，发送在 SCI-C TX ISR。
  *   - 关闭 JustFloat / 切 VIEW / 串口异常都不影响控制与安全状态。
  */
 
@@ -84,7 +84,7 @@ typedef struct
     uint16_t fault;         /* first_fault 码 */
 } DebugSnapshot;
 
-/* 快照实例：20kHz ISR 写，1ms JustFloat 读（DINT 保护） */
+/* 快照实例：20kHz ISR 写；Lite 入队同 ISR 只读，GetChannels 前台 DINT 拷贝 */
 extern DebugSnapshot g_dbg_snap;
 
 /* GPIO21 消抖稳定电平的运行期镜像（app.c 定义/更新，供快照读取） */

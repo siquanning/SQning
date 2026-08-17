@@ -1,22 +1,3 @@
-<!-- DO NOT EDIT - This part is automatically generated. -->
-
-# Claude Code Guidelines
-
-## MANDATORY Pre-Task Steps (DO NOT SKIP)
-
-**CRITICAL - NO EXCEPTIONS**: Before ANY CCS/Texas Instruments-related task (even simple ones), you MUST complete these steps IN ORDER. Do NOT call any ccs-project, ccs-debug, ccs-sysconfig, or ccs-serial MCP tools until both steps are complete.
-
-1. Read `.claude/ccs.settings.md` to get the CCS installation directory
-2. Read `{installation_directory}/ccs/theia/resources/ai/CCS.md` using the installation directory from step 1. This file includes information on how to interact with CCS as well as device-specific information (UART backchannel pins, LED setup, transmit best practices, etc.).
-3. ONLY THEN proceed with CCS MCP tool calls or any other task work
-
-Do NOT parallelize these steps with task work. Do NOT skip step 2 regardless of task complexity.
-
-
-<!-- DO NOT EDIT - This part is automatically generated. -->
-
-<!-- User instructions should be added below this line -->
-
 > Created by Siquanning
 
 ## 工程路径（严格区分）
@@ -38,7 +19,7 @@ Do NOT parallelize these steps with task work. Do NOT skip step 2 regardless of 
 ## 关键宏状态（board_config.h）
 
 - `BOARD_PLL_RELAY_TEST_ONLY=0`：双闭环启用（当前）
-- `BOARD_LOW_VOLTAGE_DIRECT_TEST=0`：预充（不控整流软启动）启用
+- `BOARD_LOW_VOLTAGE_DIRECT_TEST=1`：低压直测，跳过预充，GPIO42/44 同开同关
 - `BOARD_CLOCK_BRINGUP_ONLY`：仅与 DEV_30MHZ 同用，功率永久封锁
 - 禁止修改：`PWM_BlockOutput/PWM_ReleaseOutput`、GPIO30/TZ 安全链、GPIO42/44、GPIO21、状态机、PLL 算法、m 限幅
 
@@ -48,7 +29,7 @@ Do NOT parallelize these steps with task work. Do NOT skip step 2 regardless of 
 
 ## 调试体系
 
-- JustFloat：SCI-C 576000、1kHz；当前轻量模式固定 6 通道/28B，`g_jf_lite_mode=0` 发 Vac/Iac、`=1` 发 Vdc1~6；完整模式为 8 通道 VIEW0~10（见 `串口JustFloat数据说明.md`）
+- JustFloat：SCI-C 576000、1kHz；当前轻量模式固定 6 通道/28B，`g_jf_lite_mode=0` 发 Vac/Iac、`=1` 发 Vdc1~6、`=2` 发当前相 Id_ref/Id/Iq/VdcAvg/VdcRefRamp/m；完整模式为 8 通道 VIEW0~10（见 `串口JustFloat数据说明.md`）
 - 串口参数协议：SET（group 0xFF/0xFE）+ GET（group 0xFC → 响应 0xFD），白名单 + 上下限
 - 实机调试：TI DSS（`E:\ti\ccs2051\ccs\ccs_base\scripting\bin\dss.bat`）+ XDS100v3，脚本在 `D:\repos\DSP工作区\_dss_bringup\`
 - 功率级 WRITE（释放 PWM/GPIO30/烧 Flash 等）必须先报告经授权
@@ -80,7 +61,7 @@ Do NOT parallelize these steps with task work. Do NOT skip step 2 regardless of 
 | 切页面 VIEW0~10（完整模式） | `FE FF 01 00 00 00 0X` |
 | JustFloat 开关（0/1） | `FE FF 00 00 00 00 0X` |
 | 观测相 0~3（0=跟随测试相） | `FE FF 03 00 00 00 0X` |
-| 轻量通道组（0=Vac/Iac，1=Vdc1~6） | `FE FF 04 00 00 00 0X` |
+| 轻量通道组（0=Vac/Iac，1=Vdc，2=双闭环） | `FE FF 04 00 00 00 0X` |
 | 设 VDC_TARGET | `FF FF 07 <float>`（0~600V） |
 | 设 IAMP_LIMIT | `FF FF 08 <float>`（0~100A） |
 | 设 M_LIMIT | `FF FF 09 <float>`（0~0.98） |

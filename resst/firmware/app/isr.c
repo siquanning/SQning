@@ -230,13 +230,20 @@ static void DebugSnapshot_Update(const int16_t mabc[3],
 
 #if BOARD_DEBUG_WAVEFORM_LITE
     /*
-     * 轻量波形模式：1kHz 快照更新两组可切换的六路采样值。
+     * 轻量波形模式：1kHz 快照更新三组可切换的六路观测值。
      *  - vac 复用 g_pll_input_vabc（PLL 每 20kHz 周期无条件换算，任何状态有效）
      *  - iac 自行换算（闭环块内的 iac[3] 仅在 RUN 期间存在，STANDBY/台架
      *    下不可用，不能复用）
      *  - vdc 使用与完整 VIEW 相同的六路 offset 和换算函数
-     * 其余观测字段（PLL 跟随波、dq、CMP、GPIO、线电压等）不计算不复制。
+     *  - 当前观测相双闭环字段从 g_phase_ctrl 拷贝（STOP 时为 0）
+     * 其余观测字段（PLL 跟随波、CMP、GPIO、线电压等）不计算不复制。
      */
+    obs_phase = ((g_jf_phase >= CTRL_TEST_PHASE_A) &&
+                 (g_jf_phase <= CTRL_TEST_PHASE_C)) ? g_jf_phase : g_ctrl_test_phase;
+    oi = ((obs_phase >= CTRL_TEST_PHASE_A) &&
+          (obs_phase <= CTRL_TEST_PHASE_C)) ? (uint16_t)(obs_phase - CTRL_TEST_PHASE_A) : 0U;
+    s->obs_idx = oi;
+
     for (i = 0U; i < 3U; i++) {
         s->vac[i] = g_pll_input_vabc[i];
         s->iac[i] = Measurement_ConvertIac(g_iac_raw[i], iac_offset[i], iac_polarity[i]);
@@ -244,6 +251,15 @@ static void DebugSnapshot_Update(const int16_t mabc[3],
     for (i = 0U; i < 6U; i++) {
         s->vdc[i] = Measurement_ConvertVdc(g_vdc_raw[i], vdc_offset[i]);
     }
+
+    p = &g_phase_ctrl[oi];
+    vdc_sum = s->vdc[2U * oi] + s->vdc[2U * oi + 1U];
+    s->vdc_avg      = 0.5f * vdc_sum;
+    s->vdc_ref_ramp = p->vdc_ref_ramp;
+    s->id_ref       = p->id_ref;
+    s->id           = p->id;
+    s->iq           = p->iq;
+    s->m_final      = p->m;
     return;
 #else
     /* 观测相选择: g_jf_phase=0 自动跟随 g_ctrl_test_phase; 1..3 强制 A/B/C */
@@ -617,6 +633,10 @@ __interrupt void App_Epwm1Isr(void)
                                             (uni_c ? 4U : 0U)),
                                  dbg_cmp_left, dbg_force_left,
                                  dbg_cmp_right, dbg_force_right);
+#if (BOARD_DEBUG_JUSTFLOAT_ENABLE != 0U) && (BOARD_DEBUG_WAVEFORM_LITE != 0U)
+            /* 与快照同一 1kHz 分频点入队；不写 SCITXBUF。 */
+            JustFloat_OnSnapshot();
+#endif
         }
         if (++s_debug_snapshot_div >= (uint16_t)BOARD_DEBUG_SNAPSHOT_DIVIDER)
             s_debug_snapshot_div = 0U;

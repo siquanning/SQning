@@ -13,35 +13,75 @@ static int failures;
 /*
  * 模拟 SCI-C TX FIFO（host 测试）:
  *   tx_fifo[]    记录所有写入 SCITXBUF 的字节（DrvSci_TxPutByte）
- *   tx_fifo_len  已写入字节总数
- *   tx_int_en    当前 TXFFIENA 状态（1 = TX FIFO 中断已使能）
- * host 下 JustFloat_ScicTxIsr() 可被直接调用，模拟一次 FIFO 空中断。
+ *   tx_free      当前可写入槽位数（GetTxFifoFree）
+ *   tx_free_cap  每次“UART 发走一批”后恢复的空闲上限（模拟 TXFFIL）
  */
-static unsigned tx_fifo[128];
+static unsigned tx_fifo[512];
 static unsigned tx_fifo_len;
 static unsigned tx_int_en;
+static unsigned tx_free = 16U;
+static unsigned tx_free_cap = 16U;
 
-void DrvSci_TxPutByte(uint16_t byte) { tx_fifo[tx_fifo_len++] = (unsigned)(byte & 0xFFU); }
-uint16_t DrvSci_GetTxFifoFree(void)  { return 16U; }
+void DrvSci_TxPutByte(uint16_t byte)
+{
+    tx_fifo[tx_fifo_len++] = (unsigned)(byte & 0xFFU);
+    if (tx_free > 0U) tx_free--;
+}
+uint16_t DrvSci_GetTxFifoFree(void)  { return (uint16_t)tx_free; }
 void DrvSci_TxIntEnable(uint16_t en) { tx_int_en = en ? 1U : 0U; }
 void DrvSci_ClearTxIntFlag(void)     { }
 void DrvInterrupt_AckGroup8(void)    { }
 void DrvInterrupt_DisableGlobal(void) { }
 void DrvInterrupt_RestoreGlobal(void) { }
 
-/* 帧长（lite=28B / full=36B 通用） */
 #define TEST_FRAME_LEN (JUSTFLOAT_CH_COUNT * 4U + 4U)
 
-/* 模拟 FIFO 空中断，直到当前帧完成（tx_int_en 被最终 ISR 清 0） */
-static void drain_until_frame_done(unsigned expect_total)
+static void tx_reset(void)
+{
+    tx_fifo_len = 0U;
+    tx_int_en = 0U;
+    tx_free = 16U;
+    tx_free_cap = 16U;
+}
+
+static void stats_reset(void)
+{
+    g_jf_sent_count = 0UL;
+    g_jf_drop_count = 0UL;
+    g_waveform_produced_count = 0UL;
+    g_waveform_sent_count = 0UL;
+    g_waveform_queue_overflow_count = 0UL;
+    g_waveform_queue_max_depth = 0U;
+}
+
+static void jf_reset(void)
+{
+    g_jf_enable = 0U;
+    JustFloat_Service();
+    g_jf_enable = 1U;
+    stats_reset();
+    tx_reset();
+}
+
+/* 每次 ISR 前恢复 FIFO 空闲，模拟 UART 已把水位降到 TXFFIL。 */
+static void drain_until_idle(unsigned expect_total)
 {
     int guard = 0;
-    while (tx_int_en != 0U && guard < 16) {
+    while (tx_int_en != 0U && guard < 256) {
+        tx_free = tx_free_cap;
         JustFloat_ScicTxIsr();
         guard++;
     }
-    CHECK(tx_fifo_len == expect_total, "frame drained fully");
-    CHECK(tx_int_en == 0U, "TX int disabled after frame done");
+    CHECK(tx_fifo_len == expect_total, "queue drained fully");
+    CHECK(tx_int_en == 0U, "TX int disabled after queue idle");
+}
+
+static int frame_tail_ok(unsigned base)
+{
+    return tx_fifo[base + 24U] == 0x00U &&
+           tx_fifo[base + 25U] == 0x00U &&
+           tx_fifo[base + 26U] == 0x80U &&
+           tx_fifo[base + 27U] == 0x7FU;
 }
 
 #if BOARD_DEBUG_WAVEFORM_LITE
@@ -72,7 +112,19 @@ static void test_waveform_lite_modes(void)
           ch[3]==33.0f && ch[4]==34.0f && ch[5]==35.0f,
           "lite Vdc: CH1-6 = Vdc1..Vdc6");
 
-    g_jf_lite_mode = JUSTFLOAT_LITE_MODE_VDC + 1U;
+    g_dbg_snap.id_ref = 1.0f;
+    g_dbg_snap.id = 0.8f;
+    g_dbg_snap.iq = 0.1f;
+    g_dbg_snap.vdc_avg = 40.0f;
+    g_dbg_snap.vdc_ref_ramp = 42.0f;
+    g_dbg_snap.m_final = 0.12f;
+    g_jf_lite_mode = JUSTFLOAT_LITE_MODE_DQ;
+    JustFloat_GetChannels(99U, ch);
+    CHECK(ch[0]==1.0f && ch[1]==0.8f && ch[2]==0.1f &&
+          ch[3]==40.0f && ch[4]==42.0f && ch[5]==0.12f,
+          "lite DQ: CH1-6 = Id_ref/Id/Iq/VdcAvg/VdcRefRamp/m");
+
+    g_jf_lite_mode = JUSTFLOAT_LITE_MODE_MAX + 1U;
     JustFloat_GetChannels(99U, ch);
     CHECK(ch[0]==10.0f && ch[5]==22.0f,
           "invalid lite mode falls back to AC");
@@ -278,48 +330,106 @@ static void test_invalid_view_fallback(void)
 }
 #endif /* BOARD_DEBUG_WAVEFORM_LITE */
 
+#if BOARD_DEBUG_WAVEFORM_LITE
+static void test_wave_queue(void)
+{
+    unsigned i;
+    unsigned usable = JUSTFLOAT_WAVE_QUEUE_LEN - 1U;
+
+    jf_reset();
+    g_jf_enable = 0U;
+    for (i = 0U; i < 8U; i++) {
+        JustFloat_OnSnapshot();
+        JustFloat_Service();
+    }
+    CHECK(tx_fifo_len == 0U && g_waveform_produced_count == 0UL,
+          "disabled: no produce, no TX");
+
+    jf_reset();
+    JustFloat_OnSnapshot();
+    CHECK(tx_fifo_len == 0U && tx_int_en == 1U &&
+          g_waveform_produced_count == 1UL && g_waveform_sent_count == 0UL,
+          "OnSnapshot enqueues and arms TX, does not write FIFO");
+    CHECK(g_jf_drop_count == 0UL, "first sample is not busy-dropped");
+
+    /* 第二拍在 TX ISR 之前入队，而不是 drop */
+    JustFloat_OnSnapshot();
+    CHECK(g_waveform_produced_count == 2UL && g_jf_drop_count == 0UL &&
+          g_waveform_queue_overflow_count == 0UL &&
+          g_waveform_queue_max_depth == 2U,
+          "busy no longer drops; second sample queued");
+
+    drain_until_idle(TEST_FRAME_LEN * 2U);
+    CHECK(g_waveform_sent_count == 2UL && g_jf_sent_count == 2UL,
+          "TX ISR drains both frames without waiting Service");
+    CHECK(frame_tail_ok(0U) && frame_tail_ok(TEST_FRAME_LEN),
+          "both frames have JustFloat tail 00 00 80 7F");
+
+    /* 帧完成后队列仍有数据时，同一 ISR 路径立即开始下一帧（上面已覆盖）。
+     * 协议暂停：入队保留，不发送，Service kick 后恢复。 */
+    JustFloat_TxYieldForProtocol();
+    tx_reset();
+    stats_reset();
+    /* 保留队列空、pause=1 */
+    g_dbg_snap.vac[0] = 1.5f;
+    JustFloat_OnSnapshot();
+    CHECK(tx_fifo_len == 0U && g_waveform_produced_count == 1UL,
+          "paused: sample queued, no FIFO write");
+    JustFloat_Service();
+    drain_until_idle(TEST_FRAME_LEN);
+    CHECK(g_waveform_sent_count == 1UL, "Service kick resumes TX after yield");
+
+    /* 满队列 overflow，不覆盖旧样本 */
+    jf_reset();
+    for (i = 0U; i < usable; i++) {
+        JustFloat_OnSnapshot();
+    }
+    CHECK(g_waveform_produced_count == (uint32_t)usable &&
+          g_waveform_queue_overflow_count == 0UL &&
+          g_waveform_queue_max_depth == (uint16_t)usable,
+          "queue accepts LEN-1 frames");
+    JustFloat_OnSnapshot();
+    CHECK(g_waveform_produced_count == (uint32_t)usable &&
+          g_waveform_queue_overflow_count == 1UL,
+          "16th produce overflows instead of overwriting");
+    drain_until_idle(TEST_FRAME_LEN * usable);
+    CHECK(g_waveform_sent_count == (uint32_t)usable,
+          "overflowed sample is the only one lost");
+}
+
+static void test_fill_by_free(void)
+{
+    jf_reset();
+    tx_free = 8U;
+    tx_free_cap = 8U;
+    JustFloat_OnSnapshot();
+    JustFloat_ScicTxIsr();
+    CHECK(tx_fifo_len == 8U && tx_free == 0U,
+          "TX ISR writes only GetTxFifoFree() bytes, not a fixed 16");
+    drain_until_idle(TEST_FRAME_LEN);
+    CHECK(g_waveform_sent_count == 1UL && frame_tail_ok(0U),
+          "TXFFIL=8 style refill still completes 28B frame");
+}
+#else
 static void test_send_enable(void)
 {
-    int i;
+    float ch[JUSTFLOAT_CH_COUNT];
+    unsigned i;
 
-    /* 关闭时一字节也不发 */
-    tx_fifo_len = 0U; tx_int_en = 0U;
-    g_jf_sent_count = 0UL; g_jf_drop_count = 0UL;
+    jf_reset();
     g_jf_enable = 0U;
     for (i = 0; i < 8; i++) JustFloat_Service();
     CHECK(tx_fifo_len == 0U, "disabled JustFloat sends no bytes");
 
-    /* 帧 A：提交首批 16 字节，TX 中断使能，帧未完成不计 sent */
     g_jf_enable = 1U;
-    JustFloat_Service();
+    JustFloat_GetChannels(g_jf_view, ch);
+    JustFloat_Send(ch, JUSTFLOAT_CH_COUNT);
     CHECK(tx_fifo_len == 16U && tx_int_en == 1U && g_jf_sent_count == 0UL,
-          "frame A: first 16 bytes pushed, TX int armed, not yet sent");
-
-    /* 帧 A 未发完时提交 → 丢弃，不阻塞 */
-    JustFloat_Service();
-    CHECK(tx_fifo_len == 16U && g_jf_drop_count == 1UL && g_jf_sent_count == 0UL,
-          "frame while busy is dropped without blocking");
-
-    /* FIFO 空 → ISR 续搬剩余 → 帧完成（sent++、关中断） */
-    drain_until_frame_done(TEST_FRAME_LEN);
-    CHECK(g_jf_sent_count == 1UL, "sent_count incremented at final FIFO empty");
-
-    /* 帧完成后可再提交 */
-    JustFloat_Service();
-    CHECK(tx_fifo_len == TEST_FRAME_LEN + 16U, "frame B accepted after frame A done");
-    drain_until_frame_done(TEST_FRAME_LEN * 2U);
-    CHECK(g_jf_sent_count == 2UL, "frame B complete");
-
-    /* 协议仲裁：YieldForProtocol 等当前帧发完并暂停下一帧，恢复后正常 */
-    JustFloat_Service();                          /* 帧 C 提交 */
-    drain_until_frame_done(TEST_FRAME_LEN * 3U);
-    CHECK(g_jf_sent_count == 3UL, "frame C complete");
-    JustFloat_TxYieldForProtocol();               /* busy=0 立即返回并暂停 */
-    JustFloat_Service();                          /* 被暂停：跳过一帧 */
-    CHECK(tx_fifo_len == 3U * TEST_FRAME_LEN, "yield pauses exactly one frame");
-    JustFloat_Service();                          /* 恢复：下一帧正常提交 */
-    CHECK(tx_fifo_len == 3U * TEST_FRAME_LEN + 16U, "frame after yield resumes");
+          "frame A: first fill uses free slots, not yet complete");
+    drain_until_idle(TEST_FRAME_LEN);
+    CHECK(g_jf_sent_count == 1UL, "sent_count incremented when frame done");
 }
+#endif
 
 int main(void)
 {
@@ -327,6 +437,8 @@ int main(void)
     printf("=== JustFloat Lite Waveform Tests (%uB/frame) ===\n",
            (unsigned)TEST_FRAME_LEN);
     test_waveform_lite_modes();
+    test_wave_queue();
+    test_fill_by_free();
 #else
     printf("=== JustFloat Debug Snapshot View Tests ===\n");
     fill_snapshot();
@@ -342,8 +454,8 @@ int main(void)
     test_view_overview();
     test_invalid_view_fallback();
     test_view_line_v();
-#endif
     test_send_enable();
+#endif
     printf("=== %s ===\n", failures ? "SOME TESTS FAILED" : "ALL TESTS PASSED");
     return failures ? 1 : 0;
 }

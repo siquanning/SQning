@@ -31,9 +31,8 @@ void     DrvSci_SendBytes(const uint16_t *data, uint16_t len);
 
 /*
  * Non-blocking TX FIFO primitives (SCI-C, PIE 8.6 TX FIFO interrupt).
- * Used by the JustFloat 1kHz stream: foreground submits up to 16 bytes per
- * call, the TX FIFO interrupt keeps draining the rest. These functions never
- * wait. Caller must guarantee a free FIFO slot before DrvSci_TxPutByte.
+ * TXFFIL=8: interrupt when TXFFST<=8. Caller must use GetTxFifoFree() and
+ * never wait; never assume the FIFO is empty or stuff a fixed 16 bytes.
  */
 uint16_t DrvSci_GetTxFifoFree(void);       /* 16 - TXFFST */
 void     DrvSci_TxPutByte(uint16_t byte);  /* write SCITXBUF (no wait) */

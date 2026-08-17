@@ -9,7 +9,7 @@
 - 串口：SCI-C（GPIO62/63）
 - 波特率：576000 bit/s（实际由 LSPCLK 派生：DEV30≈576923 / TARGET20≈568182）
 - 当前 `BOARD_DEBUG_WAVEFORM_LITE=1`：固定 **6 路 `float32` 小端** + 帧尾 `00 00 80 7F`，共 **28 字节**
-- 轻量通道组可运行时切换：模式 0=`Va/Vb/Vc/Ia/Ib/Ic`，模式 1=`Vdc1..Vdc6`
+- 轻量通道组可运行时切换：模式 0=`Va/Vb/Vc/Ia/Ib/Ic`，模式 1=`Vdc1..Vdc6`，模式 2=`Id_ref/Id/Iq/VdcAvg/VdcRefRamp/m`（当前观测相）
 - `BOARD_DEBUG_WAVEFORM_LITE=0` 时恢复完整 VIEW0~10：固定 8 路，共 36 字节
 - 发送周期：**1 ms（1 kHz）**（50Hz 每周期 20 点，可还原交流波形）
 - 上位机：VOFA+，协议 JustFloat（当前轻量模式固定 6 通道，切换通道组无需改配置）
@@ -23,13 +23,21 @@
 | `g_jf_enable` | 0/1 | 1 | 0=停 JustFloat，1=开 |
 | `g_jf_view` | 0..10 | 0 | 完整模式页面选择（下表；轻量模式忽略） |
 | `g_jf_phase` | 0..3 | 0 | 观测相：0=自动跟随 `g_ctrl_test_phase`，1=A，2=B，3=C |
-| `g_jf_lite_mode` | 0/1 | 0 | 轻量通道组：0=Vac/Iac 六路，1=Vdc1~6 |
+| `g_jf_lite_mode` | 0..2 | 0 | 轻量通道组：0=Vac/Iac，1=Vdc1~6，2=当前相双闭环 |
 
 四个变量 CCS Expressions 可直接在线改，也可经串口修改（见 §4）。`g_jf_phase` 只影响观测（VIEW2/3/4/5/9 的"当前相"），不影响控制相别锁存。
 
 ## 3. 完整模式 VIEW 通道定义（g_jf_view=0..10）
 
-以下 VIEW 仅在 `BOARD_DEBUG_WAVEFORM_LITE=0` 时生效；当前轻量模式请用 `g_jf_lite_mode` 切换两组六通道。
+以下 VIEW 仅在 `BOARD_DEBUG_WAVEFORM_LITE=0` 时生效；当前轻量模式请用 `g_jf_lite_mode` 切换三组六通道。
+
+轻量模式通道（固定 6 路，`g_jf_lite_mode`）：
+
+| 模式 | 页面 | CH1 | CH2 | CH3 | CH4 | CH5 | CH6 |
+|---|---|---|---|---|---|---|---|
+| 0 | 交流采样 | Va | Vb | Vc | Ia | Ib | Ic |
+| 1 | 六路 Vdc | Vdc1 | Vdc2 | Vdc3 | Vdc4 | Vdc5 | Vdc6 |
+| 2 | 双闭环(当前相) | Id_ref | Id | Iq | VdcAvg | VdcRefRamp | m |
 
 | VIEW | 页面 | CH1 | CH2 | CH3 | CH4 | CH5 | CH6 | CH7 | CH8 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -89,9 +97,9 @@
 | 0x01 | JF_VIEW | `g_jf_view` | 0~10 |
 | 0x02 | 恢复默认 PLL 参数 | — | — |
 | 0x03 | JF_PHASE | `g_jf_phase` | 0~3 |
-| 0x04 | JF_LITE_MODE | `g_jf_lite_mode` | 0=Vac/Iac，1=Vdc1~6 |
+| 0x04 | JF_LITE_MODE | `g_jf_lite_mode` | 0=Vac/Iac，1=Vdc1~6，2=当前相双闭环 |
 
-示例：轻量模式切到六路 Vdc → 发 `FE FF 04 00 00 00 01`；切回 Vac/Iac → 发 `FE FF 04 00 00 00 00`。
+示例：切到双闭环页 → 发 `FE FF 04 00 00 00 02`；切到六路 Vdc → 发 `FE FF 04 00 00 00 01`；切回 Vac/Iac → 发 `FE FF 04 00 00 00 00`。
 
 ### GET（读取参数）
 

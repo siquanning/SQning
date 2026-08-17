@@ -185,7 +185,7 @@ void App_Service1ms(AppContext *app, uint32_t now)
     }
 
 #if BOARD_DEBUG_JUSTFLOAT_ENABLE
-    /* 安全/控制任务全部完成后再发送，250Hz JustFloat不得延迟本拍PWM封锁。 */
+    /* 安全/控制任务全部完成后再 kick TX；Lite 入队不在这里，不得阻塞。 */
     JustFloat_Service();
 #endif
 }

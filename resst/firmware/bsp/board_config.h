@@ -371,7 +371,7 @@
  *     （恢复功率闭环测试前必须确认采样标定/TZ/功率方向，见工程报告§10）。
  */
 #ifndef BOARD_PLL_RELAY_TEST_ONLY
-#define BOARD_PLL_RELAY_TEST_ONLY          1U
+#define BOARD_PLL_RELAY_TEST_ONLY          0U
 #endif
 
 /* PLL纯软件输入模拟：一个50Hz相位源派生三相，峰值10V，仅限台架模式。 */
@@ -536,8 +536,8 @@
 /*
  * 轻量波形模式（仅观测负担裁剪，不删除任何采样/控制代码）:
  *   1 = JustFloat 固定 6 通道轻量帧（6×float + 帧尾 = 28B/帧）；
- *       g_jf_lite_mode 可在 Va/Vb/Vc/Ia/Ib/Ic 与 Vdc1..Vdc6 间运行时切换。
- *       1kHz DebugSnapshot 更新这两组采样值，不再计算/复制 PLL 跟随波、dq、
+ *       g_jf_lite_mode 运行时切换：0=Vac/Iac、1=Vdc1..Vdc6、2=当前相双闭环。
+ *       1kHz DebugSnapshot 更新这三组观测值，不再计算/复制 PLL 跟随波、
  *       CMP、GPIO、线电压等暂时用不到的观测字段。
  *       12 路 ADC 采样、sequencer、PLL、dq、PWM、安全链全部保持原样。
  *   0 = 恢复现有完整 VIEW0~10（8×float + 帧尾 = 36B/帧）。
@@ -547,6 +547,8 @@
 /* 轻量 JustFloat 运行时通道组（只改变观测内容，不改变帧长）。 */
 #define JUSTFLOAT_LITE_MODE_AC         0U   /* Va/Vb/Vc/Ia/Ib/Ic */
 #define JUSTFLOAT_LITE_MODE_VDC        1U   /* Vdc1..Vdc6 */
+#define JUSTFLOAT_LITE_MODE_DQ         2U   /* Id_ref/Id/Iq/VdcAvg/VdcRefRamp/m */
+#define JUSTFLOAT_LITE_MODE_MAX        JUSTFLOAT_LITE_MODE_DQ
 #define BOARD_JUSTFLOAT_LITE_MODE_DEFAULT  JUSTFLOAT_LITE_MODE_AC
 
 /*
