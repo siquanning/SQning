@@ -278,16 +278,16 @@ add_heading(doc, "4.1　零输入与Modbus采样", 2)
 add_text(doc, "确认功率输入断开、母线放电，Vac=0、Iac=0。不能证明输入为0时，禁止校准该通道。若使用Modbus，将BOARD_DEBUG_JUSTFLOAT_ENABLE设为0后重新完整编译。")
 add_code(doc, [
     "发送：01 03 00 00 00 0C 45 CF",
-    "HR0~HR11：Vdc1~Vdc6、Va~Vc、Ia~Ic；16位数据高字节在前",
+    "HR0~HR11：Vdc1~Vdc6、Vab/Vbc/Vca、Ia~Ic；16位数据高字节在前",
     "连续采集至少100帧，各通道独立求平均并四舍五入",
 ])
 add_heading(doc, "4.2　CCS写入与验证", 2)
 add_code(doc, [
     "g_vdc1_offset_counts ... g_vdc6_offset_counts",
-    "g_vac_va_offset_counts / g_vac_vb_offset_counts / g_vac_vc_offset_counts",
+    "g_vac_vab_offset_counts / g_vac_vbc_offset_counts / g_vac_vca_offset_counts",
     "g_iac_ia_offset_counts / g_iac_ib_offset_counts / g_iac_ic_offset_counts",
 ])
-add_text(doc, "单位均为ADC count。写入各通道raw平均值后，Vdc应接近0且不为负，Vac/Iac应围绕0小幅波动。确认后写回board_config.h对应*_OFFSET_COUNTS_DEFAULT，再编译、复位并复查。")
+add_text(doc, "单位均为ADC count。Vac零偏只校正线电压三路ADC（Vab/Vbc/Vca），看g_measurement.vline_v或JustFloat lite mode 0；禁止对着重构相电压vac_v或mode 2调零偏。写入raw平均值后，Vdc应接近0且不为负，vline/Iac应围绕0小幅波动。确认后写回board_config.h对应*_OFFSET_COUNTS_DEFAULT，再编译、复位并复查。")
 add_callout(doc, "偏置纪律", "Offset只修正零点。若输入翻倍而软件结果不近似翻倍，应检查CT1/CT2/Gain，禁止继续调offset。", risk=True)
 
 add_heading(doc, "5　Vdc、Vac、Iac比例标定与预充参数整定", 1)
@@ -318,7 +318,7 @@ add_code(doc, [
 add_heading(doc, "5.2　三类通道实测标定", 2)
 add_steps(doc, [
     "Vdc：逐路施加两个以上已知直流低压点（如0.5V、1.0V、1.5V），记录raw、g_measurement.vdc_v[]及万用表值；不得超过ADC 0~3V。按真实硬件修改BOARD_VDC_CT1_PRI_V/SEC_V、BOARD_VDC_CT2_PRI_V/SEC_V、BOARD_VDC_ANALOG_GAIN。",
-    "Vac：使用隔离低压正弦源逐相验证，记录示波器/万用表有效值、raw波形及g_measurement.vac_v[]；确认零点、幅值、50Hz波形、Va/Vb/Vc相序与各相polarity。比例由BOARD_VAC_CT1_*、BOARD_VAC_CT2_*、BOARD_VAC_TIA_OHM、BOARD_VAC_ANALOG_GAIN控制。",
+    "Vac：使用隔离低压正弦源验证线电压，记录示波器/万用表有效值、raw波形及g_measurement.vline_v[]（Vab/Vbc/Vca）；零点必须在vline上确认。相序与PLL看重构后的g_measurement.vac_v[]。比例由BOARD_VAC_CT1_*、BOARD_VAC_CT2_*、BOARD_VAC_TIA_OHM、BOARD_VAC_ANALOG_GAIN控制。",
     "Iac：使用隔离限流回路和电流探头/标准表逐相注入至少两个电流点，记录raw及g_measurement.iac_a[]；确认幅值、正负方向和三相通道映射。比例由BOARD_IAC_CT1_*、BOARD_IAC_CT2_*、BOARD_IAC_TIA_OHM、BOARD_IAC_ANALOG_GAIN控制。",
     "BOARD_ADC_VREF_V和BOARD_ADC_MAX_COUNT影响三类测量。Vref应实测或依据硬件确认，不得为凑数随意修改。任何比例参数修改后，必须重新完整编译并复测三类通道。",
     "测量比例合格后，现场通过CCS调整g_precharge_done_v、g_precharge_timeout_ms、g_bypass_delay_ms；参数基本确定后再写回对应*_DEFAULT宏。",
@@ -328,7 +328,7 @@ add_callout(doc, "门槛设置", "当前BOARD_PRECHARGE_DONE_V_DEFAULT为400V，
 add_heading(doc, "6　PLL独立测试", 1)
 add_text(doc, "GPIO21保持0，PWM Block，GPIO22/23保持0。向已确认安全的Vac采样输入位置注入隔离、限流、相序正确的三相50Hz信号。当前BOARD_PLL_LOCK_VMAG_MIN_V=50.0V，表示Clarke变换后的αβ矢量峰值；测试相电压至少约35.4Vrms（线电压约61.2Vrms）才能越过该门槛。不得把50V直接加到ADC引脚，也不得绕过PLL判据。")
 add_code(doc, [
-    "观察：g_measurement.vac_v[0..2]、g_pll.vmag、g_pll.freq",
+    "观察：g_measurement.vline_v[0..2]、g_measurement.vac_v[0..2]、g_pll.vmag、g_pll.freq",
     "      g_pll.vd、g_pll.vq、g_pll.theta、g_pll_switch_req",
     "      g_switch_alpha、g_switch_phase_err_deg",
 ])

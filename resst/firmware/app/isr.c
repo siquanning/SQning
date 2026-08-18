@@ -15,7 +15,6 @@
 #include "firmware/control/control_global.h"
 #include "firmware/control/control_closedloop.h"
 #include "firmware/services/measurement.h"
-#include "firmware/services/justfloat.h"
 #include "firmware/app/debug_snapshot.h"
 #include "firmware/app/isr.h"
 #include "firmware/app/run_supervisor.h"
@@ -173,7 +172,7 @@ __interrupt void App_ScicRxIsr(void)
  * Triggered by EPWM1 SOCA at CTR=ZERO (20 kHz).
  *
  * ADCRESULT0→Vdc1,…,ADCRESULT5→Vdc6,
- * ADCRESULT6→Va, ADCRESULT7→Vb, ADCRESULT8→Vc,
+ * ADCRESULT6→Vab, ADCRESULT7→Vbc, ADCRESULT8→Vca,
  * ADCRESULT9→Ia, ADCRESULT10→Ib, ADCRESULT11→Ic.
  */
 __interrupt void App_AdcIsr(void)
@@ -205,147 +204,34 @@ __interrupt void App_AdcIsr(void)
  * ================================================================== */
 DebugSnapshot g_dbg_snap;
 
-static void DebugSnapshot_Update(const int16_t mabc[3],
-                                 uint16_t uni_polarity,
-                                 const uint16_t cmp_left[3],
-                                 const uint16_t force_left[3],
-                                 const uint16_t cmp_right[3],
-                                 const uint16_t force_right[3])
+static void DebugSnapshot_Update(void)
 {
     static const float iac_polarity[3] = {
         BOARD_IAC_IA_POLARITY, BOARD_IAC_IB_POLARITY, BOARD_IAC_IC_POLARITY };
-    const uint16_t vac_offset[3] = { g_vac_va_offset_counts,
-        g_vac_vb_offset_counts, g_vac_vc_offset_counts };
     const uint16_t iac_offset[3] = { g_iac_ia_offset_counts,
         g_iac_ib_offset_counts, g_iac_ic_offset_counts };
     const uint16_t vdc_offset[6] = { g_vdc1_offset_counts, g_vdc2_offset_counts,
         g_vdc3_offset_counts, g_vdc4_offset_counts,
         g_vdc5_offset_counts, g_vdc6_offset_counts };
     DebugSnapshot *s = &g_dbg_snap;
-    const volatile PhaseClosedLoopState *p;
-    uint16_t obs_phase;
-    uint16_t oi;
     uint16_t i;
-    float vdc_sum;
 
-#if BOARD_DEBUG_WAVEFORM_LITE
     /*
-     * 轻量波形模式：1kHz 快照更新三组可切换的六路观测值。
-     *  - vac 复用 g_pll_input_vabc（PLL 每 20kHz 周期无条件换算，任何状态有效）
-     *  - iac 自行换算（闭环块内的 iac[3] 仅在 RUN 期间存在，STANDBY/台架
-     *    下不可用，不能复用）
-     *  - vdc 使用与完整 VIEW 相同的六路 offset 和换算函数
-     *  - 当前观测相双闭环字段从 g_phase_ctrl 拷贝（STOP 时为 0）
-     * 其余观测字段（PLL 跟随波、CMP、GPIO、线电压等）不计算不复制。
+     * 轻量六通道：vline/vac 复用本拍 PLL 输入；
+     * iac 自行换算（闭环块内 iac[] 仅 RUN 期间存在）；
+     * vdc 用与控制相同的 offset/换算；pll_vmag/theta 供 mode 2 跟随波。
      */
-    obs_phase = ((g_jf_phase >= CTRL_TEST_PHASE_A) &&
-                 (g_jf_phase <= CTRL_TEST_PHASE_C)) ? g_jf_phase : g_ctrl_test_phase;
-    oi = ((obs_phase >= CTRL_TEST_PHASE_A) &&
-          (obs_phase <= CTRL_TEST_PHASE_C)) ? (uint16_t)(obs_phase - CTRL_TEST_PHASE_A) : 0U;
-    s->obs_idx = oi;
-
     for (i = 0U; i < 3U; i++) {
         s->vac[i] = g_pll_input_vabc[i];
-        s->iac[i] = Measurement_ConvertIac(g_iac_raw[i], iac_offset[i], iac_polarity[i]);
+        s->vline[i] = g_pll_input_vline[i];
+        s->iac[i] = Measurement_ConvertIac(g_iac_raw[i], iac_offset[i],
+                                           iac_polarity[i]);
     }
     for (i = 0U; i < 6U; i++) {
         s->vdc[i] = Measurement_ConvertVdc(g_vdc_raw[i], vdc_offset[i]);
     }
-
-    p = &g_phase_ctrl[oi];
-    vdc_sum = s->vdc[2U * oi] + s->vdc[2U * oi + 1U];
-    s->vdc_avg      = 0.5f * vdc_sum;
-    s->vdc_ref_ramp = p->vdc_ref_ramp;
-    s->id_ref       = p->id_ref;
-    s->id           = p->id;
-    s->iq           = p->iq;
-    s->m_final      = p->m;
-    return;
-#else
-    /* 观测相选择: g_jf_phase=0 自动跟随 g_ctrl_test_phase; 1..3 强制 A/B/C */
-    obs_phase = ((g_jf_phase >= CTRL_TEST_PHASE_A) &&
-                 (g_jf_phase <= CTRL_TEST_PHASE_C)) ? g_jf_phase : g_ctrl_test_phase;
-    oi = ((obs_phase >= CTRL_TEST_PHASE_A) &&
-          (obs_phase <= CTRL_TEST_PHASE_C)) ? (uint16_t)(obs_phase - CTRL_TEST_PHASE_A) : 0U;
-    s->obs_idx = oi;
-
-    /* 三相采样换算（raw → 物理量，与 20kHz 控制同源同公式） */
-    for (i = 0U; i < 3U; i++) {
-        s->vac[i]        = g_pll_input_vabc[i];
-        s->vac_raw[i]    = (float)g_vac_raw[i];
-        s->iac_raw[i]    = (float)g_iac_raw[i];
-        s->vac_offset[i] = (float)vac_offset[i];
-        s->iac_offset[i] = (float)iac_offset[i];
-        s->iac[i]        = Measurement_ConvertIac(g_iac_raw[i],
-                                                  iac_offset[i], iac_polarity[i]);
-    }
-    for (i = 0U; i < 6U; i++) {
-        s->vdc[i] = Measurement_ConvertVdc(g_vdc_raw[i], vdc_offset[i]);
-    }
-
-    /* 线电压（同一参考点相电压相减）：Vab = Va−Vb, Vbc = Vb−Vc, Vca = Vc−Va */
-    s->vline[0] = s->vac[0] - s->vac[1];
-    s->vline[1] = s->vac[1] - s->vac[2];
-    s->vline[2] = s->vac[2] - s->vac[0];
-
-    /* PLL */
-    s->pll_freq  = g_pll.freq;
-    s->pll_vd    = g_pll.vd;
-    s->pll_vq    = g_pll.vq;
-    s->pll_vmag  = g_pll.vmag;
+    s->pll_vmag = g_pll.vmag;
     s->pll_theta = g_pll.theta;
-    s->pll_lock  = g_pll_switch_req;
-
-    /* 当前观测相双闭环（控制未运行时相关字段为 0） */
-    p = &g_phase_ctrl[oi];
-    vdc_sum = s->vdc[2U * oi] + s->vdc[2U * oi + 1U];
-    s->vdc_avg      = 0.5f * vdc_sum;
-    s->vdc_balance  = p->vdc_balance;
-    s->vdc_ref_ramp = p->vdc_ref_ramp;
-    s->vdc_integral = p->vdc_integral;
-    s->vdc_err      = p->vdc_ref_ramp - s->vdc_avg;
-    s->iamp         = p->iamp;
-    s->iamp_lim     = (p->iamp >= g_i_limit_a) ? 1.0f : 0.0f;
-    s->id_ref       = p->id_ref;
-    s->iq_ref       = p->iq_ref;
-    s->id           = p->id;
-    s->iq           = p->iq;
-    s->id_err       = p->id_err;
-    s->iq_err       = p->iq_err;
-    s->id_integral  = p->id_integral;
-    s->iq_integral  = p->iq_integral;
-    s->vd_ctrl      = p->vd_ctrl;
-    s->vq_ctrl      = p->vq_ctrl;
-    s->i_alpha      = p->i_alpha;
-    s->i_beta       = p->i_beta;
-    s->m_raw        = p->m_raw;   /* 控制层已存钳位前 m */
-    s->m_final      = p->m;
-    s->theta_phase  = p->theta_phase;
-
-    /* PWM / 安全链 */
-    for (i = 0U; i < 3U; i++) s->mabc[i] = mabc[i];
-    s->uni_polarity = uni_polarity;
-    s->cmp_left     = cmp_left[oi];
-    s->force_left   = force_left[oi];
-    s->cmp_right    = cmp_right[oi];
-    s->force_right  = force_right[oi];
-
-    /* 系统状态 */
-    s->run_request  = g_run_request;
-    s->active_phase = ClosedLoop_GetActivePhase();
-    s->active_mode  = ClosedLoop_GetActiveRunMode();
-    s->gpio30 = (uint16_t)((GpioDataRegs.GPADAT.all >> 30U) & 1U);
-    s->gpio42 = (uint16_t)((GpioDataRegs.GPBDAT.all >> 10U) & 1U);
-    s->gpio44 = (uint16_t)((GpioDataRegs.GPBDAT.all >> 12U) & 1U);
-    s->tz_status = DrvEpwm_GetTripStatus(BOARD_EPWM_MODULE);
-    if (g_pStateMachine != ((StateMachine *)0)) {
-        s->state = (uint16_t)g_pStateMachine->state;
-        s->fault = (uint16_t)g_pStateMachine->first_fault;
-    } else {
-        s->state = 0U;
-        s->fault = 0U;
-    }
-#endif
 }
 
 /*
@@ -366,10 +252,6 @@ __interrupt void App_Epwm1Isr(void)
     Diagnostics  *diag = Diagnostics_Get();
     int16_t       mabc[3];
     uint16_t      phase;
-    uint16_t      dbg_cmp_left[3];
-    uint16_t      dbg_force_left[3];
-    uint16_t      dbg_cmp_right[3];
-    uint16_t      dbg_force_right[3];
 
     static const uint32_t s_left_module[3]  = { 1U, 3U, 5U };
     static const uint32_t s_right_module[3] = { 2U, 4U, 6U };
@@ -377,7 +259,7 @@ __interrupt void App_Epwm1Isr(void)
     diag->fast_isr_count++;
 
     /*
-     * PLL 始终运行: 从 ADC raw 换算三相电网电压 → SRF-PLL → 更新 g_pll。
+     * PLL 始终运行: ADC 线电压 → 重构相电压 → SRF-PLL → 更新 g_pll。
      * 锁定后前台判决置 g_pll_switch_req=1, 下方切换块经 alpha 淡化
      * 将调制参考相位从开环 LUT 平滑切换至 PLL 同步相位。
      */
@@ -418,13 +300,21 @@ __interrupt void App_Epwm1Isr(void)
            * (-0.5f * s_pll_sim_cos + 0.866025404f * s_pll_sim_sin);
         vc = BOARD_PLL_SIM_VPEAK_V
            * (-0.5f * s_pll_sim_cos - 0.866025404f * s_pll_sim_sin);
+        g_pll_input_vline[0] = va - vb;
+        g_pll_input_vline[1] = vb - vc;
+        g_pll_input_vline[2] = vc - va;
 #else
-        float va = Measurement_ConvertVac(g_vac_raw[0],
-                        g_vac_va_offset_counts, BOARD_VAC_VA_POLARITY);
-        float vb = Measurement_ConvertVac(g_vac_raw[1],
-                        g_vac_vb_offset_counts, BOARD_VAC_VB_POLARITY);
-        float vc = Measurement_ConvertVac(g_vac_raw[2],
-                        g_vac_vc_offset_counts, BOARD_VAC_VC_POLARITY);
+        float vab, vbc, vca, va, vb, vc;
+        vab = Measurement_ConvertVac(g_vac_raw[0],
+                        g_vac_vab_offset_counts, BOARD_VAC_VAB_POLARITY);
+        vbc = Measurement_ConvertVac(g_vac_raw[1],
+                        g_vac_vbc_offset_counts, BOARD_VAC_VBC_POLARITY);
+        vca = Measurement_ConvertVac(g_vac_raw[2],
+                        g_vac_vca_offset_counts, BOARD_VAC_VCA_POLARITY);
+        Measurement_LineToPhase(vab, vbc, vca, &va, &vb, &vc);
+        g_pll_input_vline[0] = vab;
+        g_pll_input_vline[1] = vbc;
+        g_pll_input_vline[2] = vca;
 #endif
         g_pll_input_vabc[0] = va;
         g_pll_input_vabc[1] = vb;
@@ -509,12 +399,8 @@ __interrupt void App_Epwm1Isr(void)
 #else
     {
         static uint16_t s_closedloop_was_enabled = 0U;
-        static const float vac_polarity[3] = {
-            BOARD_VAC_VA_POLARITY, BOARD_VAC_VB_POLARITY, BOARD_VAC_VC_POLARITY};
         static const float iac_polarity[3] = {
             BOARD_IAC_IA_POLARITY, BOARD_IAC_IB_POLARITY, BOARD_IAC_IC_POLARITY};
-        const uint16_t vac_offset[3] = {g_vac_va_offset_counts,
-            g_vac_vb_offset_counts, g_vac_vc_offset_counts};
         const uint16_t iac_offset[3] = {g_iac_ia_offset_counts,
             g_iac_ib_offset_counts, g_iac_ic_offset_counts};
         const uint16_t vdc_offset[6] = {g_vdc1_offset_counts, g_vdc2_offset_counts,
@@ -539,7 +425,7 @@ __interrupt void App_Epwm1Isr(void)
         valid = 1U;
         if ((is_run != 0U) || (s_closedloop_was_enabled != 0U)) {
             for (i = 0U; i < 3U; i++) {
-                vac[i] = Measurement_ConvertVac(g_vac_raw[i], vac_offset[i], vac_polarity[i]);
+                vac[i] = g_pll_input_vabc[i];
                 iac[i] = Measurement_ConvertIac(g_iac_raw[i], iac_offset[i], iac_polarity[i]);
             }
             for (i = 0U; i < 6U; i++)
@@ -604,12 +490,6 @@ __interrupt void App_Epwm1Isr(void)
         DrvEpwm_SetHalfBridgeForceHigh(
             s_right_module[phase],
             cmd.right.force_high);
-
-        /* Debug 观测: 捕获本相最终 CMP/force（供 DebugSnapshot，纯观测） */
-        dbg_cmp_left[phase]   = cmd.left.cmp;
-        dbg_force_left[phase] = cmd.left.force_high;
-        dbg_cmp_right[phase]  = cmd.right.cmp;
-        dbg_force_right[phase] = cmd.right.force_high;
     }
 
     /*
@@ -627,16 +507,7 @@ __interrupt void App_Epwm1Isr(void)
 
         /* 快照是纯观测层：按JustFloat的1kHz消费速率更新，控制仍为20kHz。 */
         if (s_debug_snapshot_div == 0U) {
-            DebugSnapshot_Update(mabc,
-                                 (uint16_t)((uni_a ? 1U : 0U) |
-                                            (uni_b ? 2U : 0U) |
-                                            (uni_c ? 4U : 0U)),
-                                 dbg_cmp_left, dbg_force_left,
-                                 dbg_cmp_right, dbg_force_right);
-#if (BOARD_DEBUG_JUSTFLOAT_ENABLE != 0U) && (BOARD_DEBUG_WAVEFORM_LITE != 0U)
-            /* 与快照同一 1kHz 分频点入队；不写 SCITXBUF。 */
-            JustFloat_OnSnapshot();
-#endif
+            DebugSnapshot_Update();
         }
         if (++s_debug_snapshot_div >= (uint16_t)BOARD_DEBUG_SNAPSHOT_DIVIDER)
             s_debug_snapshot_div = 0U;

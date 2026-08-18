@@ -22,7 +22,7 @@
  *        → inverse Park → Vctrl_α → m_raw（Vac 前馈）→ ±m_limit → m_final。
  */
 typedef struct {
-    float vac, iac;              /* 当前相 Vac / Iac（控制输入） */
+    float vac, iac;              /* 当前相 Vac（重构相电压）/ Iac（控制输入） */
     float vdc_avg, vdc_balance;  /* 直流母线均值 / 不平衡度 */
     float vdc_ref_ramp, vdc_integral;  /* Vdc 外环参考斜坡 / 积分（外环保持原样） */
     float iamp;                  /* 外环输出：电流幅值参考（= id_ref 幅值） */

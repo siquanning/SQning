@@ -40,9 +40,9 @@ volatile uint16_t g_vdc3_offset_counts;
 volatile uint16_t g_vdc4_offset_counts;
 volatile uint16_t g_vdc5_offset_counts;
 volatile uint16_t g_vdc6_offset_counts;
-volatile uint16_t g_vac_va_offset_counts;
-volatile uint16_t g_vac_vb_offset_counts;
-volatile uint16_t g_vac_vc_offset_counts;
+volatile uint16_t g_vac_vab_offset_counts;
+volatile uint16_t g_vac_vbc_offset_counts;
+volatile uint16_t g_vac_vca_offset_counts;
 volatile uint16_t g_iac_ia_offset_counts;
 volatile uint16_t g_iac_ib_offset_counts;
 volatile uint16_t g_iac_ic_offset_counts;
@@ -59,9 +59,9 @@ void Measurement_Init(void)
     g_vdc4_offset_counts = BOARD_VDC4_OFFSET_COUNTS_DEFAULT;
     g_vdc5_offset_counts = BOARD_VDC5_OFFSET_COUNTS_DEFAULT;
     g_vdc6_offset_counts = BOARD_VDC6_OFFSET_COUNTS_DEFAULT;
-    g_vac_va_offset_counts = BOARD_VAC_VA_OFFSET_COUNTS_DEFAULT;
-    g_vac_vb_offset_counts = BOARD_VAC_VB_OFFSET_COUNTS_DEFAULT;
-    g_vac_vc_offset_counts = BOARD_VAC_VC_OFFSET_COUNTS_DEFAULT;
+    g_vac_vab_offset_counts = BOARD_VAC_VAB_OFFSET_COUNTS_DEFAULT;
+    g_vac_vbc_offset_counts = BOARD_VAC_VBC_OFFSET_COUNTS_DEFAULT;
+    g_vac_vca_offset_counts = BOARD_VAC_VCA_OFFSET_COUNTS_DEFAULT;
     g_iac_ia_offset_counts = BOARD_IAC_IA_OFFSET_COUNTS_DEFAULT;
     g_iac_ib_offset_counts = BOARD_IAC_IB_OFFSET_COUNTS_DEFAULT;
     g_iac_ic_offset_counts = BOARD_IAC_IC_OFFSET_COUNTS_DEFAULT;
@@ -72,7 +72,7 @@ void Measurement_Init(void)
  *
  * Theoretical check values at current parameters (not hard-coded, for
  * compile-time verification only):
- *   VDC_GAIN ≈ 0.732601 V/count；corrected_raw=546时约400V（Vdc CT1=1000V:2V）
+ *   VDC_GAIN ≈ 0.366300 V/count；corrected_raw=546时约200V（Vdc CT1=1000V:2V，模拟增益1:1）
  *   VAC_GAIN ≈ 0.08774 V/count (× delta)
  *   IAC_GAIN ≈ 0.058608 A/count (× delta)  (Iac CT1 = 100A:5A)
  */
@@ -117,6 +117,18 @@ float Measurement_ConvertVac(uint16_t raw, uint16_t offset, float polarity)
     return polarity * (float)delta * MEAS_VAC_SCALE;
 }
 
+void Measurement_LineToPhase(float vab, float vbc, float vca,
+                             float *va, float *vb, float *vc)
+{
+    const float one_third = 1.0f / 3.0f;
+    if ((va == ((float *)0)) || (vb == ((float *)0)) ||
+        (vc == ((float *)0)))
+        return;
+    *va = (2.0f * vab + vbc) * one_third;
+    *vb = (2.0f * vbc + vca) * one_third;
+    *vc = (2.0f * vca + vab) * one_third;
+}
+
 float Measurement_ConvertIac(uint16_t raw, uint16_t offset, float polarity)
 {
     int32_t delta = (int32_t)raw - (int32_t)offset;
@@ -144,13 +156,15 @@ void Measurement_Update(MeasurementSample *out)
     out->vdc_v[4] = Measurement_ConvertVdc(g_vdc_raw[4], g_vdc5_offset_counts);
     out->vdc_v[5] = Measurement_ConvertVdc(g_vdc_raw[5], g_vdc6_offset_counts);
 
-    /* Vac — bipolar, offset-corrected, instantaneous (not RMS) */
-    out->vac_v[0] = Measurement_ConvertVac(g_vac_raw[0],
-                    g_vac_va_offset_counts, BOARD_VAC_VA_POLARITY);
-    out->vac_v[1] = Measurement_ConvertVac(g_vac_raw[1],
-                    g_vac_vb_offset_counts, BOARD_VAC_VB_POLARITY);
-    out->vac_v[2] = Measurement_ConvertVac(g_vac_raw[2],
-                    g_vac_vc_offset_counts, BOARD_VAC_VC_POLARITY);
+    /* 零偏减在线电压 ADC 上；再重构相电压供 Watch / 与控制同源 */
+    out->vline_v[0] = Measurement_ConvertVac(g_vac_raw[0],
+                    g_vac_vab_offset_counts, BOARD_VAC_VAB_POLARITY);
+    out->vline_v[1] = Measurement_ConvertVac(g_vac_raw[1],
+                    g_vac_vbc_offset_counts, BOARD_VAC_VBC_POLARITY);
+    out->vline_v[2] = Measurement_ConvertVac(g_vac_raw[2],
+                    g_vac_vca_offset_counts, BOARD_VAC_VCA_POLARITY);
+    Measurement_LineToPhase(out->vline_v[0], out->vline_v[1], out->vline_v[2],
+                            &out->vac_v[0], &out->vac_v[1], &out->vac_v[2]);
 
     /* Iac — bipolar, offset-corrected, instantaneous (not RMS) */
     out->iac_a[0] = Measurement_ConvertIac(g_iac_raw[0],

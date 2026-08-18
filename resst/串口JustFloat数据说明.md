@@ -1,18 +1,17 @@
 /* Created by Siquanning */
 # 串口 JustFloat 数据说明
 
-> 更新时间：2026-08-17（匹配当前工程：轻量六通道运行时切换 + 完整 VIEW0~10 + 串口 SET/GET 参数协议）
+> 更新时间：2026-08-18（lite 0=线电压+电流，1=Vdc，2=相电压+PLL跟随）
 
 
 ## 1. 串口模式
 
 - 串口：SCI-C（GPIO62/63）
 - 波特率：576000 bit/s（实际由 LSPCLK 派生：DEV30≈576923 / TARGET20≈568182）
-- 当前 `BOARD_DEBUG_WAVEFORM_LITE=1`：固定 **6 路 `float32` 小端** + 帧尾 `00 00 80 7F`，共 **28 字节**
-- 轻量通道组可运行时切换：模式 0=`Va/Vb/Vc/Ia/Ib/Ic`，模式 1=`Vdc1..Vdc6`，模式 2=`Id_ref/Id/Iq/VdcAvg/VdcRefRamp/m`（当前观测相）
-- `BOARD_DEBUG_WAVEFORM_LITE=0` 时恢复完整 VIEW0~10：固定 8 路，共 36 字节
+- 固定 **6 路 `float32` 小端** + 帧尾 `00 00 80 7F`，共 **28 字节**
+- 通道组用 `g_jf_lite_mode` 运行时切换：0=线电压+电流，1=Vdc1..Vdc6，2=相电压+PLL跟随波
 - 发送周期：**1 ms（1 kHz）**（50Hz 每周期 20 点，可还原交流波形）
-- 上位机：VOFA+，协议 JustFloat（当前轻量模式固定 6 通道，切换通道组无需改配置）
+- 上位机：VOFA+，协议 JustFloat（固定 6 通道，切换通道组无需改 VOFA 配置）
 - 发送位置：1 ms 前台任务末尾；**20 kHz 控制 ISR 内不做任何 SCI 发送**
 - `BOARD_DEBUG_JUSTFLOAT_ENABLE=1`：JustFloat 生效，Modbus RTU 停用
 
@@ -21,70 +20,47 @@
 | 变量 | 范围 | 默认 | 含义 |
 |---|---:|---:|---|
 | `g_jf_enable` | 0/1 | 1 | 0=停 JustFloat，1=开 |
-| `g_jf_view` | 0..10 | 0 | 完整模式页面选择（下表；轻量模式忽略） |
-| `g_jf_phase` | 0..3 | 0 | 观测相：0=自动跟随 `g_ctrl_test_phase`，1=A，2=B，3=C |
-| `g_jf_lite_mode` | 0..2 | 0 | 轻量通道组：0=Vac/Iac，1=Vdc1~6，2=当前相双闭环 |
+| `g_jf_lite_mode` | 0/1/2 | 0 | 0=Vab/Vbc/Vca+Ia/Ib/Ic，1=Vdc1~6，2=Va/Vb/Vc+PLL跟随波 |
+| `g_jf_phase` | 0..3 | 0 | 观测相（协议保留；当前六通道组不使用） |
 
-四个变量 CCS Expressions 可直接在线改，也可经串口修改（见 §4）。`g_jf_phase` 只影响观测（VIEW2/3/4/5/9 的"当前相"），不影响控制相别锁存。
+CCS Expressions 可直接在线改，也可经串口修改（见 §4）。
 
-## 3. 完整模式 VIEW 通道定义（g_jf_view=0..10）
+## 3. 轻量通道组
 
-以下 VIEW 仅在 `BOARD_DEBUG_WAVEFORM_LITE=0` 时生效；当前轻量模式请用 `g_jf_lite_mode` 切换三组六通道。
+| mode | CH1 | CH2 | CH3 | CH4 | CH5 | CH6 |
+|---|---|---|---|---|---|---|
+| 0 | Vab | Vbc | Vca | Ia | Ib | Ic |
+| 1 | Vdc1 | Vdc2 | Vdc3 | Vdc4 | Vdc5 | Vdc6 |
+| 2 | Va | Vb | Vc | PLL跟随A | PLL跟随B | PLL跟随C |
 
-轻量模式通道（固定 6 路，`g_jf_lite_mode`）：
+- **mode 0** 的 Vab/Vbc/Vca 是 ADC 实测**线电压**（`g_pll_input_vline`）。
+- **mode 2** 的 Va/Vb/Vc 是线→相重构后的**相电压**（`g_pll_input_vabc` / PLL 输入）；跟随波为 `vmag·cos(θ±0/120/240°)`，锁定且相序正确时应与三相相电压重合。
+- 线电压也可在 CCS 看 `g_measurement.vline_v[0..2]`。
+- dq 看 CCS：`g_phase_ctrl[X].*`。
 
-| 模式 | 页面 | CH1 | CH2 | CH3 | CH4 | CH5 | CH6 |
-|---|---|---|---|---|---|---|---|
-| 0 | 交流采样 | Va | Vb | Vc | Ia | Ib | Ic |
-| 1 | 六路 Vdc | Vdc1 | Vdc2 | Vdc3 | Vdc4 | Vdc5 | Vdc6 |
-| 2 | 双闭环(当前相) | Id_ref | Id | Iq | VdcAvg | VdcRefRamp | m |
+通道数据来源：**统一 DebugSnapshot**（`g_dbg_snap`）——20 kHz 控制 ISR 每 20 拍更新一次（1 kHz），1 ms 前台在 DINT 保护下整帧拷贝后发送。
 
-| VIEW | 页面 | CH1 | CH2 | CH3 | CH4 | CH5 | CH6 | CH7 | CH8 |
-|---|---|---|---|---|---|---|---|---|---|
-| 0 | PLL 跟随 | 实测Va | 实测Vb | 实测Vc | PLL跟随A | PLL跟随B | PLL跟随C | freq | vq |
-| 1 | PLL 内部 | Va | Vb | Vc | vd | vq | vmag | freq | lock |
-| 2 | 采样 | Ia | Ib | Ic | Va | Vb | Vc | 当前相Vdc1 | 当前相Vdc2 |
-| 3 | Vdc 总览 | Vdc1 | Vdc2 | Vdc3 | Vdc4 | Vdc5 | Vdc6 | 当前相VdcAvg | VdcRefRamp |
-| 4 | Vdc 外环(当前相) | Vdc1 | Vdc2 | VdcAvg | VdcRefRamp | VdcErr | Iamp | VdcIntegral | Iamp限幅标志 |
-| 5 | **dq 内环(当前相)** | Id_ref | Id | Id_err | Iq_ref | Iq | Iq_err | Vd_ctrl | Vq_ctrl |
-| 6 | PWM/安全 | m_final | 左桥CMP | 右桥CMP | UNI极性 | GPIO30 | activePhase | TZ状态 | state |
-| 7 | 启停 | runReq | state | activePhase | pllLock | GPIO30 | GPIO42 | GPIO44 | firstFault |
-| 8 | 综合 | VdcAvg | Vac | Iac | Id_ref | m_final | freq | state | fault |
-| 9 | QSG 诊断 | Iac | Ialpha | Ibeta | theta_phase | Id | Iq | freq | activePhase |
-| 10 | 线电压 | Vab | Vbc | Vca | vmag | freq | vq | activePhase | pllLock |
+### 现场看点
 
-通道数据来源：**统一 DebugSnapshot**（`g_dbg_snap`）——20 kHz 控制 ISR 每 20 拍更新一次（1 kHz），1 ms 前台在 DINT 保护下整帧拷贝后发送，保证一帧通道属于同一控制时刻。
+- **mode 0**：三路线电压相差 120°、电流同相序。
+- **mode 1**：六路母线。
+- **mode 2**：相电压与三路跟随波重合、相序正确；再在 CCS 看 `g_pll.freq≈50`、`vq≈0`、`g_pll_switch_req=1`。
+- dq 验收：CCS 看电流与**相电压**同相时 **Id>0、Iq≈0**。
 
-### 各页看点
+## 4. 串口参数协议（SCI-C 576000）
 
-- **VIEW0（默认页）**：实测 Vac 与 PLL 跟随波重合 → 锁相且相序正确；`vq≈0` 锁相误差；`freq≈50`。PLL 无电网输入时 freq=50 且 lock=0（holdover，正常）。
-- **VIEW1**：PLL 内部 dq/幅值；`lock=1`（`g_pll_switch_req`）= 已锁定并切到 PLL。
-- **VIEW2**：三相电流、三相电压与当前相 Vdc1/2 采样总览。
-- **VIEW3**：六路母线全览 + 当前相平均与参考。
-- **VIEW4**：电压外环——VdcAvg 追 VdcRefRamp、VdcErr、Iamp（限幅标志=1 表示顶 `g_i_limit_a`）。
-- **VIEW5（dq 验收关键页）**：电流与相电压同相时 **Id>0、Iq≈0**；Id_ref 追 Id；Vd/Vq_ctrl 为 dq PI 输出。
-- **VIEW6**：m_final；左/右桥 CMP（**65535 = 该桥臂被 AQCSFRC 钳位**，正常斩波时显示真实 CMPA）；UNI 极性；GPIO30；activePhase；TZ 状态；state（0~4）。
-- **VIEW7**：启停与故障——runReq、state、activePhase、pllLock、GPIO30/42/44、firstFault（故障码查这里）。
-- **VIEW8**：综合巡检一页。
-- **VIEW9**：SOGI 虚拟正交轴——Iα/Iβ 应正交（相位差约 90°）、幅值合理。
-- **VIEW10**：三路线电压及 PLL 幅值、频率和锁定状态。
+帧格式固定 7 字节：`[group][0xFF][cmd/id][payload 4B]`。payload 为 float32 小端（DEBUG 组只用最后 1 字节）。
 
-## 4. 串口参数协议（SCI-C RX，7 字节定长帧）
+### SET（写入参数）
 
-帧格式：`[group][0xFF marker][command][payload 4B]`。PARAMS 组 payload 为 `float32 LE`；DEBUG 组的单字节值位于 payload 最后一字节，即 `[00 00 00 value]`。
-
-### SET（修改参数）
-
-**PARAMS 组（group=0xFF）**——float 值，带上下限检查，越界拒绝：
+**PARAMS 组（group=0xFF）**——float 值：
 
 | cmd | 参数 | 写入变量 | 范围 |
 |---|---:|---|---|
-| 0x00 | PLL_KP | (PLL 暂存→1ms提交) | 0~500 |
-| 0x01 | PLL_KI | 同上 | 0~10000 |
-| 0x02/03/04 | freq_min/max/nom | 同上 | 40~60Hz |
-| 0x05/06 | vq_lock/unlock_ratio | 同上 | 0.001~0.50 |
-| 0x07 | VDC_TARGET | `g_vdc_target_v` | 0~600V |
-| 0x08 | IAMP_LIMIT | `g_i_limit_a` | 0~100A |
+| 0x00 | PLL_KP | 暂存，1ms 提交 | 见 board_config.h |
+| 0x01 | PLL_KI | 暂存，1ms 提交 | 见 board_config.h |
+| 0x07 | VDC_TARGET | `g_vdc_target_v` | 0~600 |
+| 0x08 | IAMP_LIMIT | `g_i_limit_a` | 0~100 |
 | 0x09 | M_LIMIT | `g_m_limit` | 0~0.98 |
 | 0x0A | CURRENT_KP | `g_kp_i` | 0~100 |
 | 0x0B | CURRENT_KI | `g_ki_i` | 0~100000 |
@@ -94,12 +70,12 @@
 | cmd | 参数 | 写入变量 | 范围 |
 |---|---:|---|---|
 | 0x00 | JF_ENABLE | `g_jf_enable` | 0/1 |
-| 0x01 | JF_VIEW | `g_jf_view` | 0~10 |
+| 0x01 | （已删除） | — | 拒绝 |
 | 0x02 | 恢复默认 PLL 参数 | — | — |
 | 0x03 | JF_PHASE | `g_jf_phase` | 0~3 |
-| 0x04 | JF_LITE_MODE | `g_jf_lite_mode` | 0=Vac/Iac，1=Vdc1~6，2=当前相双闭环 |
+| 0x04 | JF_LITE_MODE | `g_jf_lite_mode` | 0=线电压+Iac，1=Vdc，2=相电压+PLL跟随 |
 
-示例：切到双闭环页 → 发 `FE FF 04 00 00 00 02`；切到六路 Vdc → 发 `FE FF 04 00 00 00 01`；切回 Vac/Iac → 发 `FE FF 04 00 00 00 00`。
+示例：切到 PLL 跟随 → 发 `FE FF 04 00 00 00 02`；切到六路 Vdc → `FE FF 04 00 00 00 01`；切回线电压 → `FE FF 04 00 00 00 00`。
 
 ### GET（读取参数）
 
@@ -110,7 +86,7 @@
 | 0x00 | PLL_KP | 0x05 | CURRENT_KP |
 | 0x01 | PLL_KI | 0x06 | CURRENT_KI |
 | 0x02 | VDC_TARGET | 0x07 | JF_ENABLE |
-| 0x03 | IAMP_LIMIT | 0x08 | JF_VIEW |
+| 0x03 | IAMP_LIMIT | 0x08 | （已删除，拒绝） |
 | 0x04 | M_LIMIT | 0x09 | JF_PHASE |
 | 0x0A | JF_LITE_MODE |  |  |
 
@@ -118,11 +94,11 @@
 
 ## 5. 推荐现场顺序
 
-1. STOP 态：`g_jf_view=0` 确认 PLL 锁定与相序（跟随波重合、freq≈50、vq≈0、lock=1）
-2. `g_jf_view=2` 标定采样（零偏/比例）；`g_jf_view=3/4` 看母线
-3. 首次 RUN（只放目标相）：`g_jf_view=5` **验收 dq 方向（Id>0、Iq≈0）**；`g_jf_view=9` 看 SOGI 正交轴
-4. 异常先看 `g_jf_view=7`（firstFault）；STOP 后再改 `g_ctrl_test_phase` 换相
-5. 升压/提限幅前确认 VIEW6 m_final 未持续饱和、VIEW3 六路母线平衡、`fast_isr.max_cycles` 余量
+1. STOP 态：lite mode 0 看线电压；mode 2 看相电压与 PLL 跟随波重合；CCS 确认 `freq≈50`、`vq≈0`、`lock=1`
+2. 标定采样（线电压 Vab/Vbc/Vca 零偏/比例、Vdc 锚点）；lite mode 0 看线电压校零，lite mode 1 看六路母线；禁止用 mode 2 调零偏
+3. 首次 RUN（只放目标相）：CCS 验收 **Id>0、Iq≈0**；看 `g_phase_ctrl[X].i_alpha/i_beta`
+4. 异常先看 `g_diagnostics.fault_code` / `g_dbg_snap` 之外的状态机变量；STOP 后再改 `g_ctrl_test_phase`
+5. 升压前确认 `g_phase_ctrl[X].m` 未持续饱和、六路母线平衡、`fast_isr.max_cycles` 余量
 
 ## 6. 当前控制参数默认值（board_config.h）
 

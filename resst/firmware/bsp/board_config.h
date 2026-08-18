@@ -55,8 +55,11 @@
  * ADC 通道映射 — 12 路 SEQ1 级联采样，由 EPWM1 SOCA 触发 (CTR=ZERO, 20kHz)
  *
  *   CONV00..05 → ADCRESULT0..5  → Vdc1..Vdc6   (ADCINB6,B7,B4,B5,B2,B3)
- *   CONV06..08 → ADCRESULT6..8  → Va / Vb / Vc  (ADCINB1, ADCINB0, ADCINA0)
+ *   CONV06..08 → ADCRESULT6..8  → Vab / Vbc / Vca  (ADCINB1, ADCINB0, ADCINA0)
  *   CONV09..11 → ADCRESULT9..11 → Ia / Ib / Ic  (ADCINA7, ADCINA6, ADCINA5)
+ *
+ * Vac 三路硬件采的是线电压。ConvertVac 输出 Vab/Vbc/Vca，
+ * Measurement_LineToPhase 重构 Va/Vb/Vc 后再进 PLL 与闭环前馈。
  */
 #define BOARD_ADC_CONV00            0xEU    /* ADCINB6 → Vdc1 */
 #define BOARD_ADC_CONV01            0xFU    /* ADCINB7 → Vdc2 */
@@ -64,9 +67,9 @@
 #define BOARD_ADC_CONV03            0xDU    /* ADCINB5 → Vdc4 */
 #define BOARD_ADC_CONV04            0xAU    /* ADCINB2 → Vdc5 */
 #define BOARD_ADC_CONV05            0xBU    /* ADCI NB3 → Vdc6 */
-#define BOARD_ADC_CONV06            0x9U    /* ADCINB1 → Va */
-#define BOARD_ADC_CONV07            0x8U    /* ADCINB0 → Vb */
-#define BOARD_ADC_CONV08            0x0U    /* ADCINA0 → Vc */
+#define BOARD_ADC_CONV06            0x9U    /* ADCINB1 → Vab */
+#define BOARD_ADC_CONV07            0x8U    /* ADCINB0 → Vbc */
+#define BOARD_ADC_CONV08            0x0U    /* ADCINA0 → Vca */
 #define BOARD_ADC_CONV09            0x7U    /* ADCINA7 → Ia */
 #define BOARD_ADC_CONV10            0x6U    /* ADCINA6 → Ib */
 #define BOARD_ADC_CONV11            0x5U    /* ADCINA5 → Ic */
@@ -211,7 +214,7 @@
 /*
  * 电压采样链 (analog signal path):
  *
- *   V_primary [Vrms]
+ *   V_primary [Vrms]  （三路 CT 一次侧为线电压 Vab/Vbc/Vca）
  *     → CT1:  V_s1 = V_primary × (CT1_SEC_V / CT1_PRI_V)
  *     → CT2:  I_s2 = V_s1 × (CT2_SEC_A / CT2_PRI_V)              [A]
  *     → R28:  V_tia = I_s2 × TIA_OHM                              [V]
@@ -254,16 +257,18 @@
 #define BOARD_VAC_BIAS_V               1.5f
 
 /*
- * VAC各通道ADC零偏上电默认值，单位ADC count；现场临时修改
- * g_vac_vx_offset_counts。零偏只修正零输入读数，禁止用来补偿比例误差。
+ * VAC 线电压通道 ADC 零偏上电默认值，单位 ADC count。
+ * 现场临时修改 g_vac_vab/vbc/vca_offset_counts；看 g_measurement.vline_v，
+ * 禁止对着重构相电压 vac_v / JustFloat mode 2 调零偏。
+ * 零偏只修正零输入读数，禁止用来补偿比例误差。
  */
-#define BOARD_VAC_VA_OFFSET_COUNTS_DEFAULT 2028U
-#define BOARD_VAC_VB_OFFSET_COUNTS_DEFAULT 2059U
-#define BOARD_VAC_VC_OFFSET_COUNTS_DEFAULT 2059U
+#define BOARD_VAC_VAB_OFFSET_COUNTS_DEFAULT 2023U
+#define BOARD_VAC_VBC_OFFSET_COUNTS_DEFAULT 2040U
+#define BOARD_VAC_VCA_OFFSET_COUNTS_DEFAULT 2559U
 
-#define BOARD_VAC_VA_POLARITY        (+1.0f)
-#define BOARD_VAC_VB_POLARITY        (+1.0f)
-#define BOARD_VAC_VC_POLARITY        (+1.0f)
+#define BOARD_VAC_VAB_POLARITY       (+1.0f)
+#define BOARD_VAC_VBC_POLARITY       (+1.0f)
+#define BOARD_VAC_VCA_POLARITY       (+1.0f)
 
 /* ============================================================
  * Vdc采样标定参数
@@ -313,10 +318,10 @@
 #define BOARD_VDC_CT2_SEC_V          1.0f
 
 /*
- * CT2之后至ADC输入之间实测包含约1/2分压，模拟增益为0.5。
+ * CT2之后至ADC输入之间按1:1进入ADC，模拟增益为1.0。
  * 修改前必须依据实际模拟调理电路确认，Measurement层将统一使用该值换算。
  */
-#define BOARD_VDC_ANALOG_GAIN          0.5f
+#define BOARD_VDC_ANALOG_GAIN          1.0f
 
 /* ============================================================
  * Vdc各通道ADC零偏上电默认值
@@ -371,7 +376,7 @@
  *     （恢复功率闭环测试前必须确认采样标定/TZ/功率方向，见工程报告§10）。
  */
 #ifndef BOARD_PLL_RELAY_TEST_ONLY
-#define BOARD_PLL_RELAY_TEST_ONLY          0U
+#define BOARD_PLL_RELAY_TEST_ONLY          1U
 #endif
 
 /* PLL纯软件输入模拟：一个50Hz相位源派生三相，峰值10V，仅限台架模式。 */
@@ -534,51 +539,20 @@
 #define BOARD_DEBUG_JUSTFLOAT_ENABLE   1U
 
 /*
- * 轻量波形模式（仅观测负担裁剪，不删除任何采样/控制代码）:
- *   1 = JustFloat 固定 6 通道轻量帧（6×float + 帧尾 = 28B/帧）；
- *       g_jf_lite_mode 运行时切换：0=Vac/Iac、1=Vdc1..Vdc6、2=当前相双闭环。
- *       1kHz DebugSnapshot 更新这三组观测值，不再计算/复制 PLL 跟随波、
- *       CMP、GPIO、线电压等暂时用不到的观测字段。
- *       12 路 ADC 采样、sequencer、PLL、dq、PWM、安全链全部保持原样。
- *   0 = 恢复现有完整 VIEW0~10（8×float + 帧尾 = 36B/帧）。
+ * JustFloat 固定 6 通道帧（6×float + 帧尾 = 28B/帧）。
+ * g_jf_lite_mode 运行时切换通道组，不改变帧长：
+ *   0 = 实测线电压 Vab/Vbc/Vca + Ia/Ib/Ic
+ *   1 = Vdc1..Vdc6
+ *   2 = 重构相电压 Va/Vb/Vc + PLL 三相跟随波
+ * 1kHz DebugSnapshot 更新上述通道所需采样值。
+ * 12 路 ADC 采样、sequencer、PLL、dq、PWM、安全链全部保持原样。
  */
-#define BOARD_DEBUG_WAVEFORM_LITE      1U
-
-/* 轻量 JustFloat 运行时通道组（只改变观测内容，不改变帧长）。 */
-#define JUSTFLOAT_LITE_MODE_AC         0U   /* Va/Vb/Vc/Ia/Ib/Ic */
+#define JUSTFLOAT_LITE_MODE_LINE       0U   /* Vab/Vbc/Vca + Ia/Ib/Ic */
+#define JUSTFLOAT_LITE_MODE_AC         JUSTFLOAT_LITE_MODE_LINE
 #define JUSTFLOAT_LITE_MODE_VDC        1U   /* Vdc1..Vdc6 */
-#define JUSTFLOAT_LITE_MODE_DQ         2U   /* Id_ref/Id/Iq/VdcAvg/VdcRefRamp/m */
-#define JUSTFLOAT_LITE_MODE_MAX        JUSTFLOAT_LITE_MODE_DQ
-#define BOARD_JUSTFLOAT_LITE_MODE_DEFAULT  JUSTFLOAT_LITE_MODE_AC
+#define JUSTFLOAT_LITE_MODE_PLL        2U   /* Va/Vb/Vc + PLL 跟随波 */
+#define BOARD_JUSTFLOAT_LITE_MODE_DEFAULT  JUSTFLOAT_LITE_MODE_LINE
 
-/*
- * JustFloat VIEW 编号（固定 8 通道帧，g_jf_view 运行时切换）:
- *   0 = PLL 跟随: 实测Va/Vb/Vc + PLL生成三相跟随波 + freq + vq
- *   1 = PLL 内部: Va/Vb/Vc + vd/vq/vmag + freq + lock
- *   2 = 采样:     当前观测相 Vac raw/corrected + Iac raw/corrected
- *                 + Vdc1/Vdc2 + Vac offset + Iac offset
- *   3 = Vdc 总览: Vdc1..Vdc6 + 当前相 VdcAvg + VdcRefRamp
- *   4 = Vdc 外环: Vdc1/Vdc2/VdcAvg/VdcRefRamp/VdcErr/Iamp/VdcIntegral/IampLim
- *   5 = dq 内环:  Id_ref/Id/Id_err/Iq_ref/Iq/Iq_err/Vd_ctrl/Vq_ctrl
- *   6 = PWM/安全: m_final/左桥CMP/右桥CMP/UNI/GPIO30/activePhase/TZ/state
- *   7 = 启停:     runReq/state/activePhase/pllLock/GPIO30/GPIO42/GPIO44/fault
- *   8 = 综合:     VdcAvg/Vac/Iac/Id_ref/m_final/freq/state/fault
- *   9 = QSG 诊断: Iac/Ialpha/Ibeta/theta_phase/Id/Iq/freq/activePhase
- *   10 = 线电压:  Vab/Vbc/Vca + vmag/freq/vq/activePhase/pllLock
- */
-#define DEBUG_VIEW_PLL                 0U
-#define DEBUG_VIEW_PLL_INTERNAL        1U
-#define DEBUG_VIEW_ACQ                 2U
-#define DEBUG_VIEW_VDC_OVERVIEW        3U
-#define DEBUG_VIEW_VDC_LOOP            4U
-#define DEBUG_VIEW_DQ_LOOP             5U   /* 原 IAC_LOOP：改为 dq 电流内环 */
-#define DEBUG_VIEW_PWM_SAFETY          6U
-#define DEBUG_VIEW_RUNSTATE            7U
-#define DEBUG_VIEW_OVERVIEW            8U
-#define DEBUG_VIEW_QSG_DIAG            9U
-#define DEBUG_VIEW_LINE_V             10U
-#define DEBUG_VIEW_MAX                10U
-#define BOARD_DEBUG_VIEW_DEFAULT       DEBUG_VIEW_PLL
 #define BOARD_JUSTFLOAT_ENABLE_DEFAULT  1U
 #define BOARD_JUSTFLOAT_PERIOD_MS        1U  /* 1ms任务每拍发送：1kHz，50Hz每周期20点 */
 #define BOARD_DEBUG_SNAPSHOT_RATE_HZ  1000UL /* 纯观测快照与JustFloat同频，避免占满20kHz ISR */

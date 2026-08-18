@@ -12,7 +12,8 @@
  */
 typedef struct {
     float vdc_v[6];   /* Vdc1..Vdc6  瞬时直流母线电压 [V] */
-    float vac_v[3];   /* Va, Vb, Vc   瞬时交流端电压   [V] */
+    float vline_v[3]; /* Vab, Vbc, Vca  ADC 实测线电压 [V] */
+    float vac_v[3];   /* Va, Vb, Vc   由线电压重构的相电压 [V] */
     float iac_a[3];   /* Ia, Ib, Ic   瞬时交流电流     [A] */
 } MeasurementSample;
 
@@ -26,6 +27,7 @@ extern MeasurementSample g_measurement;
  * 可在CCS Expressions在线修改；DSP复位后由Measurement_Init()重新加载
  * board_config.h中的对应*_OFFSET_COUNTS_DEFAULT。
  * 零偏只用于修正零输入码值，禁止用来补偿CT1/CT2/Gain等比例误差。
+ * Vac 三路零偏对应线电压 ADC（Vab/Vbc/Vca），不要对着 vac_v 调。
  */
 extern volatile uint16_t g_vdc1_offset_counts;
 extern volatile uint16_t g_vdc2_offset_counts;
@@ -33,9 +35,9 @@ extern volatile uint16_t g_vdc3_offset_counts;
 extern volatile uint16_t g_vdc4_offset_counts;
 extern volatile uint16_t g_vdc5_offset_counts;
 extern volatile uint16_t g_vdc6_offset_counts;
-extern volatile uint16_t g_vac_va_offset_counts;
-extern volatile uint16_t g_vac_vb_offset_counts;
-extern volatile uint16_t g_vac_vc_offset_counts;
+extern volatile uint16_t g_vac_vab_offset_counts; /* Vab 线电压 ADC 零偏 */
+extern volatile uint16_t g_vac_vbc_offset_counts; /* Vbc 线电压 ADC 零偏 */
+extern volatile uint16_t g_vac_vca_offset_counts; /* Vca 线电压 ADC 零偏 */
 extern volatile uint16_t g_iac_ia_offset_counts;
 extern volatile uint16_t g_iac_ib_offset_counts;
 extern volatile uint16_t g_iac_ic_offset_counts;
@@ -52,11 +54,23 @@ void Measurement_Init(void);
 float Measurement_ConvertVdc(uint16_t raw, uint16_t offset);
 
 /*
- * Vac: delta = (int32_t)raw - offset，每相使用独立offset运行变量
+ * Vac: delta = (int32_t)raw - offset，每路线电压通道独立 offset
+ *      （g_vac_vab/vbc/vca_offset_counts），在 ADC 码上减零偏。
  *      V_primary = polarity × delta × VREF/MAX_COUNT / (TIA×GAIN)
  *                × CT2_PRI_V/CT2_SEC_A × CT1_PRI_V/CT1_SEC_V
+ *      输出为线电压 Vab/Vbc/Vca [V]，不是相电压。
  */
 float Measurement_ConvertVac(uint16_t raw, uint16_t offset, float polarity);
+
+/*
+ * 线电压 → 相电压（消零序）：
+ *   Va = (2·Vab + Vbc) / 3
+ *   Vb = (2·Vbc + Vca) / 3
+ *   Vc = (2·Vca + Vab) / 3
+ * PLL / 闭环前馈使用重构后的相电压；不能只除 √3（会留下 30°）。
+ */
+void Measurement_LineToPhase(float vab, float vbc, float vca,
+                             float *va, float *vb, float *vc);
 
 /*
  * Iac: delta = (int32_t)raw - offset，每相使用独立offset运行变量

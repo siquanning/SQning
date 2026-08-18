@@ -22,9 +22,9 @@ int main(void)
 
     CHECK(g_vdc1_offset_counts == 0U && g_vdc6_offset_counts == 0U,
           "Vdc offset defaults loaded independently");
-    CHECK(g_vac_va_offset_counts == BOARD_VAC_VA_OFFSET_COUNTS_DEFAULT &&
+    CHECK(g_vac_vab_offset_counts == BOARD_VAC_VAB_OFFSET_COUNTS_DEFAULT &&
           g_iac_ic_offset_counts == BOARD_IAC_IC_OFFSET_COUNTS_DEFAULT,
-          "Vac/Iac offset defaults loaded");
+          "Vac line / Iac offset defaults loaded");
 
     vdc_one_count = Measurement_ConvertVdc(1U, 0U);
     CHECK(Measurement_ConvertVdc(99U, 100U) == 0.0f,
@@ -33,10 +33,10 @@ int main(void)
           "Vdc raw equal offset is zero");
     CHECK(fabsf(Measurement_ConvertVdc(101U, 100U) - vdc_one_count) < 1.0e-7f,
           "Vdc uses max(raw-offset,0) times scale");
-    CHECK(fabsf(vdc_one_count - 0.732601f) < 0.000001f,
-          "Vdc CT1 1000:2 scale is about 0.732601 V/count");
-    CHECK(fabsf(Measurement_ConvertVdc(546U, 0U) - 400.0f) < 0.001f,
-          "Vdc CT1 1000:2: corrected raw 546 equals about 400 V");
+    CHECK(fabsf(vdc_one_count - 0.366300f) < 0.000001f,
+          "Vdc CT1 1000:2 analog 1:1 scale is about 0.366300 V/count");
+    CHECK(fabsf(Measurement_ConvertVdc(546U, 0U) - 200.0f) < 0.001f,
+          "Vdc CT1 1000:2 analog 1:1: corrected raw 546 equals about 200 V");
 
     CHECK(fabsf(Measurement_ConvertVac(2049U, 2048U, 1.0f) - 0.08774f) < 0.0001f,
           "Vac CT1 1:1 scale is about 0.08774 V/count");
@@ -47,6 +47,21 @@ int main(void)
           "Vac keeps signed raw-offset result");
     CHECK(Measurement_ConvertIac(2047U, 2048U, 1.0f) < 0.0f,
           "Iac keeps signed raw-offset result");
+
+    {
+        float va, vb, vc;
+        /* A 相峰值：Va=1, Vb=Vc=-0.5 → Vab=1.5, Vbc=0, Vca=-1.5 */
+        Measurement_LineToPhase(1.5f, 0.0f, -1.5f, &va, &vb, &vc);
+        CHECK(fabsf(va - 1.0f) < 1.0e-6f &&
+              fabsf(vb + 0.5f) < 1.0e-6f &&
+              fabsf(vc + 0.5f) < 1.0e-6f,
+              "LineToPhase reconstructs Va=1 at A-peak");
+        CHECK(fabsf((va - vb) - 1.5f) < 1.0e-6f,
+              "reconstructed Van-Vbn equals Vab");
+        Measurement_LineToPhase(0.0f, 0.0f, 0.0f, ((float *)0), &vb, &vc);
+        CHECK(fabsf(vb + 0.5f) < 1.0e-6f,
+              "LineToPhase null pointer is a no-op");
+    }
 
     g_vdc1_offset_counts = 10U;
     g_vdc2_offset_counts = 20U;

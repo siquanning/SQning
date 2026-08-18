@@ -10,8 +10,10 @@ extern "C" {
 #endif
 
 extern PLL_State g_pll;
-/* PLL本拍实际输入：ADC换算值或台架模拟三相值，供JustFloat观察。 */
+/* PLL本拍输入：重构后的相电压 Va/Vb/Vc（仿真路径则直接为相电压）。 */
 extern volatile float g_pll_input_vabc[3];
+/* 本拍实测线电压 Vab/Vbc/Vca（仿真路径由相电压相减得到）。 */
+extern volatile float g_pll_input_vline[3];
 
 /* ---- PLL 软切换全局状态 ----
  * g_pll_switch_req: 前台 10ms 锁定判决写入 (0=回开环, 1=切 PLL)，ISR 只读

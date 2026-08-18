@@ -58,22 +58,23 @@ g_bypass_switch_cmd                    期望0
 01 03 00 00 00 0C 45 CF
 ```
 
-回复中HR0～HR11依次为Vdc1～Vdc6、Va～Vc、Ia～Ic的16位raw，高字节在前。连续采集至少100帧，各通道独立求平均并四舍五入。不要用单帧值作为offset。
+回复中HR0～HR11依次为Vdc1～Vdc6、Vab/Vbc/Vca、Ia～Ic的16位raw，高字节在前。连续采集至少100帧，各通道独立求平均并四舍五入。不要用单帧值作为offset。不要用带电交流波形的均值当零偏。
 
 ### 4.3 CCS写入运行offset
 
 ```text
 g_vdc1_offset_counts ... g_vdc6_offset_counts
-g_vac_va_offset_counts, g_vac_vb_offset_counts, g_vac_vc_offset_counts
+g_vac_vab_offset_counts, g_vac_vbc_offset_counts, g_vac_vca_offset_counts
 g_iac_ia_offset_counts, g_iac_ib_offset_counts, g_iac_ic_offset_counts
 ```
 
-单位均为ADC count。写入各通道raw平均值后观察：
+单位均为ADC count。Vac 零偏只校正 **线电压** 三路 ADC（Vab/Vbc/Vca）。JustFloat 用 lite mode 0 看 l0/l1/l2；CCS 看 `g_measurement.vline_v`。禁止对着重构相电压 `vac_v` 或 lite mode 2 调零偏。写入各通道raw平均值后观察：
 
 ```text
-g_measurement.vdc_v[0..5]   接近0且不为负
-g_measurement.vac_v[0..2]   围绕0小幅正负波动
-g_measurement.iac_a[0..2]   围绕0小幅正负波动
+g_measurement.vdc_v[0..5]     接近0且不为负
+g_measurement.vline_v[0..2]   围绕0小幅正负波动（Vab/Vbc/Vca）
+g_measurement.vac_v[0..2]     线电压校零后应跟着绕0，不要用它反拧 offset
+g_measurement.iac_a[0..2]     围绕0小幅正负波动
 ```
 
 确认稳定后，把数值写回 `board_config.h` 中对应的 `*_OFFSET_COUNTS_DEFAULT`，重新编译、下载、复位并复查。Offset只校正零点；若输入翻倍而软件结果不近似翻倍，应检查CT1/CT2/Gain，不得继续调offset。
@@ -115,6 +116,7 @@ PLL测试期间GPIO21保持0、PWM Block、GPIO22/23保持0。给Vac采样端输
 CCS观察：
 
 ```text
+g_measurement.vline_v[0..2]
 g_measurement.vac_v[0..2]
 g_pll.vmag
 g_pll.freq
@@ -128,9 +130,9 @@ g_switch_phase_err_deg
 
 通过标准：三相波形幅值和相序正确；`g_pll.freq`稳定在50Hz附近；`|vq|`明显小于`vmag`且`vd`为正；连续满足现有判据约200ms后 `g_pll_switch_req=1`；随后约200ms内 `g_switch_alpha`平滑升到1附近，无突跳和FAULT。撤去或降低Vac后，应按现有失锁/holdover逻辑变化，不得出现非法PWM释放。
 
-当前 `BOARD_PLL_LOCK_VMAG_MIN_V=50.0V`，表示Clarke变换后的αβ矢量峰值门槛；对于220Vrms相电压，正常幅值约311V。测试相电压至少约35.4Vrms（线电压约61.2Vrms）才能越过50V峰值门槛。`g_pll.freq≈50Hz`不能单独证明锁定，因为门槛以下PLL会执行50Hz holdover。
+当前 `BOARD_PLL_LOCK_VMAG_MIN_V=10.0V`，表示 Clarke 变换后的**相电压** αβ 矢量峰值门槛。硬件采的是线电压，软件先重构相电压再进 PLL。对于 220Vrms 相电压，正常幅值约 311V。相电压峰值超过 10V（约 7.1Vrms 相电压 / 12.2Vrms 线电压）才能越过门槛。`g_pll.freq≈50Hz` 不能单独证明锁定，因为门槛以下 PLL 会执行 50Hz holdover。
 
-若PLL不锁，依次检查：Vac offset、三相通道映射、相序、`g_pll.vmag`是否超过50V、频率、vd/vq和TZ状态。不要先修改PI、theta、90°补偿或alpha算法。
+若 PLL 不锁，依次检查：线电压 Vab/Vbc/Vca 的 offset（`g_vac_vab/vbc/vca_offset_counts`）、三相通道映射、相序、`g_pll.vmag` 是否超过 10V、频率、vd/vq 和 TZ 状态。不要先修改 PI、theta、90° 补偿或 alpha 算法。
 
 ## 7. 不控整流软启动与预充测试
 

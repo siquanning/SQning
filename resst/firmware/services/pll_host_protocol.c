@@ -111,9 +111,7 @@ static uint16_t apply_debug(PllHostProtocol *p, uint16_t command,
         g_jf_enable = value;
         return 1U;
     case 0x01U:
-        if (value > DEBUG_VIEW_MAX) return 0U;
-        g_jf_view = value;
-        return 1U;
+        return 0U;   /* 原 JF_VIEW 已删除 */
     case 0x02U:
         PLL_GetDefaultParams(&p->pending);
         p->pending_dirty = 1U;
@@ -123,7 +121,7 @@ static uint16_t apply_debug(PllHostProtocol *p, uint16_t command,
         g_jf_phase = value;
         return 1U;
     case PLL_HOST_DEBUG_JF_LITE_MODE:
-        if (value > JUSTFLOAT_LITE_MODE_MAX) return 0U;
+        if (value > JUSTFLOAT_LITE_MODE_PLL) return 0U;
         g_jf_lite_mode = value;
         return 1U;
     default:
@@ -133,7 +131,6 @@ static uint16_t apply_debug(PllHostProtocol *p, uint16_t command,
 
 /*
  * GET_PARAM 响应帧 (TX): [0xFD][0xFF][param_id][float LE 4B] = 7 字节。
- * 与 JustFloat 帧 (36B, 帧尾 00 00 80 7F) 都从前台发送；
  * GET 响应为一次性短帧，PC 端按 0xFD 帧头区分（会打断一帧 JustFloat，属预期）。
  */
 static void send_response(uint16_t id, float value)
@@ -183,7 +180,6 @@ static uint16_t handle_get(uint16_t id)
     case JF_PARAM_ID_CURRENT_KP:   value = g_kp_i; break;
     case JF_PARAM_ID_CURRENT_KI:   value = g_ki_i; break;
     case JF_PARAM_ID_JF_ENABLE:    value = (float)g_jf_enable; break;
-    case JF_PARAM_ID_JF_VIEW:      value = (float)g_jf_view; break;
     case JF_PARAM_ID_JF_PHASE:     value = (float)g_jf_phase; break;
     case JF_PARAM_ID_JF_LITE_MODE: value = (float)g_jf_lite_mode; break;
     default: ok = 0U; break;

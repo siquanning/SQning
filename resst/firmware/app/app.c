@@ -33,7 +33,7 @@ static Scheduler g_sched;
 static RunControl g_run_ctrl;         /* GPIO21 消抖稳定电平 (纯逻辑) */
 static RunSupervisor g_run_sup;       /* 启停裁决: 抑制锁存 + PWM/LED 控制 */
 
-/* GPIO21 消抖稳定电平观测镜像（DebugSnapshot 读取；纯观测，不参与裁决） */
+/* GPIO21 消抖稳定电平观测镜像（纯观测，不参与裁决） */
 volatile uint16_t g_run_request = 0U;
 
 /* ===================================================================
@@ -185,7 +185,7 @@ void App_Service1ms(AppContext *app, uint32_t now)
     }
 
 #if BOARD_DEBUG_JUSTFLOAT_ENABLE
-    /* 安全/控制任务全部完成后再 kick TX；Lite 入队不在这里，不得阻塞。 */
+    /* 安全/控制任务全部完成后再发送，250Hz JustFloat不得延迟本拍PWM封锁。 */
     JustFloat_Service();
 #endif
 }

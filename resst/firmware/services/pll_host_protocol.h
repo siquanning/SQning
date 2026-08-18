@@ -23,9 +23,10 @@
 #define PLL_HOST_PARAM_CURRENT_KI   0x0BU   /* g_ki_i */
 
 /* ---- DEBUG 组命令 (uint16 值) ----
- * 0x00 = JF_ENABLE (0/1), 0x01 = JF_VIEW (0..DEBUG_VIEW_MAX), 0x02 = 恢复默认PLL
+ * 0x00 = JF_ENABLE (0/1), 0x01 = 已删除（原 JF_VIEW，拒绝）
+ * 0x02 = 恢复默认PLL
  * 0x03 = JF_PHASE (0=自动跟随, 1..3=A/B/C)
- * 0x04 = JF_LITE_MODE (0=Vac/Iac, 1=Vdc1..Vdc6, 2=当前相双闭环) */
+ * 0x04 = JF_LITE_MODE (0=线电压+电流, 1=Vdc1..Vdc6, 2=相电压+PLL跟随) */
 #define PLL_HOST_DEBUG_JF_PHASE     0x03U
 #define PLL_HOST_DEBUG_JF_LITE_MODE 0x04U
 
@@ -39,7 +40,7 @@
 #define JF_PARAM_ID_CURRENT_KP      0x05U
 #define JF_PARAM_ID_CURRENT_KI      0x06U
 #define JF_PARAM_ID_JF_ENABLE       0x07U
-#define JF_PARAM_ID_JF_VIEW         0x08U
+#define JF_PARAM_ID_JF_VIEW         0x08U   /* 已删除，GET 拒绝 */
 #define JF_PARAM_ID_JF_PHASE        0x09U
 #define JF_PARAM_ID_JF_LITE_MODE    0x0AU
 #define JF_PARAM_ID_MAX             0x0AU

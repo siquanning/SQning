@@ -7,16 +7,9 @@
 #include "firmware/services/justfloat.h"
 
 /* 运行期调试变量（justfloat.c 不参与本测试链接，由本测试提供定义） */
-volatile uint16_t g_jf_view   = DEBUG_VIEW_PLL;
 volatile uint16_t g_jf_phase  = 0U;
 volatile uint16_t g_jf_enable = BOARD_JUSTFLOAT_ENABLE_DEFAULT;
 volatile uint16_t g_jf_lite_mode = BOARD_JUSTFLOAT_LITE_MODE_DEFAULT;
-volatile uint32_t g_jf_sent_count = 0UL;
-volatile uint32_t g_jf_drop_count = 0UL;
-volatile uint32_t g_waveform_produced_count = 0UL;
-volatile uint32_t g_waveform_sent_count = 0UL;
-volatile uint32_t g_waveform_queue_overflow_count = 0UL;
-volatile uint16_t g_waveform_queue_max_depth = 0U;
 
 /* 协议扩展所需的桩 */
 static uint16_t g_tx_frame[7];
@@ -75,7 +68,6 @@ static void reset(PllHostProtocol *p)
 {
     PLL_State pll;
     PLL_Init(&pll);
-    g_jf_view=DEBUG_VIEW_PLL;
     g_jf_phase=0U;
     g_jf_enable=BOARD_JUSTFLOAT_ENABLE_DEFAULT;
     g_jf_lite_mode=BOARD_JUSTFLOAT_LITE_MODE_DEFAULT;
@@ -146,31 +138,28 @@ static void test_debug_restore_and_error_event(void)
     make_debug(f,0x00U,1U); feed(&p,f,7U);
     CHECK(g_jf_enable==1U,"JustFloat enable command");
     {
-        uint16_t view;
-        for (view = DEBUG_VIEW_PLL; view <= DEBUG_VIEW_MAX; ++view) {
-            make_debug(f,0x01U,view); feed(&p,f,7U);
-            CHECK(g_jf_view==view,"supported debug view accepted");
-        }
-        make_debug(f,0x01U,DEBUG_VIEW_MAX + 1U); feed(&p,f,7U);
-        CHECK(g_jf_view==DEBUG_VIEW_MAX,"unknown debug view rejected");
+        uint32_t rejected = g_pll_host_diag.rejected_commands;
+        make_debug(f,0x01U,0U); feed(&p,f,7U);
+        CHECK(g_pll_host_diag.rejected_commands>rejected,
+              "JF_VIEW command rejected");
     }
     /* JF_PHASE: 0=自动 1..3=A/B/C，其余拒绝 */
     make_debug(f,0x03U,0U); feed(&p,f,7U); CHECK(g_jf_phase==0U,"JF_PHASE=0 auto");
     make_debug(f,0x03U,3U); feed(&p,f,7U); CHECK(g_jf_phase==3U,"JF_PHASE=3 C accepted");
     make_debug(f,0x03U,4U); feed(&p,f,7U); CHECK(g_jf_phase==3U,"JF_PHASE=4 rejected");
-    /* JF_LITE_MODE: 0=AC, 1=Vdc, 2=当前相双闭环, 其余拒绝 */
+    /* JF_LITE_MODE: 0=线电压+电流, 1=Vdc, 2=相电压+PLL跟随, 其余拒绝 */
     make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_AC);
     feed(&p,f,7U);
-    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_AC,"JF_LITE_MODE=0 AC accepted");
+    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_AC,"JF_LITE_MODE=0 line accepted");
     make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_VDC);
     feed(&p,f,7U);
     CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_VDC,"JF_LITE_MODE=1 Vdc accepted");
-    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_DQ);
+    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_PLL);
     feed(&p,f,7U);
-    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_DQ,"JF_LITE_MODE=2 DQ accepted");
-    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_MAX+1U);
+    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_PLL,"JF_LITE_MODE=2 PLL follow accepted");
+    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_PLL+1U);
     feed(&p,f,7U);
-    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_DQ,"JF_LITE_MODE=3 rejected");
+    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_PLL,"JF_LITE_MODE=3 rejected");
 
     make_param(f,0x00U,42.0f); feed(&p,f,7U); PllHostProtocol_CommitPending(&p);
     make_debug(f,0x02U,0U); feed(&p,f,7U); PllHostProtocol_CommitPending(&p);
@@ -232,10 +221,12 @@ static void test_runtime_params_and_get(void)
               NEAR(bits.value,g_m_limit,1e-6f),"GET M_LIMIT round-trip");
     }
 
-    make_get(f,JF_PARAM_ID_JF_VIEW); feed(&p,f,7U);
-    CHECK(g_tx_frame[2]==JF_PARAM_ID_JF_VIEW &&
-          g_tx_frame[3]==DEBUG_VIEW_PLL && g_tx_frame[4]==0U,
-          "GET JF_VIEW round-trip (view 0)");
+    {
+        uint32_t rejected = g_pll_host_diag.rejected_commands;
+        make_get(f,JF_PARAM_ID_JF_VIEW); feed(&p,f,7U);
+        CHECK(g_pll_host_diag.rejected_commands>rejected,
+              "GET JF_VIEW rejected without response");
+    }
 
     g_jf_lite_mode = JUSTFLOAT_LITE_MODE_VDC;
     make_get(f,JF_PARAM_ID_JF_LITE_MODE); feed(&p,f,7U);

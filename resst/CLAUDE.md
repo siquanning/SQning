@@ -1,3 +1,22 @@
+<!-- DO NOT EDIT - This part is automatically generated. -->
+
+# Claude Code Guidelines
+
+## MANDATORY Pre-Task Steps (DO NOT SKIP)
+
+**CRITICAL - NO EXCEPTIONS**: Before ANY CCS/Texas Instruments-related task (even simple ones), you MUST complete these steps IN ORDER. Do NOT call any ccs-project, ccs-debug, ccs-sysconfig, or ccs-serial MCP tools until both steps are complete.
+
+1. Read `.claude/ccs.settings.md` to get the CCS installation directory
+2. Read `{installation_directory}/ccs/theia/resources/ai/CCS.md` using the installation directory from step 1. This file includes information on how to interact with CCS as well as device-specific information (UART backchannel pins, LED setup, transmit best practices, etc.).
+3. ONLY THEN proceed with CCS MCP tool calls or any other task work
+
+Do NOT parallelize these steps with task work. Do NOT skip step 2 regardless of task complexity.
+
+
+<!-- DO NOT EDIT - This part is automatically generated. -->
+
+<!-- User instructions should be added below this line -->
+
 > Created by Siquanning
 
 ## 工程路径（严格区分）
@@ -19,7 +38,7 @@
 ## 关键宏状态（board_config.h）
 
 - `BOARD_PLL_RELAY_TEST_ONLY=0`：双闭环启用（当前）
-- `BOARD_LOW_VOLTAGE_DIRECT_TEST=1`：低压直测，跳过预充，GPIO42/44 同开同关
+- `BOARD_LOW_VOLTAGE_DIRECT_TEST=0`：预充（不控整流软启动）启用
 - `BOARD_CLOCK_BRINGUP_ONLY`：仅与 DEV_30MHZ 同用，功率永久封锁
 - 禁止修改：`PWM_BlockOutput/PWM_ReleaseOutput`、GPIO30/TZ 安全链、GPIO42/44、GPIO21、状态机、PLL 算法、m 限幅
 
@@ -29,7 +48,7 @@
 
 ## 调试体系
 
-- JustFloat：SCI-C 576000、1kHz；当前轻量模式固定 6 通道/28B，`g_jf_lite_mode=0` 发 Vac/Iac、`=1` 发 Vdc1~6、`=2` 发当前相 Id_ref/Id/Iq/VdcAvg/VdcRefRamp/m；完整模式为 8 通道 VIEW0~10（见 `串口JustFloat数据说明.md`）
+- JustFloat：SCI-C 576000、1kHz；固定 6 通道/28B，`g_jf_lite_mode=0` 发线电压+电流、`=1` 发 Vdc1~6、`=2` 发相电压+PLL跟随波（见 `串口JustFloat数据说明.md`）
 - 串口参数协议：SET（group 0xFF/0xFE）+ GET（group 0xFC → 响应 0xFD），白名单 + 上下限
 - 实机调试：TI DSS（`E:\ti\ccs2051\ccs\ccs_base\scripting\bin\dss.bat`）+ XDS100v3，脚本在 `D:\repos\DSP工作区\_dss_bringup\`
 - 功率级 WRITE（释放 PWM/GPIO30/烧 Flash 等）必须先报告经授权
@@ -46,10 +65,10 @@
 1. 烧对固件：30MHz 板 DEV_30MHZ（`resst_dev30_150mhz_debug.out`）、20MHz 板 TARGET_20MHZ；Watch 确认 `g_board_sysclk_hz` 与板子匹配
 2. 上电 Watch：GPIO30/42/44=0、PWM 全 TZ 封锁、`g_diagnostics.fast_isr.max_cycles`<7000
 3. TZ1/TZ2（GPIO12/13）正常电平；手动拉低一次验证硬件封锁与 `FAULT_HW_TZ_TRIP`
-4. 低压 20~30Vrms + 限流：VIEW0 确认 PLL 锁定（跟随波重合、vq≈0、lock=1）与相序
-5. VIEW2 标定采样（Vac/Iac 零偏、Vdc 锚点）
-6. 首次 RUN（只放目标相）：VIEW5 验收 dq 方向（**Id>0、Iq≈0**）；VIEW9 看 SOGI 正交轴（Iα/Iβ 差 90°）
-7. VIEW3/4 看母线稳压与 Iamp；VIEW6 看 m 是否饱和；异常先看 VIEW7 firstFault
+4. 低压 20~30Vrms + 限流：lite mode 0 看三路线电压；mode 2 看相电压与 PLL 跟随波重合；CCS 确认 `g_pll.freq≈50`、`vq≈0`、`g_pll_switch_req=1`
+5. 标定采样（线电压 Vab/Vbc/Vca 零偏、Iac 零偏、Vdc 锚点）；lite mode 0 看线电压校零，lite mode 1 看六路母线；禁止用 mode 2 调零偏
+6. 首次 RUN（只放目标相）：CCS 验收 dq 方向（**Id>0、Iq≈0**）；看 `g_phase_ctrl[X].i_alpha/i_beta`（Iα/Iβ 差 90°）
+7. CCS 看母线稳压与 Iamp、`g_phase_ctrl[X].m` 是否饱和；异常先看 `first_fault`
 8. 升压原则：一次只改一个参数；每级确认采样不削顶、m 不持续饱和、六路母线平衡
 9. 预充流程：`g_run_sup.seq_state` 0→1(PRECHARGE)→2(BYPASS_WAIT)→RUN；**高压前把 `g_precharge_done_v` 门槛提到母线目标附近**（默认 5.0V 形同虚设）
 10. 首次 RUN / 释放 PWM / 烧 Flash 属功率级 WRITE，先报告经授权
@@ -58,17 +77,16 @@
 
 | 目的 | 帧 |
 |---|---|
-| 切页面 VIEW0~10（完整模式） | `FE FF 01 00 00 00 0X` |
+| 切通道组（0=线电压+Iac，1=Vdc，2=相电压+PLL跟随） | `FE FF 04 00 00 00 0X` |
 | JustFloat 开关（0/1） | `FE FF 00 00 00 00 0X` |
 | 观测相 0~3（0=跟随测试相） | `FE FF 03 00 00 00 0X` |
-| 轻量通道组（0=Vac/Iac，1=Vdc，2=双闭环） | `FE FF 04 00 00 00 0X` |
 | 设 VDC_TARGET | `FF FF 07 <float>`（0~600V） |
 | 设 IAMP_LIMIT | `FF FF 08 <float>`（0~100A） |
 | 设 M_LIMIT | `FF FF 09 <float>`（0~0.98） |
 | 设 CURRENT_KP / CURRENT_KI | `FF FF 0A / 0B <float>` |
 | 设 PLL_KP / PLL_KI | `FF FF 00 / 01 <float>`（1ms 提交） |
 | 恢复默认 PLL 参数 | `FE FF 02 00 00 00 00` |
-| GET 参数 | `FC FF <ID 0x00~0x0A> 00 00 00 00` → 回 `FD FF <ID> <float>` |
+| GET 参数 | `FC FF <ID 0x00~0x0A>`（0x08 已删除，拒绝） → 回 `FD FF <ID> <float>` |
 
 > float 为小端 4 字节。GET 响应会打断一帧 JustFloat（预期行为，自动重同步）。
 
@@ -79,4 +97,4 @@
 - **dq 内环**（X=当前相 0/1/2）：`g_phase_ctrl[X].id/.iq/.id_ref/.iq_ref/.id_err/.iq_err/.id_integral/.iq_integral/.vd_ctrl/.vq_ctrl/.i_alpha/.i_beta/.m_raw/.m`
 - **外环**：`g_phase_ctrl[X].vdc_avg/.vdc_ref_ramp/.vdc_integral/.iamp`
 - **预充/启动**：`g_run_sup.seq_state`、`g_precharge_vdc_min`、`g_grid_switch_cmd`、`g_bypass_switch_cmd`、`g_start_seq_fail`
-- **调试**：`g_jf_view/.g_jf_phase/.g_jf_enable/.g_jf_lite_mode`、`g_dbg_snap`（快照全字段）
+- **调试**：`g_jf_lite_mode/.g_jf_enable`、`g_dbg_snap.vline/vac/iac/vdc`、`g_pll_input_vline`（线电压）、`g_pll_input_vabc`（相电压）、`g_vac_vab/vbc/vca_offset_counts`（线电压零偏，看 `g_measurement.vline_v`）

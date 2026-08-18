@@ -48,19 +48,13 @@ void DrvSci_Init(const DrvSciConfig *config)
     ScicRegs.SCIHBAUD = (uint16_t)((brr >> 8) & 0xFFU);
     ScicRegs.SCILBAUD = (uint16_t)(brr & 0xFFU);
 
-    /*
-     * TX FIFO: SCIRST+SCIFFENA+TXFIFOXRESET+TXFFINTCLR, TXFFIENA=0,
-     * TXFFIL=8 — TXFFST<=8 时请求 TX 中断，ISR 必须按 GetTxFifoFree()
-     * 填入，禁止假定 FIFO 已空而固定塞 16 字节。
-     * 0xE048 = 1110 0000 0100 1000
-     */
-    ScicRegs.SCIFFTX.all  = 0xE048;
+    /* FIFO: enable enhancements, RX FIFO trigger at 1 byte */
+    ScicRegs.SCIFFTX.all  = 0xE060;
     ScicRegs.SCIFFRX.all  = 0x6861;
     ScicRegs.SCIFFCT.all  = 0x0000;
 
     ScicRegs.SCIFFTX.bit.TXFIFOXRESET = 0;
     ScicRegs.SCIFFTX.bit.TXFIFOXRESET = 1;
-    ScicRegs.SCIFFTX.bit.TXFFIL = 8U;   /* 复位脉冲后重申水位 */
     ScicRegs.SCIFFRX.bit.RXFIFORESET  = 0;
     ScicRegs.SCIFFRX.bit.RXFIFORESET  = 1;
     ScicRegs.SCIFFRX.bit.RXFFOVRCLR   = 1;
