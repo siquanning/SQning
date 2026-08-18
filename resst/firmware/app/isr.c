@@ -19,6 +19,10 @@
 #include "firmware/app/isr.h"
 #include "firmware/app/run_supervisor.h"
 #include "firmware/app/diagnostics.h"
+#if (BOARD_OPENLOOP_SPWM_TEST == 0U)
+#include "firmware/app/ac_protect.h"
+#endif
+#include "firmware/services/justfloat.h"
 
 /* ---- PLL 软切换 float 辅助 ---- */
 #define PLL_SW_TWO_PI      6.283185307f
@@ -27,6 +31,7 @@
 #define PLL_SW_TWO_PI_3    2.094395102f
 #define PLL_SW_RAD2DEG     57.29577951f
 
+#if (BOARD_OPENLOOP_SPWM_TEST == 0U)
 /*
  * 固定时间复杂度 wrap (无 while 循环)。
  * 输入有界性保证: wrap_pi 的 |x| < 3π (φ_pll∈[π/2,5π/2) 与 φ_lut∈[0,2π)
@@ -47,6 +52,7 @@ static float isr_wrap_2pi(float x)
     if (x < 0.0f)           x += PLL_SW_TWO_PI;
     return x;
 }
+#endif
 
 static SciRxQueue    *g_pSciRxQueue   = ((SciRxQueue *)0);
 static ControlContext *g_pControl      = ((ControlContext *)0);
@@ -217,7 +223,7 @@ static void DebugSnapshot_Update(void)
     uint16_t i;
 
     /*
-     * 轻量六通道：vline/vac 复用本拍 PLL 输入；
+     * 轻量七通道：vline/vac 复用本拍 PLL 输入；
      * iac 自行换算（闭环块内 iac[] 仅 RUN 期间存在）；
      * vdc 用与控制相同的 offset/换算；pll_vmag/theta 供 mode 2 跟随波。
      */
@@ -232,6 +238,27 @@ static void DebugSnapshot_Update(void)
     }
     s->pll_vmag = g_pll.vmag;
     s->pll_theta = g_pll.theta;
+
+    {
+        uint16_t ph = g_jf_phase;
+        const volatile PhaseClosedLoopState *p;
+        if (ph == 0U) {
+            ph = ClosedLoop_GetActivePhase();
+            if (ph == 0U) ph = g_ctrl_test_phase;
+        }
+        if (ClosedLoop_IsValidTestPhase(ph) == 0U)
+            ph = CTRL_TEST_PHASE_A;
+        p = &g_phase_ctrl[ph - CTRL_TEST_PHASE_A];
+        s->vdc_avg = p->vdc_avg;
+        s->iac_obs = p->iac;
+        s->iamp = p->iamp;
+        s->id = p->id;
+        s->iq = p->iq;
+        s->id_ref = p->id_ref;
+        s->vd_ctrl = p->vd_ctrl;
+        s->vq_ctrl = p->vq_ctrl;
+        s->m = p->m;
+    }
 }
 
 /*
@@ -323,6 +350,44 @@ __interrupt void App_Epwm1Isr(void)
     }
 
     /*
+     * 瞬时保护：线电压/电流/直流超限则立即 OST+GPIO30，锁存 FAULT。
+     * 继电器由 supervisor FAULT 路径在 1ms 内按 GPIO44→GPIO42 断开。
+     * 台架模式同样生效。开环发波模式跳过软件保护，硬件 TZ 仍有效。
+     */
+#if (BOARD_OPENLOOP_SPWM_TEST == 0U)
+    {
+        static const float iac_polarity[3] = {
+            BOARD_IAC_IA_POLARITY, BOARD_IAC_IB_POLARITY, BOARD_IAC_IC_POLARITY};
+        const uint16_t iac_offset[3] = {g_iac_ia_offset_counts,
+            g_iac_ib_offset_counts, g_iac_ic_offset_counts};
+        const uint16_t vdc_offset[6] = {g_vdc1_offset_counts, g_vdc2_offset_counts,
+            g_vdc3_offset_counts, g_vdc4_offset_counts,
+            g_vdc5_offset_counts, g_vdc6_offset_counts};
+        float iac_prot[3], vdc_prot[6];
+        uint16_t i;
+        SystemFault prot;
+
+        for (i = 0U; i < 3U; i++) {
+            iac_prot[i] = Measurement_ConvertIac(g_iac_raw[i], iac_offset[i],
+                                                 iac_polarity[i]);
+        }
+        for (i = 0U; i < 6U; i++) {
+            vdc_prot[i] = Measurement_ConvertVdc(g_vdc_raw[i], vdc_offset[i]);
+        }
+        prot = AcProtect_Check(g_pll_input_vline, iac_prot, vdc_prot);
+        if (prot != FAULT_NONE) {
+            PWM_BlockOutput();
+            ClosedLoop_ClearActiveConfig();
+            mabc[0] = 0; mabc[1] = 0; mabc[2] = 0;
+            if (g_pStateMachine != ((StateMachine *)0)) {
+                System_EnterFault(g_pStateMachine, prot, Timebase_Now());
+            }
+            goto pwm_apply;
+        }
+    }
+#endif
+
+    /*
      * 50 Hz 调制参考 — 开环 LUT 与 PLL 同步的相位交叉淡化切换。
      *
      * 相位约定: φLUT = 2π·idx/1200 (idx=0 → A 相正过零)
@@ -331,7 +396,11 @@ __interrupt void App_Epwm1Isr(void)
      * Δ 为连续相位差: 端点每拍 rebase 到 ±π, 淡化期间增量式
      * unwrap (跨 ±π 不跳变)。
      * LUT 每拍都运行, phase_index 保持热更新 → 回退时相位连续。
+     * 开环发波模式只走 LUT，不把 mabc 切到 PLL 相位。
      */
+#if (BOARD_OPENLOOP_SPWM_TEST != 0U)
+    OpenLoop_GenerateSine(mabc);
+#else
     {
         static float s_alpha = 0.0f;             /* 0=纯开环, 1=纯PLL */
         static float s_err_unwrapped = 0.0f;     /* 相位差 [rad], 端点 rebase 到 ±π, 仅淡化期间增长 */
@@ -392,8 +461,11 @@ __interrupt void App_Epwm1Isr(void)
         g_switch_phase_err_deg =
             isr_wrap_pi(phi_pll - phi_out) * PLL_SW_RAD2DEG;
     }
+#endif
 
-#if (BOARD_PLL_RELAY_TEST_ONLY != 0U)
+#if (BOARD_OPENLOOP_SPWM_TEST != 0U)
+    /* 开环发波：保留 LUT 三相正弦，不跑闭环、不清 mabc。 */
+#elif (BOARD_PLL_RELAY_TEST_ONLY != 0U)
     /* 台架模式不执行任何闭环采样换算或PI快步，仅保留PLL路径。 */
     mabc[0] = 0; mabc[1] = 0; mabc[2] = 0;
 #else
@@ -448,6 +520,7 @@ __interrupt void App_Epwm1Isr(void)
     }
 #endif
 
+pwm_apply:
     /* Mirror to ControlContext for diagnostics / telemetry visibility */
     if (g_pControl != ((ControlContext *)0))
     {

@@ -121,7 +121,7 @@ static uint16_t apply_debug(PllHostProtocol *p, uint16_t command,
         g_jf_phase = value;
         return 1U;
     case PLL_HOST_DEBUG_JF_LITE_MODE:
-        if (value > JUSTFLOAT_LITE_MODE_PLL) return 0U;
+        if (value > JUSTFLOAT_LITE_MODE_DQ) return 0U;
         g_jf_lite_mode = value;
         return 1U;
     default:

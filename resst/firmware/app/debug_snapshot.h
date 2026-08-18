@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 /*
- * DEBUG_SNAPSHOT_H — JustFloat 轻量六通道快照（纯观测层）
+ * DEBUG_SNAPSHOT_H — JustFloat 轻量七通道快照（纯观测层）
  *
  * 生产者: App_Epwm1Isr 按 1 kHz 分频更新
  * 消费者: JustFloat_GetChannels() 在 DINT 保护下拷贝
@@ -13,6 +13,7 @@
  *   vac[]      重构相电压（与 g_pll_input_vabc / PLL 输入同源）
  *   vline[]    实测线电压 Vab/Vbc/Vca（与 g_pll_input_vline 同源）
  *   pll_vmag/theta  供 mode 2 在 1ms 前台生成跟随波（ISR 内不算 cosf）
+ *   vdc_avg/iac_obs/vd_ctrl/iamp/id/iq/m  供 mode 3，按 g_jf_phase 选相
  */
 
 typedef struct
@@ -23,6 +24,10 @@ typedef struct
     float vdc[6];       /* Vdc1..Vdc6 [V] */
     float pll_vmag;     /* g_pll.vmag [V] */
     float pll_theta;    /* g_pll.theta [rad] */
+    float vdc_avg;      /* 观测相 Vdc 均值 [V] */
+    float iac_obs;      /* 观测相瞬时电流 [A] */
+    float iamp;         /* 观测相外环电流幅值指令 [A] */
+    float id, iq, id_ref, vd_ctrl, vq_ctrl, m; /* 观测相 dq/PI/m */
 } DebugSnapshot;
 
 extern DebugSnapshot g_dbg_snap;

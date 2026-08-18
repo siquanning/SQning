@@ -23,7 +23,7 @@ volatile uint32_t g_jf_drop_count  = 0UL;
 #if BOARD_DEBUG_JUSTFLOAT_ENABLE
 
 /*
- * 帧缓冲: 6ch × 4B + 4B 帧尾 = 28 字节。
+ * 帧缓冲: 7ch × 4B + 4B 帧尾 = 32 字节。
  * C28x 的 char 是 16 位，stdint.h 无 uint8_t — 用 uint16_t 数组，
  * 每个元素只存一个字节值 (0~255)，写入 SCI TX FIFO 时 & 0xFF 截低 8 位。
  */
@@ -34,7 +34,7 @@ static uint16_t s_frame[JUSTFLOAT_FRAME_LEN];
 /*
  * 非阻塞 TX 状态（SCI-C TX FIFO 中断，PIE 8.6）。
  * 1ms 任务只组帧 + 提交首批 ≤16 字节；FIFO 发空触发 TX 中断，
- * ISR 继续搬运剩余字节（16→12），整帧最后一字节物理发出后
+ * ISR 继续搬运剩余字节（16→16），整帧最后一字节物理发出后
  * （FIFO empty 中断）清 busy 并禁止 TXFFIENA，防止空中断风暴。
  * s_tx_busy/s_tx_paused 均为单字原子读写，前台与 ISR 无撕裂。
  */
@@ -49,7 +49,7 @@ static uint16_t s_tx_paused = 0U;               /* 1 = 协议独占发送，下�
  * 快照在 20kHz 控制 ISR 按 1kHz 更新；此处 DINT 保护下整帧拷贝，
  * 保证各通道来自同一个控制时刻。
  * 仅读取观测数据，绝不触发任何控制/安全行为。
- * g_jf_lite_mode：0=线电压+电流，1=Vdc，2=相电压+PLL跟随；非法 mode 回退 0。
+ * g_jf_lite_mode：0=线电压+电流，1=Vdc，2=相电压+PLL跟随，3=Vdc+Iac/vd_ctrl/iamp；非法 mode 回退 0。
  */
 void JustFloat_GetChannels(float *ch)
 {
@@ -68,6 +68,7 @@ void JustFloat_GetChannels(float *ch)
         ch[3] = s.vdc[3];
         ch[4] = s.vdc[4];
         ch[5] = s.vdc[5];
+        ch[6] = 0.0f;
         return;
     }
     if (g_jf_lite_mode == JUSTFLOAT_LITE_MODE_PLL) {
@@ -77,6 +78,17 @@ void JustFloat_GetChannels(float *ch)
         ch[3] = s.pll_vmag * cosf(s.pll_theta);
         ch[4] = s.pll_vmag * cosf(s.pll_theta - JUSTFLOAT_TWO_PI_3);
         ch[5] = s.pll_vmag * cosf(s.pll_theta + JUSTFLOAT_TWO_PI_3);
+        ch[6] = 0.0f;
+        return;
+    }
+    if (g_jf_lite_mode == JUSTFLOAT_LITE_MODE_DQ) {
+        ch[0] = s.vdc_avg;
+        ch[1] = s.iac_obs;
+        ch[2] = s.vd_ctrl;
+        ch[3] = s.iamp;
+        ch[4] = s.id;
+        ch[5] = s.iq;
+        ch[6] = s.m;
         return;
     }
     ch[0] = s.vline[0];
@@ -85,6 +97,7 @@ void JustFloat_GetChannels(float *ch)
     ch[3] = s.iac[0];
     ch[4] = s.iac[1];
     ch[5] = s.iac[2];
+    ch[6] = 0.0f;
 }
 
 void JustFloat_Send(const float *ch, uint16_t ch_count)
@@ -149,7 +162,7 @@ void JustFloat_Send(const float *ch, uint16_t ch_count)
 /*
  * 1ms tick — 当前每次调用发一帧，输出周期1ms（1kHz）。
  * 目标576000波特（实际由 board_clock_profile.h 的 LSPCLK 派生：
- * TARGET20→≈568182, DEV30→≈576923）下 28 字节帧在线时间约 0.49ms；
+ * TARGET20→≈568182, DEV30→≈576923）下 32 字节帧在线时间约 0.56ms；
  * 调用点位于1ms安全任务末尾，不延迟本拍故障封锁。
  * 20kHz 控制 ISR 内不做任何 SCI 发送。
  */
@@ -191,7 +204,7 @@ void JustFloat_Service(void)
  * 进入本中断时 TX FIFO 必为空（TXFFIL=0：TXFFST≤0 才置 TXFFINT），
  * 因此：
  *   - 缓冲仍有剩余 → 一次尽量填满 16 字节，保持 TXFFIENA 使能，
- *     等 FIFO 再次发空触发下一次中断（28B 帧 = 16+12 两批）。
+ *     等 FIFO 再次发空触发下一次中断（32B 帧 = 16+16 两批）。
  *   - 缓冲已耗尽 → 说明整帧最后一字节已物理发出（FIFO 空），
  *     帧完成：清 busy、禁止 TXFFIENA（防止 FIFO 恒空中断风暴）、
  *     g_jf_sent_count++。

@@ -69,7 +69,7 @@ static void StartSeq_OpenPowerPath(RunSupervisor *rs)
     StartSeq_Reset(rs);
 }
 
-#if (BOARD_PLL_RELAY_TEST_ONLY == 0U)
+#if (BOARD_PLL_RELAY_TEST_ONLY == 0U) && (BOARD_OPENLOOP_SPWM_TEST == 0U)
 static uint16_t StartSeq_PllReady(void)
 {
     uint16_t req;
@@ -278,7 +278,9 @@ void RunSupervisor_Service(RunSupervisor *rs, StateMachine *sm,
 #else
              g_bypass_delay_ms)
 #endif
+#if (BOARD_OPENLOOP_SPWM_TEST == 0U)
             && (StartSeq_PllReady() != 0U)
+#endif
             && (PWM_AreTripInputsClear() != 0U))
         {
             uint16_t active_mode = ClosedLoop_GetActiveRunMode();
@@ -286,9 +288,14 @@ void RunSupervisor_Service(RunSupervisor *rs, StateMachine *sm,
             if ((ClosedLoop_IsValidRunMode(active_mode) != 0U) &&
                 StateMachine_RequestRun(sm, now))
             {
+#if (BOARD_OPENLOOP_SPWM_TEST != 0U)
+                uint16_t released = PWM_ReleaseThreePhase();
+                (void)active_phase;
+#else
                 uint16_t released = (active_mode == CTRL_RUN_MODE_THREE_PHASE)
                                   ? PWM_ReleaseThreePhase()
                                   : PWM_ReleaseSelectedPhase(active_phase);
+#endif
                 if (released != 0U) {
                     DrvGpio_WriteRunState(1U);
                     StartSeq_Reset(rs);

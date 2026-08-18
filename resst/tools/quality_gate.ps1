@@ -65,7 +65,8 @@ if (-not $msvcAvailable) {
         @{Name="run_supervisor"; Src="test_run_supervisor.c"; Deps="firmware\app\run_supervisor.c firmware\app\state_machine.c"; Defs="/utf-8 /DPLATFORM_PROFILE_PROTOTYPE"},
         @{Name="pwm_tz"; Src="test_pwm_tz.c"; Deps="firmware\drivers\drv_epwm.c"; Defs="/utf-8 /Itests\host\fake_ti"},
         @{Name="closedloop"; Src="test_closedloop.c"; Deps="firmware\control\control_closedloop.c"; Defs="/utf-8"},
-        @{Name="justfloat"; Src="test_justfloat.c"; Deps="firmware\services\justfloat.c"; Defs="/utf-8 /D__interrupt= /Itests\host\fake_ti"}
+        @{Name="justfloat"; Src="test_justfloat.c"; Deps="firmware\services\justfloat.c"; Defs="/utf-8 /D__interrupt= /Itests\host\fake_ti"},
+        @{Name="ac_protect"; Src="test_ac_protect.c"; Deps="firmware\app\ac_protect.c"; Defs="/utf-8"}
     )
 
     foreach ($spec in $testSpecs) {
@@ -225,6 +226,7 @@ if (-not (Test-Path $CompilerPath)) {
             "$ProjRoot\firmware\app\app.c",
             "$ProjRoot\firmware\app\diagnostics.c",
             "$ProjRoot\firmware\app\isr.c",
+            "$ProjRoot\firmware\app\ac_protect.c",
             "$ProjRoot\firmware\app\main.c",
             "$ProjRoot\firmware\app\param_manager.c",
             "$ProjRoot\firmware\app\run_control.c",

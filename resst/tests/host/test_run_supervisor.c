@@ -146,6 +146,28 @@ static void test_run_gates(void)
     RunSupervisor rs; StateMachine sm;
     reset_fixture(&rs, &sm); begin_run_wait(&rs, &sm, 100UL);
 
+#if (BOARD_OPENLOOP_SPWM_TEST != 0U)
+    g_pll_switch_req = 0U; g_switch_alpha = 0.0f; g_trip_clear = 0;
+    RunSupervisor_Service(&rs, &sm, 1U, 110UL);
+    CHECK(sm.state == SYSTEM_STATE_STANDBY && g_release_calls == 0,
+          "TZ fault blocks RUN without PLL wait");
+    g_trip_clear = 1;
+    RunSupervisor_Service(&rs, &sm, 1U, RUN_AT_TICK);
+    CHECK(sm.state == SYSTEM_STATE_RUN && g_release_calls == 1 && g_led,
+          "releases three-phase PWM after TZ clear, no PLL wait");
+    CHECK(g_released_phase == 0, "openloop SPWM releases all six modules");
+    CHECK(g_grid && g_bypass, "RUN keeps grid+bypass closed together");
+    {
+        int i, grid_on = -1, bypass_on = -1, release = -1;
+        for (i = 0; i < g_trace_count; i++) {
+            if (g_trace[i] == ACT_GRID_ON && grid_on < 0) grid_on = i;
+            if (g_trace[i] == ACT_BYPASS_ON && bypass_on < 0) bypass_on = i;
+            if (g_trace[i] == ACT_RELEASE && release < 0) release = i;
+        }
+        CHECK(grid_on >= 0 && bypass_on >= 0 && release > grid_on && release > bypass_on,
+              "START order is grid -> bypass -> TZ wait -> PWM release");
+    }
+#else
     g_pll_switch_req = 1U; g_switch_alpha = 0.9f;
     RunSupervisor_Service(&rs, &sm, 1U, 110UL);
 #if (BOARD_LOW_VOLTAGE_DIRECT_TEST == 0U)
@@ -181,6 +203,7 @@ static void test_run_gates(void)
     g_ctrl_run_mode = CTRL_RUN_MODE_THREE_PHASE;
     CHECK(g_active_mode == CTRL_RUN_MODE_SINGLE_PHASE,
           "changing requested mode in RUN does not hot-switch active mode");
+#endif
 }
 
 static void test_three_phase_and_invalid_mode(void)
@@ -209,8 +232,13 @@ static void test_phase_selection_and_invalid_safe(void)
     begin_run_wait(&rs, &sm, 100UL);
     g_pll_switch_req = 1U; g_switch_alpha = 1.0f;
     RunSupervisor_Service(&rs, &sm, 1U, RUN_AT_TICK);
+#if (BOARD_OPENLOOP_SPWM_TEST != 0U)
+    CHECK(sm.state == SYSTEM_STATE_RUN && g_released_phase == 0,
+          "openloop SPWM always releases three phases");
+#else
     CHECK(sm.state == SYSTEM_STATE_RUN && g_released_phase == CTRL_TEST_PHASE_C,
           "valid C request is latched and only C is released");
+#endif
 
     reset_fixture(&rs, &sm);
     g_ctrl_test_phase = 9U;

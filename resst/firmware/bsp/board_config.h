@@ -376,7 +376,26 @@
  *     （恢复功率闭环测试前必须确认采样标定/TZ/功率方向，见工程报告§10）。
  */
 #ifndef BOARD_PLL_RELAY_TEST_ONLY
-#define BOARD_PLL_RELAY_TEST_ONLY          1U
+#define BOARD_PLL_RELAY_TEST_ONLY          0U
+#endif
+
+/*
+ * 开环正弦单极性发波（H1+H2，三相）：
+ * 1 = 20kHz ISR 用 LUT 正弦 + 钳位单极性写 ePWM1–6；GPIO27/28/29 跟极性；
+ *     1ms 任务把 mA/mB/mC 和 H1透传+H2使能写给 CPLD。跳过软件过压过流、
+ *     闭环、PLL 就绪门槛和 PLL/调度/SPI 软件 FAULT。GPIO21 仍作启停。
+ *     硬件 TZ1/TZ2 仍会封锁。测完必须改回 0 再做闭环/高压。
+ * 0 = 现有双闭环路径。
+ */
+#ifndef BOARD_OPENLOOP_SPWM_TEST
+#define BOARD_OPENLOOP_SPWM_TEST           1U
+#endif
+
+#if (BOARD_OPENLOOP_SPWM_TEST != 0U) && (BOARD_PLL_RELAY_TEST_ONLY != 0U)
+#error "OPENLOOP_SPWM_TEST cannot combine with PLL_RELAY_TEST_ONLY"
+#endif
+#if (BOARD_OPENLOOP_SPWM_TEST != 0U) && (BOARD_CLOCK_BRINGUP_ONLY != 0U)
+#error "OPENLOOP_SPWM_TEST cannot combine with CLOCK_BRINGUP_ONLY"
 #endif
 
 /* PLL纯软件输入模拟：一个50Hz相位源派生三相，峰值10V，仅限台架模式。 */
@@ -500,10 +519,10 @@
 #define BOARD_PLL_VQ_RATIO_MAX              0.50f
 
 /* ================= 单相/三相独立双闭环共用参数 ================= */
-#define BOARD_VDC_TARGET_V_DEFAULT           (70.0f)    /* 本次100Vrms空载首测的Vdc_avg默认目标，接近单桥两路均分后的自然电压70.7V。 */
+#define BOARD_VDC_TARGET_V_DEFAULT           (50.0f)    /* 50Vrms低压首测：每桥约50V，目标与自然母线对齐。 */
 #define BOARD_VDC_RAMP_RATE_VPS_DEFAULT      (10.0f)    /* Vdc参考斜坡速度，单位V/s。 */
-#define BOARD_I_LIMIT_A_DEFAULT               (1.50f)    /* 电压外环输出的交流电流峰值上限，单位A；这是控制限幅，不替代硬件过流TZ保护。 */
-#define BOARD_M_LIMIT_DEFAULT                 (0.20f)   /* 调制量m绝对值上限；0.20表示限制在±20%。 */
+#define BOARD_I_LIMIT_A_DEFAULT              (10.0f)    /* 电压外环输出的交流电流峰值上限，单位A；PI限流，过10A瞬时仍会跳闸。 */
+#define BOARD_M_LIMIT_DEFAULT                 (0.80f)   /* 调制量m绝对值上限；0.80给Vac前馈留余量，算法硬顶仍为0.98。 */
 #define BOARD_KP_V_DEFAULT                    (0.02f)   /* 直流电压外环比例增益Kp。 */
 #define BOARD_KI_V_DEFAULT                    (2.0f)    /* 直流电压外环积分增益Ki；外环按1kHz执行。 */
 #define BOARD_KP_I_DEFAULT                    (6.0f)    /* 交流电流内环比例增益Kp。 */
@@ -519,15 +538,35 @@
  * 越界写入一律拒绝（返回无效帧计数，不修改任何变量）。
  */
 #define BOARD_VDC_TARGET_MIN_V            (0.0f)
-#define BOARD_VDC_TARGET_MAX_V          (600.0f)
+#define BOARD_VDC_TARGET_MAX_V           (80.0f)    /* 与直流过压跳闸门槛对齐，低压台架不许把目标拧过80V */
 #define BOARD_I_LIMIT_MIN_A               (0.0f)
-#define BOARD_I_LIMIT_MAX_A             (100.0f)
+#define BOARD_I_LIMIT_MAX_A              (10.0f)    /* 指令电流不能高于过流跳闸门槛 */
 #define BOARD_M_LIMIT_MIN                 (0.0f)
 #define BOARD_M_LIMIT_MAX                 (0.98f)   /* 与 control_closedloop.c 的 m 钳位上限一致 */
 #define BOARD_CURRENT_KP_MIN              (0.0f)
 #define BOARD_CURRENT_KP_MAX            (100.0f)
 #define BOARD_CURRENT_KI_MIN              (0.0f)
 #define BOARD_CURRENT_KI_MAX          (100000.0f)
+
+/* ================= 交流/直流瞬时保护（20kHz，超限断PWM+继电器） ================= */
+
+/*
+ * 线电压瞬时绝对值门槛，单位V。任一 |Vab/Vbc/Vca| 超过则跳闸。
+ * 50Vrms 峰值约70.7V，本门槛不会在额定低压下误动作。
+ */
+#define BOARD_AC_OVERVOLTAGE_V          (100.0f)
+
+/*
+ * 交流电流瞬时绝对值门槛，单位A。任一 |Ia/Ib/Ic| 超过则跳闸。
+ * 与 g_i_limit_a 默认10A对齐：限幅钳指令，本门槛锁存FAULT。
+ */
+#define BOARD_AC_OVERCURRENT_A           (10.0f)
+
+/*
+ * 直流过压门槛，单位V。任一 Vdc1..Vdc6 或任一相 vdc_avg 超过则跳闸。
+ * 每桥约50V，80V 约1.6倍。
+ */
+#define BOARD_DC_OVERVOLTAGE_V           (80.0f)
 
 /* ================= 调试输出 ================= */
 
@@ -539,11 +578,12 @@
 #define BOARD_DEBUG_JUSTFLOAT_ENABLE   1U
 
 /*
- * JustFloat 固定 6 通道帧（6×float + 帧尾 = 28B/帧）。
+ * JustFloat 固定 7 通道帧（7×float + 帧尾 = 32B/帧）。
  * g_jf_lite_mode 运行时切换通道组，不改变帧长：
- *   0 = 实测线电压 Vab/Vbc/Vca + Ia/Ib/Ic
- *   1 = Vdc1..Vdc6
- *   2 = 重构相电压 Va/Vb/Vc + PLL 三相跟随波
+ *   0 = 实测线电压 Vab/Vbc/Vca + Ia/Ib/Ic（CH7=0）
+ *   1 = Vdc1..Vdc6（CH7=0）
+ *   2 = 重构相电压 Va/Vb/Vc + PLL 三相跟随波（CH7=0）
+ *   3 = 观测相 VdcAvg/Iac/vd_ctrl/iamp/Id/Iq/m
  * 1kHz DebugSnapshot 更新上述通道所需采样值。
  * 12 路 ADC 采样、sequencer、PLL、dq、PWM、安全链全部保持原样。
  */
@@ -551,6 +591,7 @@
 #define JUSTFLOAT_LITE_MODE_AC         JUSTFLOAT_LITE_MODE_LINE
 #define JUSTFLOAT_LITE_MODE_VDC        1U   /* Vdc1..Vdc6 */
 #define JUSTFLOAT_LITE_MODE_PLL        2U   /* Va/Vb/Vc + PLL 跟随波 */
+#define JUSTFLOAT_LITE_MODE_DQ         3U   /* VdcAvg/Iac/vd_ctrl/iamp/Id/Iq/m */
 #define BOARD_JUSTFLOAT_LITE_MODE_DEFAULT  JUSTFLOAT_LITE_MODE_LINE
 
 #define BOARD_JUSTFLOAT_ENABLE_DEFAULT  1U

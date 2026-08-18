@@ -147,7 +147,7 @@ static void test_debug_restore_and_error_event(void)
     make_debug(f,0x03U,0U); feed(&p,f,7U); CHECK(g_jf_phase==0U,"JF_PHASE=0 auto");
     make_debug(f,0x03U,3U); feed(&p,f,7U); CHECK(g_jf_phase==3U,"JF_PHASE=3 C accepted");
     make_debug(f,0x03U,4U); feed(&p,f,7U); CHECK(g_jf_phase==3U,"JF_PHASE=4 rejected");
-    /* JF_LITE_MODE: 0=线电压+电流, 1=Vdc, 2=相电压+PLL跟随, 其余拒绝 */
+    /* JF_LITE_MODE: 0=线电压+电流, 1=Vdc, 2=相电压+PLL跟随, 3=dq/PI/m, 其余拒绝 */
     make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_AC);
     feed(&p,f,7U);
     CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_AC,"JF_LITE_MODE=0 line accepted");
@@ -157,9 +157,12 @@ static void test_debug_restore_and_error_event(void)
     make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_PLL);
     feed(&p,f,7U);
     CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_PLL,"JF_LITE_MODE=2 PLL follow accepted");
-    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_PLL+1U);
+    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_DQ);
     feed(&p,f,7U);
-    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_PLL,"JF_LITE_MODE=3 rejected");
+    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_DQ,"JF_LITE_MODE=3 dq accepted");
+    make_debug(f,PLL_HOST_DEBUG_JF_LITE_MODE,JUSTFLOAT_LITE_MODE_DQ+1U);
+    feed(&p,f,7U);
+    CHECK(g_jf_lite_mode==JUSTFLOAT_LITE_MODE_DQ,"JF_LITE_MODE=4 rejected");
 
     make_param(f,0x00U,42.0f); feed(&p,f,7U); PllHostProtocol_CommitPending(&p);
     make_debug(f,0x02U,0U); feed(&p,f,7U); PllHostProtocol_CommitPending(&p);
@@ -181,16 +184,18 @@ static void test_runtime_params_and_get(void)
 
     /* ---- SET 运行期变量（0x07..0x0B，范围检查） ---- */
     reset(&p);
-    make_param(f,PLL_HOST_PARAM_VDC_TARGET,123.0f); feed(&p,f,7U);
-    CHECK(NEAR(g_vdc_target_v,123.0f,1e-5f),"VDC_TARGET write");
-    make_param(f,PLL_HOST_PARAM_VDC_TARGET,7000.0f); feed(&p,f,7U);
-    CHECK(NEAR(g_vdc_target_v,123.0f,1e-5f),"VDC_TARGET out-of-range rejected");
+    make_param(f,PLL_HOST_PARAM_VDC_TARGET,50.0f); feed(&p,f,7U);
+    CHECK(NEAR(g_vdc_target_v,50.0f,1e-5f),"VDC_TARGET write");
+    make_param(f,PLL_HOST_PARAM_VDC_TARGET,81.0f); feed(&p,f,7U);
+    CHECK(NEAR(g_vdc_target_v,50.0f,1e-5f),"VDC_TARGET out-of-range rejected");
     make_param(f,PLL_HOST_PARAM_M_LIMIT,0.5f); feed(&p,f,7U);
     CHECK(NEAR(g_m_limit,0.5f,1e-6f),"M_LIMIT write");
     make_param(f,PLL_HOST_PARAM_M_LIMIT,0.99f); feed(&p,f,7U);
     CHECK(NEAR(g_m_limit,0.5f,1e-6f),"M_LIMIT >0.98 rejected");
     make_param(f,PLL_HOST_PARAM_IAMP_LIMIT,2.0f); feed(&p,f,7U);
     CHECK(NEAR(g_i_limit_a,2.0f,1e-5f),"IAMP_LIMIT write");
+    make_param(f,PLL_HOST_PARAM_IAMP_LIMIT,11.0f); feed(&p,f,7U);
+    CHECK(NEAR(g_i_limit_a,2.0f,1e-5f),"IAMP_LIMIT >10A rejected");
     make_param(f,PLL_HOST_PARAM_CURRENT_KP,8.0f); feed(&p,f,7U);
     CHECK(NEAR(g_kp_i,8.0f,1e-5f),"CURRENT_KP write");
     make_param(f,PLL_HOST_PARAM_CURRENT_KI,2000.0f); feed(&p,f,7U);

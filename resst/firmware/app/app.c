@@ -184,6 +184,17 @@ void App_Service1ms(AppContext *app, uint32_t now)
         DrvGpio_WriteRunState(0U);
     }
 
+#if (BOARD_OPENLOOP_SPWM_TEST != 0U)
+    /*
+     * 开环发波：把三相 LUT 调制度交给 CPLD，并打开 H1 透传 + H2 使能。
+     * SPI 禁止进 ISR；1kHz 更新约 20 点/工频周期。GPIO30=0 时 CPLD 仍封锁门极。
+     */
+    CPLD_WriteReg16(0U, app->control.m_permill[0]);
+    CPLD_WriteReg16(1U, app->control.m_permill[1]);
+    CPLD_WriteReg16(2U, app->control.m_permill[2]);
+    CPLD_Commit();
+#endif
+
 #if BOARD_DEBUG_JUSTFLOAT_ENABLE
     /* 安全/控制任务全部完成后再发送，250Hz JustFloat不得延迟本拍PWM封锁。 */
     JustFloat_Service();
@@ -250,6 +261,7 @@ void App_Service10ms(AppContext *app, uint32_t now)
             if (s_unlock_ctr < BOARD_PLL_UNLOCK_TICKS) s_unlock_ctr++;
             if (s_unlock_ctr >= BOARD_PLL_UNLOCK_TICKS) {
                 /* 先完成硬件封锁，再撤销软件闭环许可，消除m=0过渡窗口。 */
+#if (BOARD_OPENLOOP_SPWM_TEST == 0U)
                 if ((g_pll_switch_req != 0U) &&
                     StateMachine_IsRun(&app->state_machine)) {
                     PWM_BlockOutput();
@@ -258,6 +270,7 @@ void App_Service10ms(AppContext *app, uint32_t now)
                                       FAULT_HW_PLL_LOCK_LOST, now);
                     DrvGpio_WriteRunState(0U);
                 }
+#endif
                 g_pll_switch_req = 0U;
             }
         }
@@ -266,7 +279,9 @@ void App_Service10ms(AppContext *app, uint32_t now)
     /*
      * PLL失锁消抖确认后，m=0不足以表示硬件关闭：立即复用全局OST入口，
      * 并锁存PLL失锁FAULT。非法活动相同样不得维持任何PWM释放。
+     * 开环发波模式不要求 PLL，也不因失锁跳闸。
      */
+#if (BOARD_OPENLOOP_SPWM_TEST == 0U)
     if (StateMachine_IsRun(&app->state_machine) &&
         ((g_pll_switch_req == 0U) ||
          (ClosedLoop_IsValidRunMode(ClosedLoop_GetActiveRunMode()) == 0U) ||
@@ -281,6 +296,7 @@ void App_Service10ms(AppContext *app, uint32_t now)
                           now);
         DrvGpio_WriteRunState(0U);
     }
+#endif
 
 #if BOARD_PWM_ADC_HW_CONFIRMED == 0U
     diag_flags |= DIAG_FLAG_PWM_ADC_HW_UNCONFIRMED;
@@ -304,7 +320,9 @@ void App_Service100ms(AppContext *app, Scheduler *sched, uint32_t now)
 #endif
 
     Diagnostics *diag = Diagnostics_Get();
+#if (BOARD_OPENLOOP_SPWM_TEST == 0U)
     ControlParams active_params;
+#endif
     uint32_t miss1, miss10, miss100;
     uint32_t sci_overflow;
     uint16_t sm_state, sm_fault_code;
@@ -314,8 +332,10 @@ void App_Service100ms(AppContext *app, Scheduler *sched, uint32_t now)
     uint32_t telem_writes, telem_overruns;
     uint32_t diag_flags = 0UL;
 
+#if (BOARD_OPENLOOP_SPWM_TEST == 0U)
     /* Read active parameter set once for fault threshold checks */
     Param_ReadActive(&app->param_manager, &active_params);
+#endif
 
     /* ---- Scheduler diagnostics ---- */
     Scheduler_GetDiagnostics(sched, &miss1, &miss10, &miss100);
@@ -352,6 +372,9 @@ void App_Service100ms(AppContext *app, Scheduler *sched, uint32_t now)
 #endif
     Diagnostics_WriteDiagFlags(diag, diag_flags);
 
+#if (BOARD_OPENLOOP_SPWM_TEST != 0U)
+    (void)now;
+#else
     /* ---- System fault detection: scheduler miss ---- */
     if (miss10 > active_params.fault_thresh_sched_miss)
     {
@@ -369,6 +392,7 @@ void App_Service100ms(AppContext *app, Scheduler *sched, uint32_t now)
                               FAULT_COMM_SPI_TIMEOUT_EXCESSIVE, now);
         }
     }
+#endif
 }
 
 /* ===================================================================

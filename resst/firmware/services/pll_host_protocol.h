@@ -26,7 +26,7 @@
  * 0x00 = JF_ENABLE (0/1), 0x01 = 已删除（原 JF_VIEW，拒绝）
  * 0x02 = 恢复默认PLL
  * 0x03 = JF_PHASE (0=自动跟随, 1..3=A/B/C)
- * 0x04 = JF_LITE_MODE (0=线电压+电流, 1=Vdc1..Vdc6, 2=相电压+PLL跟随) */
+ * 0x04 = JF_LITE_MODE (0=线电压+电流, 1=Vdc, 2=相电压+PLL跟随, 3=Vdc+Iac/vd_ctrl/iamp) */
 #define PLL_HOST_DEBUG_JF_PHASE     0x03U
 #define PLL_HOST_DEBUG_JF_LITE_MODE 0x04U
 

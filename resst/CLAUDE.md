@@ -33,12 +33,12 @@ Do NOT parallelize these steps with task work. Do NOT skip step 2 regardless of 
 - 20MHz 正式板（100MHz）：`powershell -File tools\build_all.ps1`（四配置：Debug/Release/Industrial_RAM/Flash_Release）
 - 30MHz 开发板（150MHz）：`powershell -File tools\build_dev30_debug.ps1`（产物 `Debug\resst_dev30_150mhz_debug.out`）
 - **新增源文件后需让 CCS 重新生成 Debug/makefile**（否则 gmake 构建链接失败）
-- 修改代码后至少一次真实 Debug 构建；任务完成前完整 4-config 构建；主机测试 `tests\host\_all.bat`（17 项）
+- 修改代码后至少一次真实 Debug 构建；任务完成前完整 4-config 构建；主机测试 `tests\host\_all.bat`（18 项）
 
 ## 关键宏状态（board_config.h）
 
 - `BOARD_PLL_RELAY_TEST_ONLY=0`：双闭环启用（当前）
-- `BOARD_LOW_VOLTAGE_DIRECT_TEST=0`：预充（不控整流软启动）启用
+- `BOARD_LOW_VOLTAGE_DIRECT_TEST=1`：低压直测（GPIO42/44 同开，跳过预充）
 - `BOARD_CLOCK_BRINGUP_ONLY`：仅与 DEV_30MHZ 同用，功率永久封锁
 - 禁止修改：`PWM_BlockOutput/PWM_ReleaseOutput`、GPIO30/TZ 安全链、GPIO42/44、GPIO21、状态机、PLL 算法、m 限幅
 
@@ -48,7 +48,7 @@ Do NOT parallelize these steps with task work. Do NOT skip step 2 regardless of 
 
 ## 调试体系
 
-- JustFloat：SCI-C 576000、1kHz；固定 6 通道/28B，`g_jf_lite_mode=0` 发线电压+电流、`=1` 发 Vdc1~6、`=2` 发相电压+PLL跟随波（见 `串口JustFloat数据说明.md`）
+- JustFloat：SCI-C 576000、1kHz；固定 7 通道/32B，`g_jf_lite_mode=0` 发线电压+电流、`=1` 发 Vdc1~6、`=2` 发相电压+PLL跟随波、`=3` 发 VdcAvg+Iac/vd_ctrl/iamp/Id/Iq/m（见 `串口JustFloat数据说明.md`）
 - 串口参数协议：SET（group 0xFF/0xFE）+ GET（group 0xFC → 响应 0xFD），白名单 + 上下限
 - 实机调试：TI DSS（`E:\ti\ccs2051\ccs\ccs_base\scripting\bin\dss.bat`）+ XDS100v3，脚本在 `D:\repos\DSP工作区\_dss_bringup\`
 - 功率级 WRITE（释放 PWM/GPIO30/烧 Flash 等）必须先报告经授权
@@ -77,11 +77,11 @@ Do NOT parallelize these steps with task work. Do NOT skip step 2 regardless of 
 
 | 目的 | 帧 |
 |---|---|
-| 切通道组（0=线电压+Iac，1=Vdc，2=相电压+PLL跟随） | `FE FF 04 00 00 00 0X` |
+| 切通道组（0=线电压+Iac，1=Vdc，2=相电压+PLL跟随，3=VdcAvg+Iac/vd_ctrl/iamp） | `FE FF 04 00 00 00 0X` |
 | JustFloat 开关（0/1） | `FE FF 00 00 00 00 0X` |
 | 观测相 0~3（0=跟随测试相） | `FE FF 03 00 00 00 0X` |
-| 设 VDC_TARGET | `FF FF 07 <float>`（0~600V） |
-| 设 IAMP_LIMIT | `FF FF 08 <float>`（0~100A） |
+| 设 VDC_TARGET | `FF FF 07 <float>`（0~80V） |
+| 设 IAMP_LIMIT | `FF FF 08 <float>`（0~10A） |
 | 设 M_LIMIT | `FF FF 09 <float>`（0~0.98） |
 | 设 CURRENT_KP / CURRENT_KI | `FF FF 0A / 0B <float>` |
 | 设 PLL_KP / PLL_KI | `FF FF 00 / 01 <float>`（1ms 提交） |
@@ -92,7 +92,7 @@ Do NOT parallelize these steps with task work. Do NOT skip step 2 regardless of 
 
 ## 关键 Watch 变量（CCS Expressions）
 
-- **系统/安全**：`g_diagnostics.fast_isr.max_cycles`、`g_diagnostics.system_state`、`g_diagnostics.fault_code`、`GpioDataRegs.GPADAT.bit.GPIO30`、`.GPBDAT.bit.GPIO42/.GPIO44`
+- **系统/安全**：`g_diagnostics.fast_isr.max_cycles`、`g_diagnostics.system_state`、`g_diagnostics.fault_code`（5=交流过压/6=交流过流/7=直流过压）、`GpioDataRegs.GPADAT.bit.GPIO30`、`.GPBDAT.bit.GPIO42/.GPIO44`
 - **PLL**：`g_pll.freq/.vd/.vq/.vmag`、`g_pll_switch_req`、`g_switch_alpha`
 - **dq 内环**（X=当前相 0/1/2）：`g_phase_ctrl[X].id/.iq/.id_ref/.iq_ref/.id_err/.iq_err/.id_integral/.iq_integral/.vd_ctrl/.vq_ctrl/.i_alpha/.i_beta/.m_raw/.m`
 - **外环**：`g_phase_ctrl[X].vdc_avg/.vdc_ref_ramp/.vdc_integral/.iamp`

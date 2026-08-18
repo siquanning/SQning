@@ -27,6 +27,7 @@ $SRC_FILES = @(
     "$PROJ\firmware\app\app.c",
     "$PROJ\firmware\app\diagnostics.c",
     "$PROJ\firmware\app\isr.c",
+    "$PROJ\firmware\app\ac_protect.c",
     "$PROJ\firmware\app\main.c",
     "$PROJ\firmware\app\param_manager.c",
     "$PROJ\firmware\app\run_control.c",

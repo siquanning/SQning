@@ -28,6 +28,9 @@ typedef enum
     FAULT_HW_ADC_STUCK_HIGH          = 2,
     FAULT_HW_ADC_STUCK_LOW           = 3,
     FAULT_HW_PLL_LOCK_LOST           = 4,
+    FAULT_HW_AC_OVERVOLTAGE          = 5,   /* |Vline| > BOARD_AC_OVERVOLTAGE_V */
+    FAULT_HW_AC_OVERCURRENT          = 6,   /* |Iac| > BOARD_AC_OVERCURRENT_A */
+    FAULT_HW_DC_OVERVOLTAGE          = 7,   /* Vdc 或 vdc_avg > BOARD_DC_OVERVOLTAGE_V */
 
     /* Software control faults */
     FAULT_SW_OUTPUT_SATURATION       = 10,

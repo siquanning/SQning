@@ -62,14 +62,14 @@ static void test_waveform_lite_modes(void)
     g_jf_lite_mode = JUSTFLOAT_LITE_MODE_LINE;
     JustFloat_GetChannels(ch);
     CHECK(ch[0]==40.0f && ch[1]==41.0f && ch[2]==42.0f &&
-          ch[3]==20.0f && ch[4]==21.0f && ch[5]==22.0f,
-          "lite 0: CH1-6 = Vab/Vbc/Vca/Ia/Ib/Ic");
+          ch[3]==20.0f && ch[4]==21.0f && ch[5]==22.0f && ch[6]==0.0f,
+          "lite 0: CH1-6 = Vab/Vbc/Vca/Ia/Ib/Ic, CH7=0");
 
     g_jf_lite_mode = JUSTFLOAT_LITE_MODE_VDC;
     JustFloat_GetChannels(ch);
     CHECK(ch[0]==30.0f && ch[1]==31.0f && ch[2]==32.0f &&
-          ch[3]==33.0f && ch[4]==34.0f && ch[5]==35.0f,
-          "lite 1: CH1-6 = Vdc1..Vdc6");
+          ch[3]==33.0f && ch[4]==34.0f && ch[5]==35.0f && ch[6]==0.0f,
+          "lite 1: CH1-6 = Vdc1..Vdc6, CH7=0");
 
     g_jf_lite_mode = JUSTFLOAT_LITE_MODE_PLL;
     JustFloat_GetChannels(ch);
@@ -77,12 +77,28 @@ static void test_waveform_lite_modes(void)
           "lite 2: CH1-3 = Va/Vb/Vc");
     CHECK(fabsf(ch[3] - 10.0f) < 1.0e-5f &&
           fabsf(ch[4] + 5.0f) < 1.0e-4f &&
-          fabsf(ch[5] + 5.0f) < 1.0e-4f,
-          "lite 2: CH4-6 = vmag·cos(θ±0/120/240°) at θ=0");
+          fabsf(ch[5] + 5.0f) < 1.0e-4f &&
+          ch[6]==0.0f,
+          "lite 2: CH4-6 = vmag·cos(θ±0/120/240°) at θ=0, CH7=0");
 
-    g_jf_lite_mode = JUSTFLOAT_LITE_MODE_PLL + 1U;
+    g_dbg_snap.vdc_avg = 50.0f;
+    g_dbg_snap.iac_obs = 2.0f;
+    g_dbg_snap.vd_ctrl = 3.0f;
+    g_dbg_snap.iamp = 1.5f;
+    g_dbg_snap.id = 1.0f;
+    g_dbg_snap.iq = 0.1f;
+    g_dbg_snap.id_ref = 1.2f;
+    g_dbg_snap.vq_ctrl = -0.5f;
+    g_dbg_snap.m = 0.4f;
+    g_jf_lite_mode = JUSTFLOAT_LITE_MODE_DQ;
     JustFloat_GetChannels(ch);
-    CHECK(ch[0]==40.0f && ch[5]==22.0f,
+    CHECK(ch[0]==50.0f && ch[1]==2.0f && ch[2]==3.0f && ch[3]==1.5f &&
+          ch[4]==1.0f && ch[5]==0.1f && ch[6]==0.4f,
+          "lite 3: CH1-7 = VdcAvg/Iac/vd_ctrl/iamp/Id/Iq/m");
+
+    g_jf_lite_mode = JUSTFLOAT_LITE_MODE_DQ + 1U;
+    JustFloat_GetChannels(ch);
+    CHECK(ch[0]==40.0f && ch[5]==22.0f && ch[6]==0.0f,
           "invalid lite mode falls back to line+Iac");
     g_jf_lite_mode = BOARD_JUSTFLOAT_LITE_MODE_DEFAULT;
 }
@@ -128,7 +144,7 @@ int main(void)
 {
     printf("=== JustFloat Lite Waveform Tests (%uB/frame) ===\n",
            (unsigned)TEST_FRAME_LEN);
-    CHECK(TEST_FRAME_LEN == 28U, "lite frame is 28 bytes");
+    CHECK(TEST_FRAME_LEN == 32U, "lite frame is 32 bytes");
     test_waveform_lite_modes();
     test_send_enable();
     printf("=== %s ===\n", failures ? "SOME TESTS FAILED" : "ALL TESTS PASSED");
